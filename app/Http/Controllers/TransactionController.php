@@ -306,31 +306,33 @@ class TransactionController extends Controller
         }
     }
 
-    public function print(Transaction $transaction)
-    {
-        $setting = Setting::first();
-        foreach ($transaction->detail as $detail) {
-            for ($i = 1; $i <= $detail->qty; $i++) {
-                $tickets[] = [
-                    "name" => $detail->ticket->name,
-                    "harga" => number_format($detail->ticket->harga + $detail->ppn, 0, ',', '.'),
-                    "ticket_code" => $detail->ticket_code,
-                ];
-            }
+   public function print(Transaction $transaction)
+{
+    $setting = Setting::first();
+
+    // 1. TAMBAHKAN INI: Inisialisasi agar variabel selalu ada
+    $tickets = [];
+
+    foreach ($transaction->detail as $detail) {
+        for ($i = 1; $i <= $detail->qty; $i++) {
+            $tickets[] = [
+                "name" => $detail->ticket->name,
+                "harga" => number_format($detail->ticket->harga + $detail->ppn, 0, ',', '.'),
+                "ticket_code" => $detail->ticket_code,
+            ];
         }
-
-
-        $logo = $setting ? asset('/storage/' . $setting->logo) : 'data:image/png;base64,' . base64_encode(file_get_contents(public_path('/images/rio.png')));
-        $name = $setting->name ?? 'Ticketing';
-        $ucapan = $setting->ucapan ?? 'Terima Kasih';
-        $deskripsi = $setting->deskripsi ?? 'qr code hanya berlaku satu kali';
-        $use = $setting->use_logo ?? false;
-        $ppn = $setting->ppn ?? 0;
-        $print = 0;
-
-        return view('transaction.print', compact('transaction', 'logo', 'ucapan', 'deskripsi', 'use', 'name', "tickets", 'ppn', 'print'));
     }
 
+    $logo = $setting ? asset('/storage/' . $setting->logo) : 'data:image/png;base64,' . base64_encode(file_get_contents(public_path('/images/rio.png')));
+    $name = $setting->name ?? 'Ticketing';
+    $ucapan = $setting->ucapan ?? 'Terima Kasih';
+    $deskripsi = $setting->deskripsi ?? 'qr code hanya berlaku satu kali';
+    $use = $setting->use_logo ?? false;
+    $ppn = $setting->ppn ?? 0;
+    $print = 0;
+
+    return view('transaction.print', compact('transaction', 'logo', 'ucapan', 'deskripsi', 'use', 'name', "tickets", 'ppn', 'print'));
+}
     public function report(Request $request)
     {
         $title = 'Report Transaction';

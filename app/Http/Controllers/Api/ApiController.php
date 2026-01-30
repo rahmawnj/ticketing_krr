@@ -142,7 +142,12 @@ class ApiController extends Controller
     public function check(Request $request)
     {
         $transScanned = DetailTransaction::where('ticket_code', $request->ticket)->first();
-
+if (empty($request->ticket)) {
+        return response()->json([
+            "status" => "error",
+            "message" => "QR Code/Ticket tidak boleh kosong!"
+        ], 400);
+    }
         if ($transScanned) {
             $invoice = Transaction::where('id', $transScanned->transaction_id)->first();
 
