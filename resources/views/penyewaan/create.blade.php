@@ -30,7 +30,8 @@
                                 value="{{ $ticket->id }}"
                                 data-harga="{{ $ticket->harga }}"
                                 data-use-ppn="{{ $ticket->use_ppn }}"
-                                data-ppn-rate="{{ $ticket->ppn }}">
+                                data-ppn-rate="{{ $ticket->ppn }}"
+                                data-use-time="{{ $ticket->use_time ?? 0 }}">
                                 {{ $ticket->name }}
                             </option>
                             @endforeach
@@ -74,6 +75,10 @@
                         <select name="metode" id="metode" class="form-control">
                             <option disabled selected>-- Pilih Metode --</option>
                             <option value="cash">Cash</option>
+                            <option value="debit">Debit</option>
+                            <option value="transfer">Transfer</option>
+                            <option value="credit">Credit Card</option>
+                            <option value="qr">QR</option>
                             <option value="tap">Emoney (Tap)</option>
                         </select>
                         @error('metode')
@@ -107,14 +112,36 @@
                     </div>
                 </div>
 
-                {{-- Bawah (Total) --}}
+                {{-- Bawah (Total + Description + End Time) --}}
                 <div class="col-md-12">
-                    <div class="form-group mb-3">
-                        <label for="jumlah">Total Jumlah Bayar (sudah termasuk PPN)</label>
-                        <input type="text" name="jumlah" id="jumlah" class="form-control" value="0" readonly>
-                        @error('jumlah')
-                        <small class="text-danger">{{ $message }}</small>
-                        @enderror
+                    <div class="row g-3 align-items-start">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="keterangan">Description</label>
+                                <textarea name="keterangan" id="keterangan" class="form-control" rows="3" placeholder="Keterangan penyewaan"></textarea>
+                                @error('keterangan')
+                                <small class="text-danger">{{ $message }}</small>
+                                @enderror
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="jumlah">Total Jumlah Bayar (sudah termasuk PPN)</label>
+                                <input type="text" name="jumlah" id="jumlah" class="form-control" value="0" readonly>
+                                @error('jumlah')
+                                <small class="text-danger">{{ $message }}</small>
+                                @enderror
+                            </div>
+
+                            <div class="form-group mb-3 time-fields d-none">
+                                <label for="end_time">End Time</label>
+                                <input type="time" name="end_time" id="end_time" class="form-control" value="">
+                                @error('end_time')
+                                <small class="text-danger">{{ $message }}</small>
+                                @enderror
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -199,7 +226,21 @@
         }
 
 
-        $("#ticket").on('change', calculatePrice);
+        function toggleTimeFields() {
+            let selectedOption = $("#ticket").find('option:selected');
+            let useTime = selectedOption.attr("data-use-time") == '1';
+            if (useTime) {
+                $(".time-fields").removeClass('d-none');
+            } else {
+                $(".time-fields").addClass('d-none');
+                $("#end_time").val('');
+            }
+        }
+
+        $("#ticket").on('change', function() {
+            calculatePrice();
+            toggleTimeFields();
+        });
         $("#qty").on('change', calculatePrice);
 
 
@@ -252,7 +293,7 @@
         // --- Logika RFID (Tetap) ---
         $('#form-penyewaan').on('keyup keypress', function(e) {
             var keyCode = e.keyCode || e.which;
-            if (keyCode === 13) {
+            if (keyCode === 13 && e.target && e.target.tagName !== 'TEXTAREA') {
                 e.preventDefault();
                 return false;
             }

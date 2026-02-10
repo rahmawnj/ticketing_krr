@@ -17,45 +17,59 @@
 
 <body>
     <div class="container">
-        <div style="margin-bottom: 20px; text-transform: uppercase;">
-            <h4>Invoice My Member ID</h4>
+        <div style="margin-bottom: 10px; text-transform: uppercase; font-weight: bold;">
+            <h4 style="margin: 0;">Invoice Membership</h4>
         </div>
 
-        <div style="display: flex; justify-content: center; font-size: 14px; padding: 15px;">
-            <table>
+        <div style="display: flex; justify-content: center; font-size: 13px; padding: 10px 12px;">
+            <table style="width: 100%; border-collapse: collapse;">
                 <tr style="text-align: left;">
-                    <td width="100">Nama: </td>
-                    <td width="200">{{ $member->nama }}</td>
+                    <td width="40%">Jenis</td>
+                    <td width="60%">{{ ($transaction->transaction_type ?? 'registration') === 'renewal' ? 'Perpanjangan' : 'Registrasi' }}</td>
                 </tr>
-
                 <tr style="text-align: left;">
-                    <td width="100">NIK: </td>
-                    <td width="200">{{ $member->no_ktp }}</td>
+                    <td>No Invoice</td>
+                    <td>{{ $transaction->ticket_code ?? $member->qr_code }}</td>
                 </tr>
-
                 <tr style="text-align: left;">
-                    <td width="100">QR Code: </td>
-                    <td width="200">{{ $member->qr_code }}</td>
+                    <td>Tanggal</td>
+                    <td>{{ $transaction?->created_at?->format('d/m/Y H:i:s') ?? now('Asia/Jakarta')->format('d/m/Y H:i:s') }}</td>
                 </tr>
-
                 <tr style="text-align: left;">
-                    <td width="100">Membership: </td>
-                    <td width="200">{{ $member->membership->name }}</td>
+                    <td>Nama</td>
+                    <td>{{ $member->nama }}</td>
                 </tr>
-
                 <tr style="text-align: left;">
-                    <td width="100">Price: </td>
-                    <td width="200">{{ "Rp. " .  number_format($member->membership->price, 0, ',', '.') }}</td>
+                    <td>NIK</td>
+                    <td>{{ $member->no_ktp }}</td>
                 </tr>
-
                 <tr style="text-align: left;">
-                    <td width="100">Reg Date: </td>
-                    <td width="200">{{ $member->tgl_register }}</td>
+                    <td>No HP</td>
+                    <td>{{ $member->no_hp }}</td>
                 </tr>
-
                 <tr style="text-align: left;">
-                    <td width="100">Exp Date: </td>
-                    <td width="200">{{ $member->tgl_expired }}</td>
+                    <td>Membership</td>
+                    <td>{{ $member->membership->name }}</td>
+                </tr>
+                <tr style="text-align: left;">
+                    <td>Masa Aktif</td>
+                    <td>{{ $member->tgl_register }} - {{ $member->tgl_expired }}</td>
+                </tr>
+                @if($member->membership && $member->membership->max_access !== null)
+                <tr style="text-align: left;">
+                    <td>Max Access</td>
+                    <td>{{ (int)$member->membership->max_access === 0 ? 'Unlimited' : $member->membership->max_access . ' kali' }}</td>
+                </tr>
+                @endif
+                @if($member->childs && $member->childs->count() > 0)
+                <tr style="text-align: left;">
+                    <td>Submember</td>
+                    <td>{{ $member->childs->pluck('nama')->filter()->implode(', ') }}</td>
+                </tr>
+                @endif
+                <tr style="text-align: left;">
+                    <td>Harga</td>
+                    <td>{{ "Rp. " .  number_format($member->membership->price, 0, ',', '.') }}</td>
                 </tr>
             </table>
         </div>

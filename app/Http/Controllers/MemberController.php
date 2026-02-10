@@ -22,6 +22,7 @@ use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\Response;
 use Yajra\DataTables\Facades\DataTables;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
+use Barryvdh\DomPDF\Facade\Pdf;
 use App\Http\Requests\Member\CreateMemberRequest;
 use App\Http\Requests\Member\UpdateMemberRequest;
 
@@ -96,13 +97,16 @@ class MemberController extends Controller
                 ->editColumn('masa_berlaku', function ($row) {
                     return Carbon::parse($row->tgl_register)->format('d/m/Y') . ' - ' . Carbon::parse($row->tgl_expired)->format('d/m/Y');
                 })
-                ->editColumn('sisa_hari', function ($row) {
-                    $sisa = Carbon::parse($row->tgl_expired)->diffInDays();
-                    if ($sisa != 0) {
-                        return Carbon::parse($row->tgl_expired)->diffInDays() . " Hari";
-                    } else {
+                ->editColumn('sisa_hari', content: function ($row) {
+                    $today = Carbon::now('Asia/Jakarta')->startOfDay();
+                    $expiredAt = Carbon::parse($row->tgl_expired)->startOfDay();
+                    $sisa = $today->diffInDays($expiredAt, false);
+
+                    if ($sisa <= 0) {
                         return '<span class="badge bg-danger rounded-0 fs-11px">Expired</span>';
                     }
+
+                    return $sisa . ' Hari';
                 })
                 ->editColumn('qr_code', function ($row) {
                     return QrCode::size(50)->generate($row->qr_code);
@@ -116,7 +120,9 @@ class MemberController extends Controller
                 })
                 ->addColumn('image_profile', function ($row) {
                     $imageUrl = $row->image_profile != null ? asset('/storage/' . $row->image_profile) : config('app.url') . '/img/user/user-10.jpg';
-                    return '<img src="' . $imageUrl . '" alt="" class="rounded h-40px">';
+                    $membershipName = $row->membership ? $row->membership->name : '-';
+                    $memberType = $row->parent_id == 0 ? 'Member' : 'Submember';
+                    return '<img src="' . $imageUrl . '" data-full="' . $imageUrl . '" data-name="' . e($row->nama) . '" data-phone="' . e($row->no_hp ?? '-') . '" data-ktp="' . e($row->no_ktp ?? '-') . '" data-rfid="' . e($row->rfid ?? '-') . '" data-membership="' . e($membershipName) . '" data-type="' . e($memberType) . '" alt="" class="rounded h-40px js-photo-thumb">';
                 })
                 ->addColumn('member_type', function ($row) {
                     if ($row->parent_id == 0) {
@@ -161,6 +167,7 @@ public function store(CreateMemberRequest $request)
             $attr['membership_id'] = $request->membership;
             $attr['is_active'] = 1;
             $attr['parent_id'] = 0;
+            $attr['access_used'] = 0;
 
             if ($request->image_profile) {
                 $image = $request->file('image_profile');
@@ -209,6 +216,7 @@ public function store(CreateMemberRequest $request)
                         'is_active' => 1,
                         'image_profile' => $image_group,
                         'parent_id' => $member->id,
+                        'access_used' => 0,
                     ]);
 
                     HistoryMembership::create([
@@ -244,8 +252,12 @@ public function store(CreateMemberRequest $request)
                 'status' => 'open',
                 'is_active' => 1,
                 'metode' => 'cash',
-                'ticket_id'=> $membership->id
+                'ticket_id'=> $membership->id,
+                'member_id' => $member->id,
+                'member_info' => $member->nama . ' - ' . $member->no_hp
             ]);
+
+            $invoiceUrl = route('transactions.invoice', $transaction->id);
 
             // DetailTransaction::create([
             //     'transaction_id' => $transaction->id,
@@ -256,7 +268,9 @@ public function store(CreateMemberRequest $request)
             // ]);
 
             DB::commit();
-            return redirect()->route('members.index')->with('success', "Member {$member->nama} berhasil ditambahkan");
+            return redirect()->route('members.index')
+                ->with('success', "Member {$member->nama} berhasil ditambahkan")
+                ->with('invoice_url', $invoiceUrl);
 
         } catch (\Throwable $th) {
             DB::rollBack();
@@ -295,6 +309,7 @@ public function update(UpdateMemberRequest $request, Member $member)
             $attr = $request->validated();
             $is_active = $request->has('is_active') ? 1 : 0;
             $is_membership_changed = false;
+            $invoiceUrl = null;
 
             if ($member->parent_id == 0) {
                 $newMembershipId = $request->membership;
@@ -311,6 +326,7 @@ public function update(UpdateMemberRequest $request, Member $member)
                     $attr['tgl_lahir'] = $request->tanggal_lahir;
                     $attr['membership_id'] = $membership->id;
                     $attr['tgl_expired'] = now('Asia/Jakarta')->addDay($membership->duration_days)->format('Y-m-d');
+                    $attr['access_used'] = 0;
 
                     HistoryMembership::where('member_id', $member->id)
                         ->where('status', 'active')
@@ -349,9 +365,13 @@ public function update(UpdateMemberRequest $request, Member $member)
                         'status' => 'open',
                         'is_active' => 1,
                 'metode' => 'cash',
-                'ticket_id'=> $membership->id
+                'ticket_id'=> $membership->id,
+                        'member_id' => $member->id,
+                        'member_info' => $member->nama . ' - ' . $member->no_hp
 
                     ]);
+
+                    $invoiceUrl = route('transactions.invoice', $transaction->id);
 
                     // DetailTransaction::create([
                     //     'transaction_id' => $transaction->id,
@@ -391,6 +411,7 @@ public function update(UpdateMemberRequest $request, Member $member)
                         'is_active' => $is_active,
                         'membership_id' => $is_membership_changed ? $attr['membership_id'] : $child->membership_id,
                         'tgl_expired' => $is_membership_changed ? $attr['tgl_expired'] : $child->tgl_expired,
+                        'access_used' => $is_membership_changed ? 0 : $child->access_used,
                     ]);
 
                     if ($is_membership_changed) {
@@ -420,7 +441,9 @@ public function update(UpdateMemberRequest $request, Member $member)
             }
 
             DB::commit();
-            return redirect()->route('members.index')->with('success', "Member {$member->nama} berhasil diupdate");
+            return redirect()->route('members.index')
+                ->with('success', "Member {$member->nama} berhasil diupdate")
+                ->with('invoice_url', $invoiceUrl);
 
         } catch (\Throwable $th) {
             DB::rollBack();
@@ -475,7 +498,10 @@ public function update(UpdateMemberRequest $request, Member $member)
                 return back()->with('error', 'Member belum berlangganan');
             }
 
-            $member->update(['tgl_expired' => Carbon::now('Asia/Jakarta')->addDay($member->membership->duration_days)->format('Y-m-d')]);
+            $member->update([
+                'tgl_expired' => Carbon::now('Asia/Jakarta')->addDay($member->membership->duration_days)->format('Y-m-d'),
+                'access_used' => 0
+            ]);
 
             HistoryMembership::create([
                 'member_id' => $member->id,
@@ -549,7 +575,30 @@ public function update(UpdateMemberRequest $request, Member $member)
 
     function invoice(Member $member)
     {
-        return view('member.invoice', compact('member'));
+        $transaction = Transaction::where('member_id', $member->id)
+            ->whereIn('transaction_type', ['registration', 'renewal'])
+            ->latest()
+            ->first();
+
+        if (!$transaction) {
+            abort(404);
+        }
+
+        return redirect()->route('transactions.invoice', $transaction->id);
+    }
+
+    public function invoicePdf(Member $member)
+    {
+        $transaction = Transaction::where('member_id', $member->id)
+            ->whereIn('transaction_type', ['registration', 'renewal'])
+            ->latest()
+            ->first();
+
+        if (!$transaction) {
+            abort(404);
+        }
+
+        return redirect()->route('transactions.invoice.pdf', $transaction->id);
     }
 
     public function bulkRenewIndex(Request $request)
@@ -572,7 +621,6 @@ public function getRenewableMembers(Request $request)
     $limitDate = Carbon::now('Asia/Jakarta')->addDays($reminderDays)->format('Y-m-d');
 
     $data = Member::with('membership')
-        // Ambil yang tgl_expired-nya kurang dari atau sama dengan limitDate
         ->where('tgl_expired', '<=', $limitDate)
         ->where('parent_id', 0)
         ->where('is_active', 1) // Biasanya reminder hanya untuk member yang masih aktif
@@ -663,7 +711,7 @@ public function processBulkRenew(Request $request)
                 $tgl_expired_baru = $tgl_baru_start->copy()->addDays($duration)->format('Y-m-d');
 
                 // Update member
-                $member->update(['tgl_expired' => $tgl_expired_baru, 'is_active' => true]); // Set is_active ke true
+                $member->update(['tgl_expired' => $tgl_expired_baru, 'is_active' => true, 'access_used' => 0]); // Reset access
 
                 // Catat History untuk Parent
                 HistoryMembership::create([
@@ -680,7 +728,8 @@ public function processBulkRenew(Request $request)
 
                 $childMembers = Member::where('parent_id', $member->id)->get();
                 foreach ($childMembers as $child) {
-                    $child->update(['tgl_expired' => $tgl_expired_baru, 'is_active' => true]);
+                    $child->update(['tgl_expired' => $tgl_expired_baru, 'is_active' => true, 'access_used' => 0]);
+                    $child->update(['access_used' => 0]);
 
                     HistoryMembership::create([
                         'member_id' => $child->id,
@@ -723,13 +772,18 @@ public function processBulkRenew(Request $request)
             'is_active' => 1,
             'tipe' => $tipeTransaksi,
             'metode' => $request->metode ?? 'Cash',
-            'ticket_id' => $member->membership_id
+            'ticket_id' => $member->membership_id,
+            'member_id' => $firstParentMember ? $firstParentMember->id : null,
+            'member_info' => $firstParentMember ? ($firstParentMember->nama . ' - ' . $firstParentMember->no_hp) : null
         ]);
 
+        $invoiceUrl = $transaction ? route('transactions.invoice', $transaction->id) : null;
 
 
         DB::commit();
-        return redirect()->route('members.index')->with('success', "Berhasil memperpanjang $successCount entri member & mencatat transaksi RENEW.");
+        return redirect()->route('members.index')
+            ->with('success', "Berhasil memperpanjang $successCount entri member & mencatat transaksi RENEW.")
+            ->with('invoice_url', $invoiceUrl);
 
     } catch (\Throwable $th) {
         DB::rollBack();

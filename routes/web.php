@@ -80,6 +80,9 @@ Route::middleware('auth')->group(function () {
     Route::get('members/{member:id}/print-qr', [MemberController::class, 'print_qr'])->name('members.printqr');
     Route::post('member/{member:id}/expired', [MemberController::class, 'expired'])->name('members.expired');
     Route::get('members/{member:id}/invoice', [MemberController::class, 'invoice'])->name('members.invoice');
+    Route::get('members/{member:id}/invoice-pdf', [MemberController::class, 'invoicePdf'])->name('members.invoice.pdf');
+    Route::get('transactions/{transaction}/invoice', [TransactionController::class, 'invoice'])->name('transactions.invoice');
+    Route::get('transactions/{transaction}/invoice-pdf', [TransactionController::class, 'invoicePdf'])->name('transactions.invoice.pdf');
     Route::post('update-setting', [MemberController::class, 'update_setting'])->name('setting.update');
     Route::post('import', [MemberController::class, 'import'])->name('member.import');
     Route::get('members/bulk-renew', [MemberController::class, 'bulkRenewIndex'])->name('members.bulk_renew');

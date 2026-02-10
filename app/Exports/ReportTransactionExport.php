@@ -38,9 +38,9 @@ class ReportTransactionExport implements FromCollection, WithHeadings, WithMappi
             $data->user->name ?? '-', // <--- MENAMPILKAN NAMA KASIR
             $data->amount,
             $data->bayar,
+            $data->bayar - $disc + $data->ppn,
             $data->ppn,
             $disc,
-            $data->bayar - $disc + $data->ppn,
         ];
     }
 
@@ -53,9 +53,9 @@ class ReportTransactionExport implements FromCollection, WithHeadings, WithMappi
             'Nama Kasir', // <--- HEADER BARU
             'Amount',
             'Jumlah',
+            'Total',
             'PPN',
             'Discount',
-            'Total',
         ];
     }
 }

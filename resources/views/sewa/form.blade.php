@@ -20,7 +20,6 @@
         <form action="{{ $action }}" method="post">
             @method($method)
             @csrf
-
             <div class="form-group mb-3">
                 <label for="name">Name</label>
                 <input type="text" name="name" id="name" class="form-control" value="{{ $ticket->name ?? old('name') }}">

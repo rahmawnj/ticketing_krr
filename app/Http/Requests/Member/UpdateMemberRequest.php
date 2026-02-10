@@ -39,7 +39,7 @@ class UpdateMemberRequest extends FormRequest
             // --- ATURAN JIKA EDIT PARENT ---
             return [
                 'nama'          => 'required|string',
-                'alamat'        => 'required|string',
+                'alamat'        => 'nullable|string',
                 'no_ktp'        => 'nullable|numeric',
                 'no_hp'         => 'required|numeric',
                 'tanggal_lahir' => 'required|date',

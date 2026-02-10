@@ -39,6 +39,9 @@
                     <th class="text-nowrap">Qty</th>
                     <th class="text-nowrap">Metode</th>
                     <th class="text-nowrap">Total</th>
+                    <th class="text-nowrap">Description</th>
+                    <th class="text-nowrap">Start Time</th>
+                    <th class="text-nowrap">End Time</th>
                     <th class="text-nowrap">Action</th>
                 </tr>
             </thead>
@@ -218,6 +221,18 @@
             {
                 data: 'jumlah',
                 name: 'jumlah'
+            },
+            {
+                data: 'keterangan',
+                name: 'keterangan'
+            },
+            {
+                data: 'start_time',
+                name: 'start_time'
+            },
+            {
+                data: 'end_time',
+                name: 'end_time'
             },
             {
                 data: 'action',

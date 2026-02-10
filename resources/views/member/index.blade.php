@@ -13,6 +13,35 @@
         background-color: #007bff; /* Primary color */
         color: white;
     }
+    #datatable tbody .js-photo-thumb {
+        cursor: zoom-in;
+        transition: transform 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    }
+    #datatable tbody .js-photo-thumb:hover {
+        transform: scale(1.03);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    }
+    #modal-photo .modal-dialog {
+        max-width: 680px;
+    }
+    #modal-photo-img {
+        max-height: 55vh;
+        width: 100%;
+        object-fit: cover;
+    }
+    .photo-meta {
+        text-align: left;
+    }
+    .photo-meta .label {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #6c757d;
+    }
+    .photo-meta .value {
+        font-weight: 600;
+        color: #111;
+    }
 </style>
 @endpush
 
@@ -37,8 +66,8 @@
 
             {{-- START: BUTTON FILTER BARU --}}
             <div class="btn-group" role="group" aria-label="Filter Member">
-                <button type="button" class="btn btn-default btn-filter active" data-filter="all">All</button>
-                <button type="button" class="btn btn-default btn-filter" data-filter="member">Member</button>
+                <button type="button" class="btn btn-default btn-filter" data-filter="all">All</button>
+                <button type="button" class="btn btn-default btn-filter active" data-filter="member">Member</button>
                 <button type="button" class="btn btn-default btn-filter" data-filter="submember">Submember</button>
             </div>
             {{-- END: BUTTON FILTER BARU --}}
@@ -97,6 +126,50 @@
 
 @include("member.show")
 @include("member.membership")
+
+<div class="modal fade" id="modal-photo" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Foto</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-hidden="true"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3 align-items-start">
+                    <div class="col-5">
+                        <img id="modal-photo-img" src="" alt="Foto" class="img-fluid rounded">
+                    </div>
+                    <div class="col-7 photo-meta">
+                        <div class="mb-2">
+                            <div class="label">Nama</div>
+                            <div class="value" id="modal-photo-name">-</div>
+                        </div>
+                        <div class="mb-2">
+                            <div class="label">No. HP</div>
+                            <div class="value" id="modal-photo-phone">-</div>
+                        </div>
+                        <div class="mb-2">
+                            <div class="label">No. Identitas</div>
+                            <div class="value" id="modal-photo-ktp">-</div>
+                        </div>
+                        <div class="mb-2">
+                            <div class="label">RFID</div>
+                            <div class="value" id="modal-photo-rfid">-</div>
+                        </div>
+                        <div class="mb-2">
+                            <div class="label">Membership</div>
+                            <div class="value" id="modal-photo-membership">-</div>
+                        </div>
+                        <div>
+                            <div class="label">Tipe</div>
+                            <div class="value" id="modal-photo-type">-</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
 
 @push('script')
@@ -109,7 +182,7 @@
 
 <script>
     // Menyimpan nilai filter saat ini
-    var currentFilter = 'all';
+    var currentFilter = 'member';
 
     var table = $('#datatable').DataTable({
         processing: true,
@@ -317,6 +390,7 @@
                 });
 
                 $("#btn-print-qr").attr("href", `/members/${member.id}/print-qr`)
+                $("#btn-download-card").attr("href", `/members/${member.id}/print-qr`)
             }
         })
     })
@@ -404,6 +478,26 @@
             $('.form-group.title-group').remove(); // Hapus title
             $(".form-group.member-group").remove(); // Hapus field
         }
+    });
+
+    $("#datatable").on('click', '.js-photo-thumb', function() {
+        let src = $(this).attr('data-full') || $(this).attr('src');
+        let name = $(this).attr('data-name') || '-';
+        let phone = $(this).attr('data-phone') || '-';
+        let ktp = $(this).attr('data-ktp') || '-';
+        let rfid = $(this).attr('data-rfid') || '-';
+        let membership = $(this).attr('data-membership') || '-';
+        let type = $(this).attr('data-type') || '-';
+        if (!src) return;
+
+        $("#modal-photo-img").attr('src', src);
+        $("#modal-photo-name").text(name);
+        $("#modal-photo-phone").text(phone);
+        $("#modal-photo-ktp").text(ktp);
+        $("#modal-photo-rfid").text(rfid);
+        $("#modal-photo-membership").text(membership);
+        $("#modal-photo-type").text(type);
+        $('#modal-photo').modal('show');
     });
 </script>
 @endpush

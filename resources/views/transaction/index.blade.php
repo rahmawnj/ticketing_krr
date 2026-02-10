@@ -3,6 +3,16 @@
 @push('style')
 <link href="{{ asset('/') }}plugins/datatables.net-bs4/css/dataTables.bootstrap4.min.css" rel="stylesheet" />
 <link href="{{ asset('/') }}plugins/datatables.net-responsive-bs4/css/responsive.bootstrap4.min.css" rel="stylesheet" />
+<style>
+    #datatable tbody img {
+        cursor: zoom-in;
+        transition: transform 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    }
+    #datatable tbody img:hover {
+        transform: scale(1.03);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    }
+</style>
 @endpush
 
 @section('content')
@@ -75,6 +85,7 @@
                     <!-- <th class="text-nowrap">No Trx</th> -->
                     <th class="text-nowrap">Invoice</th>
                     <th class="text-nowrap">Dibuat Oleh (Kasir)</th>
+                    <th class="text-nowrap">Data Member</th>
                     <!-- <th class="text-nowrap">Ticket</th> -->
                     <!-- <th class="text-nowrap">Harga</th> -->
 <th class="text-nowrap">Transaction Type</th>
@@ -254,6 +265,20 @@
         </div>
     </div>
 </div>
+
+<div class="modal fade" id="modal-photo" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Foto</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-hidden="true"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="modal-photo-img" src="" alt="Foto" class="img-fluid rounded">
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
 
 @push('script')
@@ -295,6 +320,10 @@
         data: 'user_name',
         name: 'user_name' // Harus sesuai dengan nama kolom di Controller
     },
+            {
+                data: 'member_info',
+                name: 'member_info'
+            },
            {
                 data: 'transaction_type',
                 name: 'transaction_type',
@@ -496,6 +525,14 @@
 
         // Tampilkan modal
         $('#modal-full-scan').modal('show');
+    });
+
+    $("#datatable").on('click', 'tbody img', function() {
+        let src = $(this).attr('data-full') || $(this).attr('src');
+        if (!src) return;
+
+        $("#modal-photo-img").attr('src', src);
+        $('#modal-photo').modal('show');
     });
 </script>
 @endpush

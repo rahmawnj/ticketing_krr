@@ -94,6 +94,14 @@
                     </div>
 
                     <div class="form-group mb-3">
+                        <label for="max_access">Max Access (0 = Unlimited)</label>
+                        <input type="number" name="max_access" id="max_access" class="form-control" value="0" min="0">
+                        @error('max_access')
+                        <small class="text-danger">{{ $message }}</small>
+                        @enderror
+                    </div>
+
+                    <div class="form-group mb-3">
                         <label for="gates">Gate ID</label>
                         <select name="gates[]" id="gates" class="form-control multiple-select2" multiple>
                             @foreach ($gates as $gate)
@@ -255,6 +263,7 @@
                 $("#price").val(membership.price);
                 $("#duration_days").val(membership.duration_days);
                 $("#max_person").val(membership.max_person);
+                $("#max_access").val(membership.max_access ?? 0);
 
                 // Isi PPN
                 if (membership.use_ppn == 1) {

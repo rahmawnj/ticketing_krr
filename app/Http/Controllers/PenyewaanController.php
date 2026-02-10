@@ -61,6 +61,15 @@ class PenyewaanController extends Controller
                 ->editColumn('jumlah', function ($row) {
                     return 'Rp. ' . number_format($row->jumlah, 0, ',', '.');
                 })
+                ->editColumn('keterangan', function ($row) {
+                    return $row->keterangan ?? '-';
+                })
+                ->editColumn('start_time', function ($row) {
+                    return $row->start_time ?? '-';
+                })
+                ->editColumn('end_time', function ($row) {
+                    return $row->end_time ?? '-';
+                })
                 ->rawColumns(['action'])
                 ->make(true);
         }
@@ -128,6 +137,9 @@ public function store(Request $request)
                 'jumlah' => $grossAmount, // Simpan gross amount di sini (total yang dipotong dari saldo)
                 'bayar' => $grossAmount,
                 'kembali' => 0,
+                'keterangan' => $request->keterangan,
+                'start_time' => $request->start_time ?: Carbon::now('Asia/Jakarta')->format('H:i'),
+                'end_time' => $request->end_time,
                 'user_id' => auth()->user()->id
             ]);
 
@@ -172,6 +184,9 @@ public function store(Request $request)
                 'jumlah' => $basePrice, // Simpan total yang dibayar (gross amount)
                 'bayar' => $bayarCash,
                 'kembali' => $kembaliCash,
+                'keterangan' => $request->keterangan,
+                'start_time' => $request->start_time ?: Carbon::now('Asia/Jakarta')->format('H:i'),
+                'end_time' => $request->end_time,
                 'user_id' => auth()->user()->id
 
             ]);

@@ -86,6 +86,7 @@ class MembershipController extends Controller
             'price' => 'required|numeric|min:0',
             'duration_days' => 'required|integer|min:1',
             'max_person' => 'nullable|integer|min:1',
+            'max_access' => 'nullable|integer|min:0',
             'gates' => 'required|array',
             'gates.*' => 'exists:gate_accesses,id'
         ]);
@@ -103,6 +104,7 @@ class MembershipController extends Controller
             $data = $request->all();
             $data['use_ppn'] = $usePpn;
             $data['ppn'] = $calculatedPpn;
+            $data['max_access'] = $request->max_access ?? 0;
 
             $membership = Membership::create($data);
 
@@ -142,6 +144,7 @@ class MembershipController extends Controller
             'price' => 'required|numeric|min:0',
             'duration_days' => 'required|integer|min:1',
             'max_person' => 'nullable|integer|min:1',
+            'max_access' => 'nullable|integer|min:0',
             'gates' => 'required|array',
             'gates.*' => 'exists:gate_accesses,id'
         ]);
@@ -159,6 +162,7 @@ class MembershipController extends Controller
             $data = $request->all();
             $data['use_ppn'] = $usePpn;
             $data['ppn'] = $calculatedPpn;
+            $data['max_access'] = $request->max_access ?? 0;
 
             $membership->update($data);
 

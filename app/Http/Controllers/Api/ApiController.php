@@ -221,6 +221,16 @@ if (empty($request->ticket)) {
                         ], 500);
                     }
 
+                    $maxAccess = (int) ($membership->max_access ?? 0);
+                    $accessUsed = (int) ($member->access_used ?? 0);
+                    // dd($membership, $member );
+                    if ($maxAccess > 0 && $accessUsed >= $maxAccess) {
+                        return response()->json([
+                            "status" => 'close',
+                            "message" => "Kuota akses habis"
+                        ], 500);
+                    }
+
                     $gates = $membership->gates()->pluck('id')->toArray();
 
                     if (in_array($request->gate, $gates)) {
@@ -230,6 +240,8 @@ if (empty($request->ticket)) {
                             'user_id' => 0,
                             'waktu' => now('Asia/Jakarta')->format('Y-m-d H:i:s')
                         ]);
+
+                        $member->increment('access_used');
 
                         return response()->json([
                             "status" => 'open',

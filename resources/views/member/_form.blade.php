@@ -9,9 +9,9 @@
     <div class="col-md-4">
         <label for="membership" class="form-label"><sup class="text-danger">*</sup>Jenis Member</label>
         <select name="membership" id="membership" class="form-control">
-            <option selected value="">-- Pilih Jenis Member --</option>
+            <option value="" {{ old('membership') ? '' : 'selected' }}>-- Pilih Jenis Member --</option>
             @foreach ($memberships as $membership)
-            <option data-price="{{ $membership->price }}" data-duration="{{ $membership->duration_days }}" data-max-person="{{ $membership->max_person }}" value="{{ $membership->id }}">{{ $membership->name }}</option>
+            <option {{ old('membership') == $membership->id ? 'selected' : '' }} data-price="{{ $membership->price }}" data-duration="{{ $membership->duration_days }}" data-max-person="{{ $membership->max_person }}" value="{{ $membership->id }}">{{ $membership->name }}</option>
             @endforeach
         </select>
 
@@ -34,7 +34,7 @@
 <div class="form-group row mb-3">
     <div class="col-md-4">
         <label for="rfid" class="form-label">RFID</label>
-        <input type="text" name="rfid" id="rfid" class="form-control" value="" placeholder="0192029300">
+        <input type="text" name="rfid" id="rfid" class="form-control" value="{{ old('rfid') }}" placeholder="0192029300">
 
         @error('rfid')
         <small class="text-danger">{{ $message }}</small>
@@ -44,7 +44,7 @@
     <div class="col-md-4">
         <div class="form-group mb-3">
             <label for="nama" class="form-label"><sup class="text-danger">*</sup>Nama</label>
-            <input type="text" name="nama" id="nama" class="form-control" value="" placeholder="John Doe">
+            <input type="text" name="nama" id="nama" class="form-control" value="{{ old('nama') }}" placeholder="John Doe">
 
             @error('nama')
             <small class="text-danger">{{ $message }}</small>
@@ -55,7 +55,7 @@
     <div class="col-md-4">
         <div class="form-group mb-3">
             <label for="no_ktp" class="form-label">No Identitas</label>
-            <input type="number" name="no_ktp" id="no_ktp" class="form-control" value="" placeholder="xxxxxxxxx" max="16">
+            <input type="number" name="no_ktp" id="no_ktp" class="form-control" value="{{ old('no_ktp') }}" placeholder="xxxxxxxxx" max="16">
 
             @error('no_ktp')
             <small class="text-danger">{{ $message }}</small>
@@ -67,7 +67,7 @@
 <div class="form-group row mb-3">
     <div class="col-md-4">
         <label for="no_hp" class="form-label"><sup class="text-danger">*</sup>No Hp</label>
-        <input type="number" name="no_hp" id="no_hp" class="form-control" value="" placeholder="08xxxxx">
+        <input type="number" name="no_hp" id="no_hp" class="form-control" value="{{ old('no_hp') }}" placeholder="08xxxxx">
 
         @error('no_hp')
         <small class="text-danger">{{ $message }}</small>
@@ -76,7 +76,7 @@
 
     <div class="col-md-4">
         <label for="tanggal_lahir" class="form-label"><sup class="text-danger">*</sup>Tanggal Lahir</label>
-        <input type="date" name="tanggal_lahir" id="tanggal_lahir" class="form-control" value="">
+        <input type="date" name="tanggal_lahir" id="tanggal_lahir" class="form-control" value="{{ old('tanggal_lahir') }}">
 
         @error('tanggal_lahir')
         <small class="text-danger">{{ $message }}</small>
@@ -86,8 +86,8 @@
     <div class="col-md-4">
         <label for="jenis_kelamin" class="form-label"><sup class="text-danger">*</sup>Jenis Kelamin</label>
         <select name="jenis_kelamin" id="jenis_kelamin" class="form-control">
-            <option value="L">Laki-Laki</option>
-            <option value="P">Perempuan</option>
+            <option value="L" {{ old('jenis_kelamin') == 'L' ? 'selected' : '' }}>Laki-Laki</option>
+            <option value="P" {{ old('jenis_kelamin') == 'P' ? 'selected' : '' }}>Perempuan</option>
         </select>
 
         @error('jenis_kelamin')
@@ -98,7 +98,7 @@
 
 <div class="form-group mb-3">
     <label for="alamat" class="form-label"><sup class="text-danger">*</sup>Alamat</label>
-    <textarea name="alamat" id="alamat" cols="30" rows="3" class="form-control" placeholder="Jakarta"></textarea>
+    <textarea name="alamat" id="alamat" cols="30" rows="3" class="form-control" placeholder="Jakarta">{{ old('alamat') }}</textarea>
 
     @error('alamat')
     <small class="text-danger">{{ $message }}</small>
@@ -106,7 +106,7 @@
 </div>
 
 <div class="form-group mb-3">
-    <label for="image_profile" class="form-label"><sup class="text-danger">*</sup>Foto</label>
+            <label for="image_profile" class="form-label">Foto</label>
     <input type="file" name="image_profile" id="image_profile" class="form-control" accept="image/*">
 
     @error('image_profile')
@@ -202,6 +202,10 @@
                 // $('#target').empty(); // Ini sudah ditangani di baris paling atas
             }
         });
+
+        if ($('#membership').val()) {
+            $('#membership').trigger('change');
+        }
 
         // --- 5. (PENINGKATAN) Script untuk Image Preview ---
         $('#image_profile').on('change', function(event) {

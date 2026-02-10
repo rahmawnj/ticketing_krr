@@ -42,7 +42,7 @@
                     <h4 class="modal-title">Form Sewa</h4>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-hidden="true"></button>
                 </div>
-                <form action="" method="post" id="form-sewa">
+                <form action="{{ route('sewa.store') }}" method="post" id="form-sewa">
                     @csrf
                     <div class="modal-body">
                         <div class="form-group mb-3">
@@ -79,6 +79,11 @@
                             @error('device')
                             <small class="text-danger">{{ $message }}</small>
                             @enderror
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="use_time" name="use_time" value="1">
+                            <label class="form-check-label" for="use_time">Aktifkan Jam</label>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -145,16 +150,18 @@
     $("#btn-add").on('click', function() {
         // Reset form untuk Add
         $("#form-sewa").trigger('reset');
-        $("#form-sewa").removeAttr('method');
+        $("#form-sewa").attr('method', 'POST');
         $("#form-sewa input[name='_method']").remove();
         $("#jumlah_ppn").val(0); // Pastikan PPN di-reset
+        $('#use_time').prop('checked', false);
 
         let route = $(this).attr('data-route');
         $("#form-sewa").attr('action', route);
     })
 
     $("#btn-close").on('click', function() {
-        $("#form-sewa").removeAttr('action');
+        $("#form-sewa").attr('action', "{{ route('sewa.store') }}");
+        $("#form-sewa").attr('method', 'POST');
         $("#form-sewa input[name='_method']").remove();
     })
 
@@ -166,7 +173,7 @@
         $("#form-sewa").trigger('reset');
 
         $("#form-sewa").attr('action', route);
-        $("#form-sewa").attr('method', 'POST'); // Override method PUT
+        $("#form-sewa").attr('method', 'POST'); // HTML method tetap POST
         $("#form-sewa input[name='_method']").remove(); // Hapus jika sudah ada
         $("#form-sewa").append(`<input type="hidden" name="_method" value="PUT">`);
 
@@ -174,6 +181,9 @@
             url: "/sewa/" + id,
             type: 'GET',
             method: 'GET',
+            error: function(xhr) {
+                alert("Gagal load data sewa. Status: " + xhr.status);
+            },
             success: function(response) {
                 let sewa = response.sewa;
 
@@ -181,6 +191,8 @@
                 // Harga yang disimpan di DB adalah harga pokok, bukan total
                 $("#harga").val(sewa.harga);
                 $("#device").val(sewa.device);
+                $('#use_time').prop('checked', sewa.use_time == 1);
+                $("#route-target").val($("#form-sewa").attr('action'));
 
                 // Set PPN checkbox dan nilai PPN
                 if (sewa.use_ppn == 1) {
@@ -193,6 +205,7 @@
             }
         })
     })
+
 
     // 4. Logic Delete (SweetAlert)
     $("#datatable").on('click', '.btn-delete', function(e) {

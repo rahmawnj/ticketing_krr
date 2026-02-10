@@ -6,6 +6,8 @@ use App\Models\Sewa;
 use App\Models\Setting; // <-- Tambahkan ini
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\Facades\DataTables;
 
 class SewaController extends Controller
@@ -32,16 +34,13 @@ class SewaController extends Controller
             return DataTables::of($data)
                 ->addIndexColumn()
                 ->addColumn('action', function ($row) {
-                    // Tambahkan data PPN ke tombol edit untuk digunakan di JS
                     $actionBtn = '<a href="#modal-dialog" id="' . $row->id . '" class="btn btn-sm btn-success btn-edit" data-route="' . route('sewa.update', $row->id) . '" data-bs-toggle="modal" data-use-ppn="' . $row->use_ppn . '" data-ppn-value="' . $row->ppn . '">Edit</a> <button type="button" data-route="' . route('sewa.destroy', $row->id) . '" class="delete btn btn-danger btn-delete btn-sm">Delete</button>';
                     return $actionBtn;
                 })
                 ->editColumn('harga', function ($row) {
-                    // Tampilkan total harga (Harga Pokok + PPN) di tabel
                     return 'Rp. ' . number_format($row->harga + $row->ppn, 0, ',', '.');
                 })
                 ->editColumn('ppn_status', function ($row) {
-                    // Kolom baru untuk menampilkan status PPN
                     if ($row->use_ppn == 1) {
                         return '<span class="badge bg-success">Diterapkan (Rp. ' . number_format($row->ppn, 0, ',', '.') . ')</span>';
                     }
@@ -55,11 +54,19 @@ class SewaController extends Controller
     public function store(Request $request)
     {
         try {
-            $request->validate([
+            $validator = Validator::make($request->all(), [
                 'name' => 'required|string',
                 'harga' => 'required|numeric',
-                'device' => 'required|numeric'
+                'device' => 'required|numeric',
             ]);
+            if ($validator->fails()) {
+                Log::warning('Sewa store validation failed', [
+                    'errors' => $validator->errors()->toArray(),
+                    'payload' => $request->except(['_token']),
+                ]);
+                return back()->withErrors($validator)->withInput()->with('error', 'Validasi gagal. Mohon cek input.');
+            }
+
 
             DB::beginTransaction();
 
@@ -73,6 +80,7 @@ class SewaController extends Controller
             $data = $request->all();
             $data['use_ppn'] = $usePpn;
             $data['ppn'] = $calculatedPpn;
+            $data['use_time'] = $request->has('use_time') ? 1 : 0;
 
             $sewa = Sewa::create($data);
 
@@ -81,6 +89,10 @@ class SewaController extends Controller
             return redirect()->route('sewa.index')->with('success', "{$sewa->name} berhasil ditambahkan");
         } catch (\Throwable $th) {
             DB::rollBack();
+            Log::error('Sewa store failed', [
+                'message' => $th->getMessage(),
+                'payload' => $request->except(['_token']),
+            ]);
             return back()->with('error', $th->getMessage());
         }
     }
@@ -96,11 +108,19 @@ class SewaController extends Controller
     public function update(Request $request, Sewa $sewa)
     {
         try {
-            $request->validate([
+            $validator = Validator::make($request->all(), [
                 'name' => 'required|string',
                 'harga' => 'required|numeric',
-                'device' => 'required|numeric'
+                'device' => 'required|numeric',
             ]);
+            if ($validator->fails()) {
+                Log::warning('Sewa update validation failed', [
+                    'errors' => $validator->errors()->toArray(),
+                    'payload' => $request->except(['_token']),
+                    'sewa_id' => $sewa->id,
+                ]);
+                return back()->withErrors($validator)->withInput()->with('error', 'Validasi gagal. Mohon cek input.');
+            }
 
             DB::beginTransaction();
 
@@ -114,6 +134,7 @@ class SewaController extends Controller
             $data = $request->all();
             $data['use_ppn'] = $usePpn;
             $data['ppn'] = $calculatedPpn;
+            $data['use_time'] = $request->has('use_time') ? 1 : 0;
 
             $sewa->update($data);
 
@@ -122,6 +143,11 @@ class SewaController extends Controller
             return redirect()->route('sewa.index')->with('success', "{$sewa->name} berhasil diupdate");
         } catch (\Throwable $th) {
             DB::rollBack();
+            Log::error('Sewa update failed', [
+                'message' => $th->getMessage(),
+                'payload' => $request->except(['_token']),
+                'sewa_id' => $sewa->id,
+            ]);
             return back()->with('error', $th->getMessage());
         }
     }

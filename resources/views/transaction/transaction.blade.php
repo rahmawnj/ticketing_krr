@@ -29,8 +29,14 @@ date_default_timezone_set('Asia/Jakarta')
                 </span>
                 <div style="display: flex;font-weight: 900; justify-content: space-between; margin-left: 10px; margin-right: 10px;">
                     <span>Jumlah Ticket : </span>
+                    <span>{{ $transaction->detail()->sum('qty') }}</span>
+                </div>
+                @if(($printMode ?? 'per_qty') === 'per_ticket')
+                <div style="display: flex;font-weight: 900; justify-content: space-between; margin-left: 10px; margin-right: 10px;">
+                    <span>Jumlah Jenis : </span>
                     <span>{{ $transaction->detail()->count() }}</span>
                 </div>
+                @endif
                 <div style="display: flex;font-weight: 900; justify-content: space-between; margin-left: 10px; margin-right: 10px;">
                     <span>Total Harga : </span>
                     <span>Rp. {{ number_format($transaction->detail()->sum('total'), 0, ',', '.') }}</span>

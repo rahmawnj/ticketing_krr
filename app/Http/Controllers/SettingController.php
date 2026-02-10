@@ -33,6 +33,7 @@ class SettingController extends Controller
         'logo' => 'nullable|mimes:jpg,jpeg,png,gif',
         'ppn' => 'required|numeric',
         'member_reminder_days' => 'required|numeric|min:1', // Tambahkan validasi ini
+        'print_mode' => 'required|in:per_qty,per_ticket',
     ]);
 
     try {
@@ -41,7 +42,7 @@ class SettingController extends Controller
         $setting = Setting::first();
         $logo = $request->file('logo');
         $logoUrl = null;
-        $attr['use_logo'] = $request->use_logo == 'on' ? 1 : 0;
+        $attr['use_logo'] = $request->has('use_logo') ? 1 : 0;
 
         // Atribut member_reminder_days otomatis masuk karena sudah di-validate di atas
 

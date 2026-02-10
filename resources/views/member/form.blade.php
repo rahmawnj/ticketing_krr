@@ -37,11 +37,11 @@
                 <div class="col-md-4">
                     <label for="membership" class="form-label"><sup class="text-danger">*</sup>Jenis Member</label>
                     <select name="membership" id="membership" class="form-control" {{ $member->id != 0 && $member->membership_id != 0 ? 'disabled' : '' }}>
-                        <option selected value="">-- Pilih Jenis Member --</option>
+                        <option value="" {{ (old('membership') ?? $member->membership_id) ? '' : 'selected' }}>-- Pilih Jenis Member --</option>
                         @foreach ($memberships as $membership)
                         {{-- MENAMBAH DATA-ATTRIBUTES UNTUK PPN --}}
                         <option
-                            {{ $member->membership_id == $membership->id ? 'selected' : '' }}
+                            {{ (old('membership') ?? $member->membership_id) == $membership->id ? 'selected' : '' }}
                             data-price="{{ $membership->price }}"
                             data-duration="{{ $membership->duration_days }}"
                             data-max-person="{{ $membership->max_person }}"
@@ -84,7 +84,7 @@
             <div class="form-group row mb-3">
                 <div class="col-md-4">
                     <label for="rfid" class="form-label">RFID</label>
-                    <input type="text" name="rfid" id="rfid" class="form-control" value="{{ $member->rfid ?? old('rfid') }}" placeholder="0192029300">
+                    <input type="text" name="rfid" id="rfid" class="form-control" value="{{ old('rfid', $member->rfid) }}" placeholder="0192029300">
 
                     @error('rfid')
                     <small class="text-danger">{{ $message }}</small>
@@ -94,7 +94,7 @@
                 <div class="col-md-4">
                     <div class="form-group mb-3">
                         <label for="nama" class="form-label"><sup class="text-danger">*</sup>Nama</label>
-                        <input type="text" name="nama" id="nama" class="form-control" value="{{ $member->nama ?? old('nama') }}" placeholder="John Doe">
+                        <input type="text" name="nama" id="nama" class="form-control" value="{{ old('nama', $member->nama) }}" placeholder="John Doe">
 
                         @error('nama')
                         <small class="text-danger">{{ $message }}</small>
@@ -104,8 +104,8 @@
 
                 <div class="col-md-4">
                     <div class="form-group mb-3">
-                        <label for="no_ktp" class="form-label"><sup class="text-danger">*</sup> No Identitas</label>
-                        <input type="number" name="no_ktp" id="no_ktp" class="form-control" value="{{ $member->no_ktp ?? old('no_ktp') }}" placeholder="xxxxxxxxx" required>
+                        <label for="no_ktp" class="form-label">No Identitas</label>
+                        <input type="number" name="no_ktp" id="no_ktp" class="form-control" value="{{ old('no_ktp', $member->no_ktp) }}" placeholder="xxxxxxxxx">
 
                         @error('no_ktp')
                         <small class="text-danger">{{ $message }}</small>
@@ -117,7 +117,7 @@
             <div class="form-group row mb-3">
                 <div class="col-md-4">
                     <label for="no_hp" class="form-label"><sup class="text-danger">*</sup>No Hp</label>
-                    <input type="number" name="no_hp" id="no_hp" class="form-control" value="{{ $member->no_hp ?? old('no_hp') }}" placeholder="08xxxxx">
+                    <input type="number" name="no_hp" id="no_hp" class="form-control" value="{{ old('no_hp', $member->no_hp) }}" placeholder="08xxxxx">
 
                     @error('no_hp')
                     <small class="text-danger">{{ $message }}</small>
@@ -126,7 +126,7 @@
 
                 <div class="col-md-4">
                     <label for="tanggal_lahir" class="form-label"><sup class="text-danger">*</sup>Tanggal Lahir</label>
-                    <input type="date" name="tanggal_lahir" id="tanggal_lahir" class="form-control" value="{{ $member->tgl_lahir ?? old('tanggal_lahir') }}">
+                    <input type="date" name="tanggal_lahir" id="tanggal_lahir" class="form-control" value="{{ old('tanggal_lahir', $member->tgl_lahir) }}">
 
                     @error('tanggal_lahir')
                     <small class="text-danger">{{ $message }}</small>
@@ -136,8 +136,8 @@
                 <div class="col-md-4">
                     <label for="jenis_kelamin" class="form-label"><sup class="text-danger">*</sup>Jenis Kelamin</label>
                     <select name="jenis_kelamin" id="jenis_kelamin" class="form-control">
-                        <option value="L" {{ ($member->jenis_kelamin ?? old('jenis_kelamin')) == 'L' ? 'selected' : '' }}>Laki-Laki</option>
-                        <option value="P" {{ ($member->jenis_kelamin ?? old('jenis_kelamin')) == 'P' ? 'selected' : '' }}>Perempuan</option>
+                        <option value="L" {{ old('jenis_kelamin', $member->jenis_kelamin) == 'L' ? 'selected' : '' }}>Laki-Laki</option>
+                        <option value="P" {{ old('jenis_kelamin', $member->jenis_kelamin) == 'P' ? 'selected' : '' }}>Perempuan</option>
                     </select>
 
                     @error('jenis_kelamin')
@@ -148,7 +148,7 @@
 
             <div class="form-group mb-3">
                 <label for="alamat" class="form-label"><sup class="text-danger">*</sup>Alamat</label>
-                <textarea name="alamat" id="alamat" cols="30" rows="3" class="form-control" placeholder="Jakarta">{{ $member->alamat ?? old('alamat') }}</textarea>
+                <textarea name="alamat" id="alamat" cols="30" rows="3" class="form-control" placeholder="Jakarta">{{ old('alamat', $member->alamat) }}</textarea>
 
                 @error('alamat')
                 <small class="text-danger">{{ $message }}</small>
@@ -156,7 +156,7 @@
             </div>
 
             <div class="form-group mb-3">
-                <label for="image_profile" class="form-label"><sup class="text-danger">*</sup>Foto</label>
+                <label for="image_profile" class="form-label">Foto</label>
                 <input type="file" name="image_profile" id="image_profile" class="form-control" accept="image/*">
 
                 @error('image_profile')
@@ -332,11 +332,8 @@
         // Panggil fungsi kalkulasi saat halaman edit dimuat.
         // Ini akan memastikan harga tampil (jika dropdown tidak di-disable)
         // Jika disabled, harga sudah ditampilkan oleh PHP, tapi fungsi ini tetap aman.
-        if (!isCreatePage) {
-            // Hanya panggil kalkulasi jika ada membership yang terpilih (dropdown tidak kosong)
-            if($('#membership').val()) {
-                calculateAndDisplayPrice();
-            }
+        if ($('#membership').val()) {
+            calculateAndDisplayPrice();
         }
 
 

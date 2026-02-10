@@ -178,12 +178,26 @@ class DetailTransactionController extends Controller
             // $setting = Setting::first();
 
 
+            $setting = Setting::first();
+            $printMode = $setting->print_mode ?? 'per_qty';
+
             foreach ($transaction->detail as $detail) {
+                if ($printMode === 'per_ticket') {
+                    $tickets[] = [
+                        "name" => $detail->ticket->name,
+                        "harga" => number_format($detail->ticket->harga + $detail->ppn, 0, ',', '.'),
+                        "ticket_code" => $detail->ticket_code,
+                        "qty" => $detail->qty,
+                    ];
+                    continue;
+                }
+
                 for ($i = 1; $i <= $detail->qty; $i++) {
                     $tickets[] = [
                         "name" => $detail->ticket->name,
                         "harga" => number_format($detail->ticket->harga + $detail->ppn, 0, ',', '.'),
-                        "ticket_code" => $detail->ticket_code
+                        "ticket_code" => $detail->ticket_code,
+                        "qty" => $detail->qty,
                     ];
                 }
             }
@@ -217,15 +231,13 @@ class DetailTransactionController extends Controller
             ]);
 
             DB::commit();
-            $setting = Setting::first();
-
             $logo = $setting ? asset('/storage/' . $setting->logo) : 'data:image/png;base64,' . base64_encode(file_get_contents(public_path('/images/rio.png')));
             $ucapan = $setting->ucapan ?? 'Terima Kasih';
             $name = $setting->name ?? 'Ticketing';
             $deskripsi = $setting->deskripsi ?? 'qr code hanya berlaku satu kali';
             $use = $setting->use_logo ?? false;
 
-            return view('transaction.print', compact('transaction', 'logo', 'ucapan', 'deskripsi', 'use', 'name', "tickets", 'print'));
+            return view('transaction.print', compact('transaction', 'logo', 'ucapan', 'deskripsi', 'use', 'name', "tickets", 'print', 'printMode'));
             // $print = $this->print($transaction);
             // if ($print["status"] == "success") {
             //     return back()->with('success', "Transaction success");

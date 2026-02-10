@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
 use Yajra\DataTables\Facades\DataTables;
 use App\Http\Requests\Transaction\CreateTransactionRequest;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class TransactionController extends Controller
 {
@@ -59,6 +60,21 @@ class TransactionController extends Controller
                 ->addColumn('transaction_type', function ($row) {
                     return ucfirst($row->transaction_type);
                 })
+                ->addColumn('member_info', function ($row) {
+                    if (!in_array($row->transaction_type, ['renewal', 'registration'])) {
+                        return '-';
+                    }
+
+                    if ($row->member_id && $row->member) {
+                        return $row->member->nama . ' - ' . $row->member->no_hp;
+                    }
+
+                    if (!empty($row->member_info)) {
+                        return $row->member_info . ' (deleted)';
+                    }
+
+                    return '-';
+                })
                 ->editColumn('action', function ($row) {
                     $actionBtn = '<a href="' . route("transactions.print", $row->id) . '" class="btn btn-sm btn-primary"><i class="fas fa-print"></i></a> ';
 
@@ -67,13 +83,17 @@ class TransactionController extends Controller
 
                     if ($row->transaction_type == 'ticket' && $totalScanned < $totalQty) {
                         $routeFullScan = route('transactions.set_full_scan', $row->id);
-                        $actionBtn .= '<button type="button"
+                    $actionBtn .= '<button type="button"
                                                 data-route="' . $routeFullScan . '"
                                                 data-ticket-code="' . $row->ticket_code . '"
                                                 class="btn btn-sm btn-warning ms-1 btn-full-scan"
                                                 title="Set Full Scan">
                                                 <i class="fas fa-check-double"></i>
                                             </button>';
+                    }
+
+                    if (in_array($row->transaction_type, ['registration', 'renewal'])) {
+                        $actionBtn .= '<a href="' . route('transactions.invoice.pdf', $row->id) . '" class="btn btn-sm btn-secondary ms-1" target="_blank" title="Invoice Membership (PDF)"><i class="fas fa-file-invoice"></i></a>';
                     }
 
                     if (auth()->user()->can('transaction-delete')) {
@@ -313,12 +333,24 @@ class TransactionController extends Controller
     // 1. TAMBAHKAN INI: Inisialisasi agar variabel selalu ada
     $tickets = [];
 
+    $printMode = $setting->print_mode ?? 'per_qty';
     foreach ($transaction->detail as $detail) {
+        if ($printMode === 'per_ticket') {
+            $tickets[] = [
+                "name" => $detail->ticket->name,
+                "harga" => number_format($detail->ticket->harga + $detail->ppn, 0, ',', '.'),
+                "ticket_code" => $detail->ticket_code,
+                "qty" => $detail->qty,
+            ];
+            continue;
+        }
+
         for ($i = 1; $i <= $detail->qty; $i++) {
             $tickets[] = [
                 "name" => $detail->ticket->name,
                 "harga" => number_format($detail->ticket->harga + $detail->ppn, 0, ',', '.'),
                 "ticket_code" => $detail->ticket_code,
+                "qty" => $detail->qty,
             ];
         }
     }
@@ -331,7 +363,7 @@ class TransactionController extends Controller
     $ppn = $setting->ppn ?? 0;
     $print = 0;
 
-    return view('transaction.print', compact('transaction', 'logo', 'ucapan', 'deskripsi', 'use', 'name', "tickets", 'ppn', 'print'));
+    return view('transaction.print', compact('transaction', 'logo', 'ucapan', 'deskripsi', 'use', 'name', "tickets", 'ppn', 'print', 'printMode'));
 }
     public function report(Request $request)
     {
@@ -343,6 +375,66 @@ class TransactionController extends Controller
         $tickets = Ticket::whereNotIn('id', [11, 12, 13])->get();
 
         return view('transaction.report', compact('title', 'breadcrumbs', 'transactions', 'from', 'to', 'tickets'));
+    }
+
+    public function invoice(Transaction $transaction)
+    {
+        if (!in_array($transaction->transaction_type, ['registration', 'renewal'])) {
+            abort(404);
+        }
+
+        $member = $transaction->member;
+        if (!$member) {
+            abort(404);
+        }
+
+        $member->load(['membership', 'childs']);
+
+        return view('member.invoice', compact('member', 'transaction'));
+    }
+
+    public function invoicePdf(Transaction $transaction)
+    {
+        if (!in_array($transaction->transaction_type, ['registration', 'renewal'])) {
+            abort(404);
+        }
+
+        $member = $transaction->member;
+        if (!$member) {
+            abort(404);
+        }
+
+        $member->load(['membership', 'childs']);
+
+        $type = $transaction->transaction_type === 'renewal' ? 'Perpanjangan' : 'Registrasi';
+        $invoiceCode = $transaction->ticket_code;
+        $price = 'Rp. ' . number_format($member->membership->price ?? 0, 0, ',', '.');
+        $date = $transaction->created_at?->format('d/m/Y H:i:s') ?? now('Asia/Jakarta')->format('d/m/Y H:i:s');
+
+        $setting = Setting::first();
+        $appName = $setting->name ?? 'Ticketing App';
+        $logoData = null;
+        if ($setting && $setting->use_logo && $setting->logo) {
+            $logoPath = public_path('storage/' . $setting->logo);
+            if (is_file($logoPath)) {
+                $logoBase64 = base64_encode(file_get_contents($logoPath));
+                $logoMime = pathinfo($logoPath, PATHINFO_EXTENSION) === 'png' ? 'image/png' : 'image/jpeg';
+                $logoData = 'data:' . $logoMime . ';base64,' . $logoBase64;
+            }
+        }
+
+        $pdf = Pdf::loadView('member.invoice-pdf', [
+            'member' => $member,
+            'type' => $type,
+            'invoice_code' => $invoiceCode,
+            'date' => $date,
+            'price' => $price,
+            'transaction' => $transaction,
+            'app_name' => $appName,
+            'logo_data' => $logoData,
+        ]);
+
+        return $pdf->download('invoice_membership_' . $member->id . '.pdf');
     }
 
     // Dalam TransactionController.php

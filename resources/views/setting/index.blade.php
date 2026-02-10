@@ -45,7 +45,7 @@
 
                     <div class="form-group mb-3">
                         <label for="deskripsi">Deskripsi Singkat</label>
-                        <input type="text" name="deskripsi" id="deskripsi" class="form-control" value="{{ $setting->deskripsi ?? old('deskripsi') }}">
+                        <textarea name="deskripsi" id="deskripsi" class="form-control" rows="3">{{ $setting->deskripsi ?? old('deskripsi') }}</textarea>
                         @error('deskripsi') <small class="text-danger">{{ $message }}</small> @enderror
                     </div>
 
@@ -75,6 +75,23 @@
                         <label for="ppn">PPN <sup class="text-danger">(%)</sup></label>
                         <input type="number" name="ppn" id="ppn" class="form-control" value="{{ $setting->ppn ?? old('ppn') }}">
                         @error('ppn') <small class="text-danger">{{ $message }}</small> @enderror
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="print_mode">Mode Print Tiket</label>
+                        <select name="print_mode" id="print_mode" class="form-control">
+                            @php
+                                $printMode = $setting->print_mode ?? old('print_mode', 'per_qty');
+                            @endphp
+                            <option value="per_qty" {{ $printMode === 'per_qty' ? 'selected' : '' }}>
+                                Print sesuai jumlah (qty)
+                            </option>
+                            <option value="per_ticket" {{ $printMode === 'per_ticket' ? 'selected' : '' }}>
+                                Print 1x per jenis tiket (barcode sama)
+                            </option>
+                        </select>
+                        <small class="text-muted">Jika barcode sama, bisa pilih 1x per jenis tiket agar tidak berulang.</small>
+                        @error('print_mode') <br><small class="text-danger">{{ $message }}</small> @enderror
                     </div>
 
                     <div class="form-group mb-3">
