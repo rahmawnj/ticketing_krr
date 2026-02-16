@@ -11,6 +11,20 @@
     </div>
 
     <div class="panel-body">
+        <div class="row mb-3">
+            <div class="col-md-3">
+                <label for="renew-metode" class="form-label">Metode Pembayaran Renewal</label>
+                <select id="renew-metode" class="form-control">
+                    <option value="cash" selected>Cash</option>
+                    <option value="debit">Debit</option>
+                    <option value="kredit">Kredit</option>
+                    <option value="qris">QRIS</option>
+                    <option value="transfer">Transfer</option>
+                    <option value="tap">RFID / Tap</option>
+                    <option value="lain-lain">Lain-lain</option>
+                </select>
+            </div>
+        </div>
 
         <table id="datatable-renew" class="table table-striped table-bordered align-middle">
             <thead>
@@ -33,6 +47,7 @@
 <form id="form-single-renew" method="POST" action="{{ route('members.process_bulk_renew') }}" style="display: none;">
     @csrf
     <input type="hidden" name="member_ids[]" id="member-id-input">
+    <input type="hidden" name="metode" id="metode-input" value="cash">
 </form>
 
 @endsection
@@ -83,6 +98,7 @@
             if (willRenew) {
                 // Set ID member ke form tersembunyi
                 $('#member-id-input').val(memberId);
+                $('#metode-input').val($('#renew-metode').val() || 'cash');
 
                 // Submit form
                 $('#form-single-renew').submit();

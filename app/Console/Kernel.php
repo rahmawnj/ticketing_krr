@@ -15,6 +15,7 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
+        $schedule->command('members:notify-renewal-h1')->dailyAt('08:00');
         $schedule->command('members:purge-expired')->dailyAt('01:00');
     }
 

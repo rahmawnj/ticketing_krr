@@ -90,6 +90,7 @@ public function store(Request $request)
         ]);
 
         DB::beginTransaction();
+        $now = Carbon::now('Asia/Jakarta');
 
         $ticketData = Sewa::findOrFail($request->ticket);
 
@@ -151,16 +152,16 @@ public function store(Request $request)
                 'penyewaan_id' => $penyewaan->id,
                 'member_id' => $member->id,
             ]);
+            $rentalNoTrx = Transaction::nextNoTrxByType('rental', $now);
 
-              $transaction = Transaction::create([
+            $transaction = Transaction::create([
             'ticket_id' => $penyewaan->id,
             'user_id' => auth()->id(),
-            // Pastikan no_trx dihitung dengan benar
-            'no_trx' => Transaction::max('no_trx') + 1,
-            'ticket_code' => 'RENT/' . time(),
+            'no_trx' => $rentalNoTrx,
+            'ticket_code' => Transaction::buildTicketCodeByType('rental', $now, $rentalNoTrx),
             'transaction_type' => 'rental',
             'tipe' => 'individual',
-                'metode' => 'cash',
+                'metode' => $request->metode,
             'amount' => $request->qty,       // harga bersih (net price)
             'bayar' => $basePrice,       // Total dibayar (gross price)
             'status' => 'open',
@@ -190,16 +191,16 @@ public function store(Request $request)
                 'user_id' => auth()->user()->id
 
             ]);
+            $rentalNoTrx = Transaction::nextNoTrxByType('rental', $now);
 
-              $transaction = Transaction::create([
+            $transaction = Transaction::create([
             'ticket_id' => $sewa->id,
             'user_id' => auth()->id(),
-            // Pastikan no_trx dihitung dengan benar
-            'no_trx' => Transaction::max('no_trx') + 1,
-            'ticket_code' => 'TKT/' . time(),
+            'no_trx' => $rentalNoTrx,
+            'ticket_code' => Transaction::buildTicketCodeByType('rental', $now, $rentalNoTrx),
             'transaction_type' => 'rental',
             'tipe' => 'individual',
-                'metode' => 'cash',
+                'metode' => $request->metode,
             'amount' => $request->qty,       // harga bersih (net price)
             'bayar' => $basePrice,       // Total dibayar (gross price)
             'status' => 'open',
@@ -222,6 +223,10 @@ public function store(Request $request)
     public function print($id)
     {
         $penyewaan = Penyewaan::find($id);
+        $transaction = Transaction::where('ticket_id', $id)
+            ->where('transaction_type', 'rental')
+            ->latest()
+            ->first();
         $setting = Setting::first();
 
         $logo = $setting ? asset('/storage/' . $setting->logo) : 'data:image/png;base64,' . base64_encode(file_get_contents(public_path('/images/rio.png')));
@@ -230,7 +235,7 @@ public function store(Request $request)
         $deskripsi = $setting->deskripsi ?? 'qr code hanya berlaku satu kali';
         $use = $setting->use_logo ?? false;
 
-        return view('penyewaan.print', compact('penyewaan', 'logo', 'name', 'use', 'ucapan', 'deskripsi'));
+        return view('penyewaan.print', compact('penyewaan', 'transaction', 'logo', 'name', 'use', 'ucapan', 'deskripsi'));
     }
 
     public function destroy(Penyewaan $penyewaan)

@@ -76,6 +76,34 @@
                                  <b class="fs-14px" id="info-expired"></b>
                              </div>
                          </div>
+
+                         <hr>
+                         <div class="d-flex justify-content-between align-items-center mb-2">
+                             <h5 class="mb-0">Riwayat Pembayaran Membership</h5>
+                             <small class="text-muted" id="payment-history-owner"></small>
+                         </div>
+                         <small class="text-muted d-block mb-2" id="payment-history-note"></small>
+                         <div class="table-responsive">
+                             <table class="table table-sm table-bordered mb-0">
+                                 <thead>
+                                     <tr>
+                                         <th class="text-nowrap">Tanggal</th>
+                                         <th class="text-nowrap">Invoice</th>
+                                         <th class="text-nowrap">Tipe</th>
+                                         <th class="text-nowrap">Metode</th>
+                                         <th class="text-nowrap">Kasir</th>
+                                         <th class="text-nowrap">Bayar</th>
+                                         <th class="text-nowrap">PPN</th>
+                                         <th class="text-nowrap">Total</th>
+                                     </tr>
+                                 </thead>
+                                 <tbody id="payment-history-body">
+                                     <tr>
+                                         <td colspan="8" class="text-center text-muted">Belum ada data</td>
+                                     </tr>
+                                 </tbody>
+                             </table>
+                         </div>
                      </div>
                  </div>
              </div>

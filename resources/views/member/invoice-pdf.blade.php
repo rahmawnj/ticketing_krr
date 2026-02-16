@@ -20,7 +20,9 @@
         .divider { border-top: 1px dashed #0f2a3c; margin: 8px 0; }
         .subtable th, .subtable td { border: 1px solid #ccc; padding: 4px; font-size: 11px; }
         .subtable th { background: #eef3f6; color: #0f2a3c; text-align: left; }
-        .footer { text-align: center; margin-top: 8px; font-size: 11px; }
+        .footer-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 11px; }
+        .footer-left { text-align: left; vertical-align: top; }
+        .footer-right { text-align: right; vertical-align: top; }
     </style>
 </head>
 
@@ -58,23 +60,27 @@
             </tr>
             <tr>
                 <td class="label">Nama</td>
-                <td class="value">{{ $member->nama }}</td>
+                <td class="value">{{ filled($member->nama) ? $member->nama : '-' }}</td>
             </tr>
             <tr>
                 <td class="label">NIK</td>
-                <td class="value">{{ $member->no_ktp }}</td>
+                <td class="value">{{ filled($member->no_ktp) ? $member->no_ktp : '-' }}</td>
             </tr>
             <tr>
                 <td class="label">No HP</td>
-                <td class="value">{{ $member->no_hp }}</td>
+                <td class="value">{{ filled($member->no_hp) ? $member->no_hp : '-' }}</td>
+            </tr>
+            <tr>
+                <td class="label">Kasir</td>
+                <td class="value">{{ filled($cashier_name ?? null) ? $cashier_name : '-' }}</td>
             </tr>
             <tr>
                 <td class="label">Membership</td>
-                <td class="value">{{ $member->membership->name }}</td>
+                <td class="value">{{ filled($member->membership->name ?? null) ? $member->membership->name : '-' }}</td>
             </tr>
             <tr>
                 <td class="label">Masa Aktif</td>
-                <td class="value">{{ $member->tgl_register }} - {{ $member->tgl_expired }}</td>
+                <td class="value">{{ filled($member->tgl_register) ? $member->tgl_register : '-' }} - {{ filled($member->tgl_expired) ? $member->tgl_expired : '-' }}</td>
             </tr>
             @if($member->membership && $member->membership->max_access !== null)
             <tr>
@@ -108,7 +114,13 @@
         </table>
         @endif
 
-        <div class="footer">Terima Kasih </div>
+        <div class="divider"></div>
+        <table class="footer-table">
+            <tr>
+                <td class="footer-left">{!! nl2br(e($ucapan ?? 'Terima Kasih')) !!}</td>
+                <td class="footer-right">{!! nl2br(e($deskripsi ?? '')) !!}</td>
+            </tr>
+        </table>
     </div>
 </body>
 

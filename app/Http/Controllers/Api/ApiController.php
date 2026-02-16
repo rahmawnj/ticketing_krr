@@ -40,14 +40,7 @@ class ApiController extends Controller
 
     public function getNoTrx()
     {
-        $now = Carbon::now()->format('Y-m-d');
-        $transaction = Transaction::whereDate('created_at', $now)->orderBy('no_trx', 'DESC')->first();
-
-        if ($transaction) {
-            $noTrx = $transaction->no_trx + 1;
-        } else {
-            $noTrx = 1;
-        }
+        $noTrx = Transaction::nextNoTrxByType('ticket', Carbon::now('Asia/Jakarta'));
 
         return response()->json([
             "no_trx" => $noTrx,

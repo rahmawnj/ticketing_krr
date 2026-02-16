@@ -22,6 +22,24 @@ use Yajra\DataTables\Facades\DataTables;
 
 class ReportController extends Controller
 {
+    private function resolveProductDescription($transaction): string
+    {
+        if ($transaction->transaction_type === 'ticket') {
+            $names = $transaction->detail->pluck('ticket.name')->filter()->unique()->values();
+            return $names->isNotEmpty() ? $names->implode(', ') : '-';
+        }
+
+        if (in_array($transaction->transaction_type, ['registration', 'renewal'])) {
+            return Membership::find($transaction->ticket_id)?->name ?? '-';
+        }
+
+        if ($transaction->transaction_type === 'rental') {
+            return Penyewaan::with('sewa')->find($transaction->ticket_id)?->sewa?->name ?? '-';
+        }
+
+        return '-';
+    }
+
     public function transaction(Request $request)
     {
         $date = $request->from ? Carbon::parse($request->from)->format('d/m/Y') . ' s.d ' . Carbon::parse($request->to)->format('d/m/Y') : Carbon::now()->format('d/m/Y');
@@ -39,8 +57,7 @@ class ReportController extends Controller
         $now = Carbon::now()->format('Y-m-d');
         $transactionType = $request->transaction_type;
 
-        // Tambahkan with('user') untuk mengambil nama kasir
-        $query = Transaction::with('user')->where('is_active', 1);
+        $query = Transaction::with(['user.roles', 'detail.ticket'])->where('is_active', 1);
 
         if ($request->from && $request->to) {
             $to = Carbon::parse($request->to)->addDay(1)->format('Y-m-d');
@@ -63,8 +80,16 @@ class ReportController extends Controller
                 return Carbon::parse($row->created_at)->format('d/m/Y H:i:s');
             })
             ->addColumn('kasir', function ($row) {
-                // Menampilkan nama kasir dari relasi user
                 return $row->user->name ?? '-';
+            })
+            ->addColumn('metode', function ($row) {
+                return strtoupper($row->metode ?? '-');
+            })
+            ->addColumn('keterangan_produk', function ($row) {
+                return $this->resolveProductDescription($row);
+            })
+            ->addColumn('transaction_type_label', function ($row) {
+                return ucfirst($row->transaction_type ?? '-');
             })
             ->editColumn('harga', function ($row) {
                 return 'Rp. ' . number_format($row->bayar, 0, ',', '.') ?? 0;
@@ -90,17 +115,24 @@ class ReportController extends Controller
     function export_transaction(Request $request)
     {
         $now = Carbon::now()->format('Y-m-d');
+        $transactionType = $request->transaction_type;
 
         if ($request->from && $request->to && $request->kasir == 'all') {
             $to = Carbon::parse($request->to)->addDay(1)->format('Y-m-d');
 
-            $data = Transaction::with('ticket')->where('is_active', 1)->whereBetween('created_at', [$request->from, $to])->get();
+            $query = Transaction::with(['user.roles', 'detail.ticket'])->where('is_active', 1)->whereBetween('created_at', [$request->from, $to]);
         } elseif ($request->from && $request->to && $request->kasir != 'all') {
             $to = Carbon::parse($request->to)->addDay(1)->format('Y-m-d');
-            $data = Transaction::with('ticket')->where(['is_active' => 1, 'user_id' => $request->kasir])->whereBetween('created_at', [$request->from, $to])->get();
+            $query = Transaction::with(['user.roles', 'detail.ticket'])->where(['is_active' => 1, 'user_id' => $request->kasir])->whereBetween('created_at', [$request->from, $to]);
         } else {
-            $data = Transaction::with('ticket')->where('is_active', 1)->whereDate('created_at', $now)->get();
+            $query = Transaction::with(['user.roles', 'detail.ticket'])->where('is_active', 1)->whereDate('created_at', $now);
         }
+
+        if (!empty($transactionType)) {
+            $query->where('transaction_type', $transactionType);
+        }
+
+        $data = $query->get();
 
         return Excel::download(new ReportTransactionExport($data), "Laporan Transaksi.xlsx");
     }

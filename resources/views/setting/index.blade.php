@@ -95,6 +95,23 @@
                     </div>
 
                     <div class="form-group mb-3">
+                        <label for="dashboard_metric_mode">Mode Nilai Kartu Dashboard</label>
+                        <select name="dashboard_metric_mode" id="dashboard_metric_mode" class="form-control">
+                            @php
+                                $dashboardMetricMode = $setting->dashboard_metric_mode ?? old('dashboard_metric_mode', 'amount');
+                            @endphp
+                            <option value="amount" {{ $dashboardMetricMode === 'amount' ? 'selected' : '' }}>
+                                Tampilkan Jumlah Uang
+                            </option>
+                            <option value="count" {{ $dashboardMetricMode === 'count' ? 'selected' : '' }}>
+                                Tampilkan Jumlah Transaksi
+                            </option>
+                        </select>
+                        <small class="text-muted">Mengatur nilai utama pada kartu Renewal, New Member, Rental, dan Ticket di dashboard.</small>
+                        @error('dashboard_metric_mode') <br><small class="text-danger">{{ $message }}</small> @enderror
+                    </div>
+
+                    <div class="form-group mb-3">
                         <label for="member_reminder_days">Reminder Expire Member <sup class="text-danger">(Hari)</sup></label>
                         <div class="input-group">
                             <input type="number" name="member_reminder_days" id="member_reminder_days" class="form-control" value="{{ $setting->member_reminder_days ?? old('member_reminder_days', 7) }}">
@@ -102,6 +119,16 @@
                         </div>
                         <small class="text-muted">Munculkan peringatan X hari sebelum member kedaluwarsa.</small>
                         @error('member_reminder_days') <br><small class="text-danger">{{ $message }}</small> @enderror
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="member_delete_grace_days">Hapus Member Setelah Masa Tenggang <sup class="text-danger">(Hari)</sup></label>
+                        <div class="input-group">
+                            <input type="number" name="member_delete_grace_days" id="member_delete_grace_days" class="form-control" value="{{ $setting->member_delete_grace_days ?? old('member_delete_grace_days', 0) }}">
+                            <span class="input-group-text">Hari</span>
+                        </div>
+                        <small class="text-muted">Member dihapus otomatis jika expired lebih dari X hari (cron harian).</small>
+                        @error('member_delete_grace_days') <br><small class="text-danger">{{ $message }}</small> @enderror
                     </div>
                 </div>
             </div>

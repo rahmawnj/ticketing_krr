@@ -84,15 +84,19 @@ class MemberController extends Controller
                 return $row->no_hp ?? '-';
             })
                ->editColumn('expired', function ($row) {
-                    if (Carbon::now('Asia/Jakarta')->format('Y-m-d') >= $row->tgl_expired) {
-
-                        return '<span class="badge bg-danger fs-12px">Expired</span>';
-
-                    } elseif ($row->is_active == 0) {
-                        return '<span class="badge fs-12px bg-secondary">Inactive</span>';
-                    } else {
-                        return '<span class="badge fs-12px bg-success">Active</span>';
+                    if ($row->lifecycle_status === 'expired') {
+                        return '<span class="badge bg-danger fs-12px">Expired &gt; 30 Hari</span>';
                     }
+
+                    if ($row->lifecycle_status === 'suspend') {
+                        return '<span class="badge bg-warning text-dark fs-12px">Suspend</span>';
+                    }
+
+                    if ($row->lifecycle_status === 'inactive') {
+                        return '<span class="badge fs-12px bg-secondary">Inactive</span>';
+                    }
+
+                    return '<span class="badge fs-12px bg-success">Active</span>';
                 })
                 ->editColumn('masa_berlaku', function ($row) {
                     return Carbon::parse($row->tgl_register)->format('d/m/Y') . ' - ' . Carbon::parse($row->tgl_expired)->format('d/m/Y');
@@ -103,7 +107,11 @@ class MemberController extends Controller
                     $sisa = $today->diffInDays($expiredAt, false);
 
                     if ($sisa <= 0) {
-                        return '<span class="badge bg-danger rounded-0 fs-11px">Expired</span>';
+                        if ($row->days_after_expired <= 30) {
+                            return '<span class="badge bg-warning text-dark rounded-0 fs-11px">H+' . $row->days_after_expired . ' (Suspend)</span>';
+                        }
+
+                        return '<span class="badge bg-danger rounded-0 fs-11px">Expired &gt; 30 Hari</span>';
                     }
 
                     return $sisa . ' Hari';
@@ -234,15 +242,18 @@ public function store(CreateMemberRequest $request)
             $basePricePerMember = (float) $membership->price;
             $ppnAmount = $membership->use_ppn ? ((float) $membership->ppn) : 0;
 
-            $grossTotal = $basePricePerMember + $ppnAmount;
             $now = Carbon::now('Asia/Jakarta');
-            $lastTrx = Transaction::whereDate('created_at', $now->format('Y-m-d'))->latest()->first();
-            $notrx = $lastTrx ? $lastTrx->no_trx + 1 : 1;
+            $notrx = Transaction::nextNoTrxByType('registration', $now);
+
+            $metode = strtolower((string) $request->input('metode', 'cash'));
+            if (!in_array($metode, ['cash', 'debit', 'kredit', 'qris', 'transfer', 'tap', 'lain-lain'], true)) {
+                $metode = 'cash';
+            }
 
             $transaction = Transaction::create([
                 'user_id' => auth()->id() ?? 1,
                 'no_trx' => $notrx,
-                'ticket_code' => 'REG/' . $now->format('dmY') . rand(1000, 9999),
+                'ticket_code' => Transaction::buildTicketCodeByType('registration', $now, $notrx),
                 'tipe' => ($totalMembersRegistered > 1) ? 'group' : 'individual',
                 'amount' => $totalMembersRegistered,
                 'discount' => 0,
@@ -251,7 +262,7 @@ public function store(CreateMemberRequest $request)
                 'bayar' => $basePricePerMember,
                 'status' => 'open',
                 'is_active' => 1,
-                'metode' => 'cash',
+                'metode' => $metode,
                 'ticket_id'=> $membership->id,
                 'member_id' => $member->id,
                 'member_info' => $member->nama . ' - ' . $member->no_hp
@@ -282,11 +293,51 @@ public function store(CreateMemberRequest $request)
     public function show(Member $member)
     {
         $member->load('membership');
-        $member->image_profile = config('app.url') . "/storage/" . $member->image_profile;
+        $member->image_profile = $member->image_profile
+            ? config('app.url') . "/storage/" . $member->image_profile
+            : config('app.url') . '/img/user/user-10.jpg';
+
+        $ownerMember = $member;
+        $memberIdsForHistory = [$member->id];
+
+        if ((int) $member->parent_id === 0) {
+            $childIds = Member::where('parent_id', $member->id)->pluck('id')->all();
+            $memberIdsForHistory = array_merge($memberIdsForHistory, $childIds);
+        } else {
+            $parentMember = Member::find($member->parent_id);
+            if ($parentMember) {
+                $ownerMember = $parentMember;
+                $memberIdsForHistory[] = $parentMember->id;
+            }
+        }
+
+        $paymentHistory = Transaction::with('user')
+            ->whereIn('member_id', array_values(array_unique($memberIdsForHistory)))
+            ->whereIn('transaction_type', ['registration', 'renewal'])
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(function ($trx) {
+                return [
+                    'date' => optional($trx->created_at)->timezone('Asia/Jakarta')->format('d/m/Y H:i:s') ?? '-',
+                    'invoice' => $trx->ticket_code ?? '-',
+                    'type' => ucfirst($trx->transaction_type ?? '-'),
+                    'method' => $trx->metode ?: '-',
+                    'cashier' => $trx->user->name ?? '-',
+                    'amount' => 'Rp. ' . number_format((float) ($trx->bayar ?? 0), 0, ',', '.'),
+                    'ppn' => 'Rp. ' . number_format((float) ($trx->ppn ?? 0), 0, ',', '.'),
+                    'total' => 'Rp. ' . number_format(((float) ($trx->bayar ?? 0)) + ((float) ($trx->ppn ?? 0)), 0, ',', '.'),
+                ];
+            })->values();
 
         return response()->json([
             'status' => 'success',
-            'member' => $member
+            'member' => $member,
+            'payment_history' => $paymentHistory,
+            'payment_history_owner' => [
+                'id' => $ownerMember->id,
+                'name' => $ownerMember->nama ?? '-',
+            ],
+            'payment_history_note' => 'Riwayat pembayaran membership masih dalam tahap development.'
         ], 200);
     }
 
@@ -345,12 +396,15 @@ public function update(UpdateMemberRequest $request, Member $member)
                     $ppnAmount = $membership->use_ppn ? ((float) $membership->ppn) : 0;
 
                     $now = Carbon::now('Asia/Jakarta');
-                    $lastTrx = Transaction::whereDate('created_at', $now->format('Y-m-d'))
-                                            ->latest()->first();
-                    $notrx = $lastTrx ? $lastTrx->no_trx + 1 : 1;
+                    $notrx = Transaction::nextNoTrxByType('registration', $now);
 
                     $tipeTransaksi = ($totalMembersRegistered > 1) ? 'group' : 'individual';
-                    $ticketCode = 'REG/' . $now->format('dmY') . rand(1000, 9999);
+                    $ticketCode = Transaction::buildTicketCodeByType('registration', $now, $notrx);
+
+                    $metode = strtolower((string) $request->input('metode', 'cash'));
+                    if (!in_array($metode, ['cash', 'debit', 'kredit', 'qris', 'transfer', 'tap', 'lain-lain'], true)) {
+                        $metode = 'cash';
+                    }
 
                     $transaction = Transaction::create([
                         'user_id' => auth()->id() ?? 1,
@@ -364,8 +418,8 @@ public function update(UpdateMemberRequest $request, Member $member)
                         'bayar' => $basePricePerMember,
                         'status' => 'open',
                         'is_active' => 1,
-                'metode' => 'cash',
-                'ticket_id'=> $membership->id,
+                        'metode' => $metode,
+                        'ticket_id'=> $membership->id,
                         'member_id' => $member->id,
                         'member_info' => $member->nama . ' - ' . $member->no_hp
 
@@ -611,7 +665,7 @@ public function update(UpdateMemberRequest $request, Member $member)
 
 public function getRenewableMembers(Request $request)
 {
-    $today = Carbon::now('Asia/Jakarta')->format('Y-m-d');
+    $today = Carbon::now('Asia/Jakarta')->startOfDay();
 
     // 1. Ambil settingan hari dari database
     $setting = Setting::first();
@@ -623,7 +677,6 @@ public function getRenewableMembers(Request $request)
     $data = Member::with('membership')
         ->where('tgl_expired', '<=', $limitDate)
         ->where('parent_id', 0)
-        ->where('is_active', 1) // Biasanya reminder hanya untuk member yang masih aktif
         ->orderBy('tgl_expired', 'asc');
 
     return DataTables::eloquent($data)
@@ -634,15 +687,36 @@ public function getRenewableMembers(Request $request)
             return number_format($totalDisplayPrice, 0, ',', '.');
         })
         ->addColumn('renewal_status', function ($row) use ($today) {
-            // Logika Status: Jika sudah lewat tanggalnya = Expired, jika belum = Mendekati Expire
-            if ($row->tgl_expired < $today) {
-                return '<span class="badge bg-danger">Expired</span>';
-            } else {
-                $sisaHari = Carbon::parse($row->tgl_expired)->diffInDays(Carbon::parse($today));
-                return '<span class="badge bg-warning text-dark">' . $sisaHari . ' Hari Lagi</span>';
+            $expiredAt = Carbon::parse($row->tgl_expired)->startOfDay();
+
+            if ($today->greaterThan($expiredAt)) {
+                $daysAfterExpired = $expiredAt->diffInDays($today);
+
+                if ($daysAfterExpired > 30) {
+                    return '<span class="badge bg-danger">Expired &gt; 30 Hari (Admin)</span>';
+                }
+
+                if ($daysAfterExpired === 1) {
+                    return '<span class="badge bg-warning text-dark">H+1 Tagihan Perpanjangan</span>';
+                }
+
+                return '<span class="badge bg-warning text-dark">Suspend (H+' . $daysAfterExpired . ')</span>';
             }
+
+            $sisaHari = $today->diffInDays($expiredAt);
+            return '<span class="badge bg-info">' . $sisaHari . ' Hari Lagi</span>';
         })
         ->addColumn('action', function ($row) {
+            $today = Carbon::now('Asia/Jakarta')->startOfDay();
+            $expiredAt = Carbon::parse($row->tgl_expired)->startOfDay();
+            $daysAfterExpired = $today->greaterThan($expiredAt) ? $expiredAt->diffInDays($today) : 0;
+
+            if ($daysAfterExpired > 30) {
+                return '<button type="button" class="btn btn-sm btn-secondary" disabled>
+                        <i class="fa fa-ban"></i> Registrasi Ulang (Admin)
+                    </button>';
+            }
+
             $grossPrice = 0;
             if ($row->membership) {
                 $grossPrice = $row->membership->price + ($row->membership->use_ppn ? $row->membership->ppn : 0);
@@ -676,6 +750,26 @@ public function processBulkRenew(Request $request)
         $firstParentMember = null;
 
         $member = Member::with('membership')->where('id', $member_ids)->first();
+        if (!$member) {
+            DB::rollBack();
+            return back()->with('error', 'Member tidak ditemukan.');
+        }
+
+        $today = Carbon::now('Asia/Jakarta')->startOfDay();
+        $expiredAt = Carbon::parse($member->tgl_expired)->startOfDay();
+        $daysAfterExpired = $today->greaterThan($expiredAt) ? $expiredAt->diffInDays($today) : 0;
+
+        // Lewat 30 hari dianggap expired penuh dan wajib registrasi ulang (kena admin).
+        if ($daysAfterExpired > 30) {
+            DB::rollBack();
+            return back()->with('error', 'Membership sudah expired lebih dari 30 hari. Wajib registrasi ulang (dengan biaya admin).');
+        }
+
+        if ($member->membership_id == 0 || !$member->membership || $member->parent_id != 0) {
+            DB::rollBack();
+            return back()->with('error', 'Member tidak valid untuk perpanjangan (harus parent dan punya membership).');
+        }
+
         $totalPpnAmount = 0;
         if ($member->membership->use_ppn) {
             $totalPpnAmount = (float) $member->membership->ppn;
@@ -751,13 +845,17 @@ public function processBulkRenew(Request $request)
 
         $grandTotal = $member->membership->price;
 
-        $now = Carbon::now()->format('Y-m-d');
-        $lastTrx = Transaction::whereDate('created_at', $now)->latest()->first();
-        $notrx = $lastTrx ? $lastTrx->no_trx + 1 : 1;
+        $now = Carbon::now('Asia/Jakarta');
+        $notrx = Transaction::nextNoTrxByType('renewal', $now);
 
-        $ticketCode = 'RENEW/' . Carbon::now('Asia/Jakarta')->format('dmY') . rand(1000, 9999);
+        $ticketCode = Transaction::buildTicketCodeByType('renewal', $now, $notrx);
 
         $tipeTransaksi = $successCount > 1 ? 'group' : 'individual';
+
+        $metode = strtolower((string) $request->input('metode', 'cash'));
+        if (!in_array($metode, ['cash', 'debit', 'kredit', 'qris', 'transfer', 'tap', 'lain-lain'], true)) {
+            $metode = 'cash';
+        }
 
         $transaction = Transaction::create([
             'user_id' => auth()->user()->id,
@@ -771,7 +869,7 @@ public function processBulkRenew(Request $request)
             'status' => 'open',
             'is_active' => 1,
             'tipe' => $tipeTransaksi,
-            'metode' => $request->metode ?? 'Cash',
+            'metode' => $metode,
             'ticket_id' => $member->membership_id,
             'member_id' => $firstParentMember ? $firstParentMember->id : null,
             'member_info' => $firstParentMember ? ($firstParentMember->nama . ' - ' . $firstParentMember->no_hp) : null

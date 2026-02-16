@@ -65,7 +65,7 @@
                 <div class="col-md-2">
                     <div class="form-group mt-1">
                         <button type="submit" class="btn btn-primary mt-3">Submit</button>
-                        <a href="{{ route('report.transaction.export') }}?from={{ request('from') }}&to={{ request('to') }}&kasir={{ request('kasir') }}" class="btn btn-success mt-3"><i class="fas fa-file-excel me-1"></i>Download</a>
+                        <a href="{{ route('report.transaction.export') }}?from={{ request('from') }}&to={{ request('to') }}&kasir={{ request('kasir') }}&transaction_type={{ request('transaction_type') }}" class="btn btn-success mt-3"><i class="fas fa-file-excel me-1"></i>Download</a>
                     </div>
                 </div>
             </div>
@@ -76,14 +76,15 @@
                     <th class="text-nowrap">No</th>
                     <th class="text-nowrap">Tanggal</th>
                     <th class="text-nowrap">Kasir</th>
+                    <th class="text-nowrap">Transaction Type</th>
                     <th class="text-nowrap">Ticket Code</th>
-                    <!-- <th class="text-nowrap">Ticket</th> -->
+                    <th class="text-nowrap">Keterangan Produk</th>
+                    <th class="text-nowrap">Metode</th>
                     <th class="text-nowrap">Amount</th>
                     <th class="text-nowrap">Jumlah</th>
+                    <th class="text-nowrap">Total</th>
                     <th class="text-nowrap">PPN</th>
                     <th class="text-nowrap">Discount</th>
-                    <!-- <th class="text-nowrap">Jumlah</th> -->
-                    <th class="text-nowrap">Total</th>
                 </tr>
             </thead>
             <tbody></tbody>
@@ -142,14 +143,21 @@
                 name: 'tanggal'
             },
             { data: 'kasir', name: 'user.name' },
+            { data: 'transaction_type_label', name: 'transaction_type' },
             {
                 data: 'ticket_code',
                 name: 'ticket_code'
             },
-            // {
-            //     data: 'ticket',
-            //     name: 'ticket'
-            // },
+            {
+                data: 'keterangan_produk',
+                name: 'keterangan_produk',
+                searchable: false,
+                sortable: false
+            },
+            {
+                data: 'metode',
+                name: 'metode'
+            },
             {
                 data: 'amount',
                 name: 'amount',
@@ -159,20 +167,16 @@
                 name: 'harga'
             },
             {
+                data: 'harga_ticket',
+                name: 'harga_ticket',
+            },
+            {
                 data: 'ppn',
                 name: 'ppn'
             },
-            // {
-            //     data: 'jumlah',
-            //     name: 'jumlah',
-            // },
             {
                 data: 'discount',
                 name: 'discount',
-            },
-            {
-                data: 'harga_ticket',
-                name: 'harga_ticket',
             },
         ]
     });

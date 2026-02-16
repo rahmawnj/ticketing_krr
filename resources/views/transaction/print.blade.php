@@ -8,6 +8,9 @@
             .ticket-row {
                 page-break-after: always;
             }
+            .ticket-row:last-child {
+                page-break-after: auto;
+            }
         }
     </style>
 </head>
@@ -69,7 +72,8 @@
             </div>
 
             <hr style="border-style: dashed;">
-            <p style="font-size:9pt;text-align: center;margin-bottom:10px; text-transform: uppercase;">{!! nl2br(e($ucapan)) !!}</p>
+            <p style="font-size:9pt;text-align: center;margin-bottom:8px; text-transform: uppercase;">{!! nl2br(e($ucapan)) !!}</p>
+            <p style="font-size:9pt;text-align: center;margin-bottom:10px; text-transform: uppercase;">{!! nl2br(e($deskripsi)) !!}</p>
         </div>
     </div>
     </div>
@@ -98,6 +102,7 @@
             </p>
 
             <hr style="border-style: dashed;">
+            <p style="font-size:9pt;text-align: center;margin-bottom:8px; text-transform: uppercase;">{!! nl2br(e($ucapan)) !!}</p>
             <p style="font-size:9pt;text-align: center;margin-bottom:10px; text-transform: uppercase;">{!! nl2br(e($deskripsi)) !!}</p>
         </div>
     </div>

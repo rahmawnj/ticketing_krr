@@ -66,9 +66,9 @@
 
             {{-- START: BUTTON FILTER BARU --}}
             <div class="btn-group" role="group" aria-label="Filter Member">
-                <button type="button" class="btn btn-default btn-filter" data-filter="all">All</button>
                 <button type="button" class="btn btn-default btn-filter active" data-filter="member">Member</button>
                 <button type="button" class="btn btn-default btn-filter" data-filter="submember">Submember</button>
+                <button type="button" class="btn btn-default btn-filter" data-filter="all">All</button>
             </div>
             {{-- END: BUTTON FILTER BARU --}}
         </div>
@@ -359,16 +359,21 @@
             success: function(response) {
                 console.log(response)
                 let member = response.member;
+                let paymentHistory = response.payment_history || [];
+                let paymentHistoryOwner = response.payment_history_owner || null;
+                let paymentHistoryNote = response.payment_history_note || 'Riwayat pembayaran membership masih dalam tahap development.';
 
-                $("#info-name").text(member.nama)
-                $("#info-id").text(member.no_ktp)
-                $("#info-phone").text(member.no_hp)
-                $("#info-birth").text(member.tgl_lahir)
-                $("#info-gender").text(member.jenis_kelamin)
-                $("#info-address").text(member.alamat)
-                $("#info-rfid").text(member.rfid)
-                $("#info-register").text(member.tgl_register)
-                $("#info-expired").text(member.tgl_expired)
+                const textOrDash = (value) => value ? value : '-';
+
+                $("#info-name").text(textOrDash(member.nama))
+                $("#info-id").text(textOrDash(member.no_ktp))
+                $("#info-phone").text(textOrDash(member.no_hp))
+                $("#info-birth").text(textOrDash(member.tgl_lahir))
+                $("#info-gender").text(textOrDash(member.jenis_kelamin))
+                $("#info-address").text(textOrDash(member.alamat))
+                $("#info-rfid").text(textOrDash(member.rfid))
+                $("#info-register").text(textOrDash(member.tgl_register))
+                $("#info-expired").text(textOrDash(member.tgl_expired))
 
                 $("#image-member").attr("src", member.image_profile)
 
@@ -391,6 +396,32 @@
 
                 $("#btn-print-qr").attr("href", `/members/${member.id}/print-qr`)
                 $("#btn-download-card").attr("href", `/members/${member.id}/print-qr`)
+
+                if (paymentHistoryOwner && paymentHistoryOwner.name) {
+                    $("#payment-history-owner").text(`Akun pembayaran: ${paymentHistoryOwner.name}`);
+                } else {
+                    $("#payment-history-owner").text('');
+                }
+                $("#payment-history-note").text(paymentHistoryNote);
+
+                let rows = '';
+                if (paymentHistory.length === 0) {
+                    rows = '<tr><td colspan="8" class="text-center text-muted">Belum ada riwayat pembayaran membership</td></tr>';
+                } else {
+                    paymentHistory.forEach(function(item) {
+                        rows += `<tr>
+                            <td class="text-nowrap">${textOrDash(item.date)}</td>
+                            <td class="text-nowrap">${textOrDash(item.invoice)}</td>
+                            <td class="text-nowrap">${textOrDash(item.type)}</td>
+                            <td class="text-nowrap">${textOrDash(item.method)}</td>
+                            <td class="text-nowrap">${textOrDash(item.cashier)}</td>
+                            <td class="text-nowrap">${textOrDash(item.amount)}</td>
+                            <td class="text-nowrap">${textOrDash(item.ppn)}</td>
+                            <td class="text-nowrap">${textOrDash(item.total)}</td>
+                        </tr>`;
+                    });
+                }
+                $("#payment-history-body").html(rows);
             }
         })
     })

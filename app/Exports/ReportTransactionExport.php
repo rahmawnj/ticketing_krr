@@ -2,6 +2,8 @@
 
 namespace App\Exports;
 
+use App\Models\Membership;
+use App\Models\Penyewaan;
 use Carbon\Carbon;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
@@ -20,6 +22,24 @@ class ReportTransactionExport implements FromCollection, WithHeadings, WithMappi
         $this->data = $data;
     }
 
+    private function resolveProductDescription($data): string
+    {
+        if ($data->transaction_type === 'ticket') {
+            $names = $data->detail->pluck('ticket.name')->filter()->unique()->values();
+            return $names->isNotEmpty() ? $names->implode(', ') : '-';
+        }
+
+        if (in_array($data->transaction_type, ['registration', 'renewal'])) {
+            return Membership::find($data->ticket_id)?->name ?? '-';
+        }
+
+        if ($data->transaction_type === 'rental') {
+            return Penyewaan::with('sewa')->find($data->ticket_id)?->sewa?->name ?? '-';
+        }
+
+        return '-';
+    }
+
     public function collection()
     {
         return $this->data;
@@ -34,8 +54,11 @@ class ReportTransactionExport implements FromCollection, WithHeadings, WithMappi
         return [
             $this->rowNumber++, // Nomor urut
             Carbon::parse($data->created_at)->format('d/m/Y H:i:s'),
-            $data->ticket_code,
             $data->user->name ?? '-', // <--- MENAMPILKAN NAMA KASIR
+            ucfirst($data->transaction_type ?? '-'),
+            $data->ticket_code,
+            $this->resolveProductDescription($data),
+            strtoupper($data->metode ?? '-'),
             $data->amount,
             $data->bayar,
             $data->bayar - $disc + $data->ppn,
@@ -49,8 +72,11 @@ class ReportTransactionExport implements FromCollection, WithHeadings, WithMappi
         return [
             '#',
             'Tanggal',
+            'Nama Kasir',
+            'Transaction Type',
             'Ticket Code',
-            'Nama Kasir', // <--- HEADER BARU
+            'Keterangan Produk',
+            'Metode Pembayaran',
             'Amount',
             'Jumlah',
             'Total',

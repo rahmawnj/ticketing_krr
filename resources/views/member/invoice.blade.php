@@ -37,23 +37,27 @@
                 </tr>
                 <tr style="text-align: left;">
                     <td>Nama</td>
-                    <td>{{ $member->nama }}</td>
+                    <td>{{ filled($member->nama) ? $member->nama : '-' }}</td>
                 </tr>
                 <tr style="text-align: left;">
                     <td>NIK</td>
-                    <td>{{ $member->no_ktp }}</td>
+                    <td>{{ filled($member->no_ktp) ? $member->no_ktp : '-' }}</td>
                 </tr>
                 <tr style="text-align: left;">
                     <td>No HP</td>
-                    <td>{{ $member->no_hp }}</td>
+                    <td>{{ filled($member->no_hp) ? $member->no_hp : '-' }}</td>
+                </tr>
+                <tr style="text-align: left;">
+                    <td>Kasir</td>
+                    <td>{{ filled($cashierName ?? null) ? $cashierName : '-' }}</td>
                 </tr>
                 <tr style="text-align: left;">
                     <td>Membership</td>
-                    <td>{{ $member->membership->name }}</td>
+                    <td>{{ filled($member->membership->name ?? null) ? $member->membership->name : '-' }}</td>
                 </tr>
                 <tr style="text-align: left;">
                     <td>Masa Aktif</td>
-                    <td>{{ $member->tgl_register }} - {{ $member->tgl_expired }}</td>
+                    <td>{{ filled($member->tgl_register) ? $member->tgl_register : '-' }} - {{ filled($member->tgl_expired) ? $member->tgl_expired : '-' }}</td>
                 </tr>
                 @if($member->membership && $member->membership->max_access !== null)
                 <tr style="text-align: left;">
@@ -69,11 +73,20 @@
                 @endif
                 <tr style="text-align: left;">
                     <td>Harga</td>
-                    <td>{{ "Rp. " .  number_format($member->membership->price, 0, ',', '.') }}</td>
+                    <td>{{ "Rp. " .  number_format(($member->membership->price ?? 0), 0, ',', '.') }}</td>
                 </tr>
             </table>
         </div>
     </div>
+
+    <div style="text-align: center; margin-top: 8px; font-size: 11px; text-transform: uppercase;">
+        {!! nl2br(e($ucapan ?? 'Terima Kasih')) !!}
+    </div>
+    @if(!empty($deskripsi))
+    <div style="text-align: center; margin-top: 4px; font-size: 11px; text-transform: uppercase;">
+        {!! nl2br(e($deskripsi)) !!}
+    </div>
+    @endif
 
 
     <script>

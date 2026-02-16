@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -30,5 +31,35 @@ class Member extends Model
     function HistoryMemberships(): HasMany
     {
         return $this->hasMany(HistoryMembership::class);
+    }
+
+    public function getLifecycleStatusAttribute(): string
+    {
+        $today = Carbon::now('Asia/Jakarta')->startOfDay();
+        $expiredAt = Carbon::parse($this->tgl_expired)->startOfDay();
+
+        if ($today->lessThanOrEqualTo($expiredAt)) {
+            return $this->is_active ? 'active' : 'inactive';
+        }
+
+        $daysAfterExpired = $expiredAt->diffInDays($today);
+
+        if ($daysAfterExpired <= 30) {
+            return 'suspend';
+        }
+
+        return 'expired';
+    }
+
+    public function getDaysAfterExpiredAttribute(): int
+    {
+        $today = Carbon::now('Asia/Jakarta')->startOfDay();
+        $expiredAt = Carbon::parse($this->tgl_expired)->startOfDay();
+
+        if ($today->lessThanOrEqualTo($expiredAt)) {
+            return 0;
+        }
+
+        return $expiredAt->diffInDays($today);
     }
 }

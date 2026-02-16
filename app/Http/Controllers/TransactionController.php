@@ -76,30 +76,35 @@ class TransactionController extends Controller
                     return '-';
                 })
                 ->editColumn('action', function ($row) {
-                    $actionBtn = '<a href="' . route("transactions.print", $row->id) . '" class="btn btn-sm btn-primary"><i class="fas fa-print"></i></a> ';
+                    $buttons = [];
+
+                    if (!in_array($row->transaction_type, ['registration', 'renewal'])) {
+                        $buttons[] = '<a href="' . route("transactions.print", $row->id) . '" class="btn btn-sm btn-primary"><i class="fas fa-print"></i></a>';
+                    }
 
                     $totalQty = $row->detail()->sum('qty');
                     $totalScanned = $row->detail()->sum('scanned');
 
                     if ($row->transaction_type == 'ticket' && $totalScanned < $totalQty) {
                         $routeFullScan = route('transactions.set_full_scan', $row->id);
-                    $actionBtn .= '<button type="button"
+                        $buttons[] = '<button type="button"
                                                 data-route="' . $routeFullScan . '"
                                                 data-ticket-code="' . $row->ticket_code . '"
-                                                class="btn btn-sm btn-warning ms-1 btn-full-scan"
+                                                class="btn btn-sm btn-warning btn-full-scan"
                                                 title="Set Full Scan">
                                                 <i class="fas fa-check-double"></i>
                                             </button>';
                     }
 
                     if (in_array($row->transaction_type, ['registration', 'renewal'])) {
-                        $actionBtn .= '<a href="' . route('transactions.invoice.pdf', $row->id) . '" class="btn btn-sm btn-secondary ms-1" target="_blank" title="Invoice Membership (PDF)"><i class="fas fa-file-invoice"></i></a>';
+                        $buttons[] = '<a href="' . route('transactions.invoice.pdf', $row->id) . '" class="btn btn-sm btn-secondary" target="_blank" title="Invoice Membership (PDF)"><i class="fas fa-file-invoice"></i></a>';
                     }
 
                     if (auth()->user()->can('transaction-delete')) {
-                        $actionBtn .= '<button type="button" data-route="' . route('transactions.destroy', $row->id) . '" class="delete btn btn-danger btn-delete btn-sm ms-1"><i class="fas fa-trash"></i></button>';
+                        $buttons[] = '<button type="button" data-route="' . route('transactions.destroy', $row->id) . '" class="delete btn btn-danger btn-delete btn-sm"><i class="fas fa-trash"></i></button>';
                     }
-                    return $actionBtn;
+
+                    return '<div class="d-inline-flex flex-nowrap align-items-center gap-1">' . implode('', $buttons) . '</div>';
                 })
                 ->editColumn('disc', function ($row) {
                     return $row->discount . '%';
@@ -165,13 +170,8 @@ class TransactionController extends Controller
             $tickets = Ticket::get();
         }
 
-        $now = Carbon::now()->format('Y-m-d');
-        $lastTrx = Transaction::whereDate('created_at', $now)->latest()->first();
-        if ($lastTrx) {
-            $notrx = $lastTrx->no_trx + 1;
-        } else {
-            $notrx = 1;
-        }
+        $now = Carbon::now('Asia/Jakarta');
+        $notrx = Transaction::nextNoTrxByType('ticket', $now);
 
         $active = Transaction::whereDate('created_at', $now)->where(['is_active' => 0, 'user_id' => auth()->user()->id])->latest()->first();
 
@@ -182,7 +182,8 @@ class TransactionController extends Controller
                 'ticket_id' => 0,
                 'user_id' => auth()->user()->id,
                 'no_trx' => $notrx,
-                'ticket_code' => 'INV' . Carbon::now('Asia/Jakarta')->format('/dmY') . '/' . rand(1000, 9999)
+                'ticket_code' => Transaction::buildTicketCodeByType('ticket', $now, $notrx),
+                'transaction_type' => 'ticket',
             ]);
         }
 
@@ -205,7 +206,7 @@ class TransactionController extends Controller
 
             $attr = $request->except('name', 'ticket', 'type_customer', 'print', 'jumlah');
             $ticket = Ticket::where('id', $request->ticket)->first();
-            $now = Carbon::now()->format('Y-m-d');
+            $now = Carbon::now('Asia/Jakarta');
 
             // $tipe = $request->type_customer;
             $tipe = 'group';
@@ -224,18 +225,13 @@ class TransactionController extends Controller
 
             $print = 1;
             $transactions = [];
-            $lastTrx = Transaction::whereDate('created_at', $now)->latest()->first();
-
-            if ($lastTrx) {
-                $notrx = $lastTrx->no_trx + 1;
-            } else {
-                $notrx = 1;
-            }
+            $notrx = Transaction::nextNoTrxByType('ticket', $now);
 
             if ($tipe == 'individual') {
                 for ($i = 0; $i < $request->amount; $i++) {
                     $attr['no_trx'] = $notrx++;
-                    $attr['ticket_code'] = 'TKT' . Carbon::now('Asia/Jakarta')->format('dmY') . rand(1000, 9999);
+                    $attr['ticket_code'] = Transaction::buildTicketCodeByType('ticket', $now, $attr['no_trx']);
+                    $attr['transaction_type'] = 'ticket';
 
                     $transaction = Transaction::create($attr);
 
@@ -243,8 +239,9 @@ class TransactionController extends Controller
                 }
             } else {
                 $attr['no_trx'] = $notrx;
-                $attr['ticket_code'] = 'GRP' . Carbon::now('Asia/Jakarta')->format('dmY') . rand(1000, 9999);
+                $attr['ticket_code'] = Transaction::buildTicketCodeByType('ticket', $now, $notrx);
                 $attr['amount'] = $request->amount;
+                $attr['transaction_type'] = 'ticket';
 
                 $transaction = Transaction::create($attr);
 
@@ -328,6 +325,14 @@ class TransactionController extends Controller
 
    public function print(Transaction $transaction)
 {
+    if ($transaction->transaction_type === 'rental') {
+        if (!$transaction->ticket_id) {
+            abort(404);
+        }
+
+        return redirect()->route('penyewaan.print', $transaction->ticket_id);
+    }
+
     $setting = Setting::first();
 
     // 1. TAMBAHKAN INI: Inisialisasi agar variabel selalu ada
@@ -389,8 +394,12 @@ class TransactionController extends Controller
         }
 
         $member->load(['membership', 'childs']);
+        $cashierName = $transaction->user?->name ?? '-';
+        $setting = Setting::first();
+        $ucapan = $setting->ucapan ?? 'Terima Kasih';
+        $deskripsi = $setting->deskripsi ?? '';
 
-        return view('member.invoice', compact('member', 'transaction'));
+        return view('member.invoice', compact('member', 'transaction', 'cashierName', 'ucapan', 'deskripsi'));
     }
 
     public function invoicePdf(Transaction $transaction)
@@ -410,9 +419,12 @@ class TransactionController extends Controller
         $invoiceCode = $transaction->ticket_code;
         $price = 'Rp. ' . number_format($member->membership->price ?? 0, 0, ',', '.');
         $date = $transaction->created_at?->format('d/m/Y H:i:s') ?? now('Asia/Jakarta')->format('d/m/Y H:i:s');
+        $cashierName = $transaction->user?->name ?? '-';
 
         $setting = Setting::first();
         $appName = $setting->name ?? 'Ticketing App';
+        $ucapan = $setting->ucapan ?? 'Terima Kasih';
+        $deskripsi = $setting->deskripsi ?? '';
         $logoData = null;
         if ($setting && $setting->use_logo && $setting->logo) {
             $logoPath = public_path('storage/' . $setting->logo);
@@ -432,6 +444,9 @@ class TransactionController extends Controller
             'transaction' => $transaction,
             'app_name' => $appName,
             'logo_data' => $logoData,
+            'cashier_name' => $cashierName,
+            'ucapan' => $ucapan,
+            'deskripsi' => $deskripsi,
         ]);
 
         return $pdf->download('invoice_membership_' . $member->id . '.pdf');

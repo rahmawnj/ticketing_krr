@@ -38,6 +38,10 @@ date_default_timezone_set('Asia/Jakarta')
                     <span>{{ $penyewaan->qty . ' X ' . number_format($penyewaan->sewa->harga, 0, ',', '.') }}</span>
                 </div>
                 <div style="display: flex;font-weight: 900; justify-content: space-between; margin-left: 10px; margin-right: 10px;">
+                    <span>No Transaksi : </span>
+                    <span>{{ $transaction->ticket_code ?? '-' }}</span>
+                </div>
+                <div style="display: flex;font-weight: 900; justify-content: space-between; margin-left: 10px; margin-right: 10px;">
                     <span>Jumlah : </span>
                     <span>{{ number_format($penyewaan->jumlah, 0 , ',', '.') }}</span>
                 </div>
@@ -68,6 +72,9 @@ date_default_timezone_set('Asia/Jakarta')
                 <p style="font-size:10pt;margin-left:10px;margin-top:5px;margin-bottom:0px; font-weight: bold;">Keterangan</p>
                 <p style="font-size:10pt;margin-left:10px;margin-top:2px;margin-bottom:0px">{{ $penyewaan->keterangan }}</p>
                 @endif
+                <div style="margin: 24px 10px 4px 10px;">
+                    <hr style="border-style: dashed;">
+                </div>
                 <p style="font-size:10pt;margin-left:10px;margin-top:5px;margin-bottom:0px"></p>
                 <br>
                 <p style="font-size:9pt;text-align: center;margin-top:5px; text-transform: uppercase;">{!! nl2br(e($ucapan)) !!}</p>
