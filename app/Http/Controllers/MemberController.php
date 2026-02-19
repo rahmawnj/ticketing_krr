@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use App\Imports\MemberImport;
 use App\Models\DetailTransaction;
 use App\Models\HistoryMembership;
+use App\Models\WhatsappNotificationLog;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
@@ -268,6 +269,8 @@ public function store(CreateMemberRequest $request)
                 'member_info' => $member->nama . ' - ' . $member->no_hp
             ]);
 
+            $this->enqueueWhatsappNotificationFromTransaction($transaction, $member);
+
             $invoiceUrl = route('transactions.invoice', $transaction->id);
 
             // DetailTransaction::create([
@@ -424,6 +427,8 @@ public function update(UpdateMemberRequest $request, Member $member)
                         'member_info' => $member->nama . ' - ' . $member->no_hp
 
                     ]);
+
+                    $this->enqueueWhatsappNotificationFromTransaction($transaction, $member);
 
                     $invoiceUrl = route('transactions.invoice', $transaction->id);
 
@@ -875,6 +880,10 @@ public function processBulkRenew(Request $request)
             'member_info' => $firstParentMember ? ($firstParentMember->nama . ' - ' . $firstParentMember->no_hp) : null
         ]);
 
+        if ($firstParentMember) {
+            $this->enqueueWhatsappNotificationFromTransaction($transaction, $firstParentMember);
+        }
+
         $invoiceUrl = $transaction ? route('transactions.invoice', $transaction->id) : null;
 
 
@@ -888,4 +897,79 @@ public function processBulkRenew(Request $request)
         return back()->with('error', 'Gagal memproses perpanjangan massal: ' . $th->getMessage());
     }
 }
+
+    private function enqueueWhatsappNotificationFromTransaction(Transaction $transaction, Member $member): void
+    {
+        $setting = Setting::query()->first();
+        if (!$setting || !(bool) $setting->whatsapp_enabled) {
+            return;
+        }
+
+        $phone = $this->normalizeWhatsappPhone($member->no_hp ?? null);
+        if (!$phone) {
+            return;
+        }
+
+        $type = strtolower((string) $transaction->transaction_type);
+        if (!in_array($type, ['registration', 'renewal'], true)) {
+            return;
+        }
+
+        $alreadyExists = WhatsappNotificationLog::query()
+            ->where('type', $type)
+            ->where('transaction_id', $transaction->id)
+            ->where('recipient_phone', $phone)
+            ->exists();
+
+        if ($alreadyExists) {
+            return;
+        }
+
+        $message = $this->buildMembershipWhatsappMessage($type, $member, $transaction);
+
+        WhatsappNotificationLog::create([
+            'type' => $type,
+            'member_id' => $member->id,
+            'transaction_id' => $transaction->id,
+            'recipient_phone' => $phone,
+            'message' => $message,
+            'status' => 'pending',
+            'retry_count' => 0,
+        ]);
+    }
+
+    private function buildMembershipWhatsappMessage(string $type, Member $member, Transaction $transaction): string
+    {
+        $memberName = trim((string) $member->nama) !== '' ? $member->nama : 'Member';
+        $invoiceCode = $transaction->ticket_code ?? ('TRX-' . $transaction->id);
+        $date = optional($transaction->created_at)->timezone('Asia/Jakarta')->format('d/m/Y H:i') ?? now('Asia/Jakarta')->format('d/m/Y H:i');
+
+        if ($type === 'renewal') {
+            return "Halo {$memberName}, perpanjangan membership Anda berhasil diproses pada {$date}. Kode invoice: {$invoiceCode}. Terima kasih.";
+        }
+
+        return "Halo {$memberName}, registrasi membership Anda berhasil pada {$date}. Kode invoice: {$invoiceCode}. Selamat bergabung.";
+    }
+
+    private function normalizeWhatsappPhone(?string $phone): ?string
+    {
+        if (!$phone) {
+            return null;
+        }
+
+        $normalized = preg_replace('/\D+/', '', $phone);
+        if (!$normalized) {
+            return null;
+        }
+
+        if (strpos($normalized, '62') === 0) {
+            return $normalized;
+        }
+
+        if (strpos($normalized, '0') === 0) {
+            return '62' . substr($normalized, 1);
+        }
+
+        return $normalized;
+    }
 }

@@ -15,8 +15,9 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        $schedule->command('members:notify-renewal-h1')->dailyAt('08:00');
-        $schedule->command('members:purge-expired')->dailyAt('01:00');
+        $schedule->command('members:notify-renewal-h1')->everyMinute()->withoutOverlapping();
+        $schedule->command('members:purge-expired')->dailyAt('15:48');
+        $schedule->command('wa:process-logs --limit=20')->everyMinute()->withoutOverlapping();
     }
 
     /**

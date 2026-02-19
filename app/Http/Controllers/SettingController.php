@@ -35,6 +35,7 @@ class SettingController extends Controller
             'member_delete_grace_days' => 'required|integer|min:0',
             'print_mode' => 'required|in:per_qty,per_ticket',
             'dashboard_metric_mode' => 'required|in:amount,count',
+            'whatsapp_enabled' => 'nullable|boolean',
         ]);
 
         try {
@@ -44,6 +45,7 @@ class SettingController extends Controller
             $logo = $request->file('logo');
             $logoUrl = null;
             $attr['use_logo'] = $request->has('use_logo') ? 1 : 0;
+            $attr['whatsapp_enabled'] = $request->has('whatsapp_enabled') ? 1 : 0;
 
             if ($setting) {
                 if ($logo) {

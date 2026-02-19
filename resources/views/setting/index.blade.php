@@ -130,6 +130,13 @@
                         <small class="text-muted">Member dihapus otomatis jika expired lebih dari X hari (cron harian).</small>
                         @error('member_delete_grace_days') <br><small class="text-danger">{{ $message }}</small> @enderror
                     </div>
+
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="whatsapp_enabled" name="whatsapp_enabled" value="1" {{ old('whatsapp_enabled', isset($setting) ? (int) $setting->whatsapp_enabled : 0) ? 'checked' : '' }}>
+                        <label class="form-check-label" for="whatsapp_enabled">Aktifkan Pengiriman WhatsApp</label>
+                        <div><small class="text-muted">Default nonaktif. Centang jika notifikasi WhatsApp sudah siap digunakan.</small></div>
+                        @error('whatsapp_enabled') <small class="text-danger d-block">{{ $message }}</small> @enderror
+                    </div>
                 </div>
             </div>
 
