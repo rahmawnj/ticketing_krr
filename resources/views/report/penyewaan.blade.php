@@ -1,10 +1,7 @@
 @extends('layouts.master', ['title' => $title, 'breadcrumbs' => $breadcrumbs])
 
 @push('style')
-<link href="{{ asset('/') }}plugins/datatables.net-bs4/css/dataTables.bootstrap4.min.css" rel="stylesheet" />
-<link href="{{ asset('/') }}plugins/datatables.net-responsive-bs4/css/responsive.bootstrap4.min.css" rel="stylesheet" />
-<link href="{{ asset('/') }}plugins/datatables.net-buttons-bs4/css/buttons.bootstrap4.min.css" rel="stylesheet" />
-<link href="{{ asset('/') }}plugins/select2/dist/css/select2.min.css" rel="stylesheet" />
+<link href="{{ asset('/') }}plugins/bootstrap-daterangepicker/daterangepicker.css" rel="stylesheet" />
 @endpush
 
 @section('content')
@@ -22,190 +19,166 @@
     <div class="panel-body">
         <form action="" method="get">
             <div class="row mb-3">
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <div class="form-group">
-                        <label for="from">From</label>
-                        <input type="date" name="from" id="from" class="form-control" value="{{ request('from') }}">
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="form-group">
-                        <label for="to">To</label>
-                        <input type="date" name="to" id="to" class="form-control" value="{{ request('to') }}">
+                        <label for="daterange">Tanggal</label>
+                        <input type="text" name="daterange" id="daterange" class="form-control"
+                            value="{{ request('daterange') ?: now('Asia/Jakarta')->format('m/d/Y') . ' - ' . now('Asia/Jakarta')->format('m/d/Y') }}">
+                        <input type="hidden" name="from" id="from" value="{{ $from ?? request('from') }}">
+                        <input type="hidden" name="to" id="to" value="{{ $to ?? request('to') }}">
                     </div>
                 </div>
 
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <div class="form-group">
                         <label for="kasir">Kasir</label>
                         <select name="kasir" id="kasir" class="form-control">
-                            <option value="all" selected>All</option>
+                            <option value="all" {{ ($kasir ?? request('kasir', 'all')) == 'all' ? 'selected' : '' }}>All</option>
                             @foreach($users as $user)
-                            <option {{ request('kasir') == $user->id ? 'selected' : '' }} value="{{ $user->id }}">{{ $user->name }}</option>
+                            <option {{ ($kasir ?? request('kasir')) == $user->id ? 'selected' : '' }} value="{{ $user->id }}">{{ $user->name }}</option>
                             @endforeach
                         </select>
                     </div>
                 </div>
 
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <div class="form-group mt-1">
                         <button type="submit" class="btn btn-primary mt-3">Submit</button>
-                        <a href="{{ route('report.penyewaan.export') }}?from={{ request('from') }}&to={{ request('to') }}&kasir={{ request('kasir') }}" class="btn btn-success mt-3"><i class="fas fa-file-excel me-1"></i>Download</a>
+                        <a href="{{ route('report.penyewaan.export') }}?from={{ $from }}&to={{ $to }}&kasir={{ $kasir ?? 'all' }}" class="btn btn-success mt-3"><i class="fas fa-file-excel me-1"></i>Download</a>
                     </div>
                 </div>
             </div>
         </form>
-        <table id="datatable" class="table table-striped table-bordered align-middle">
+        <table class="table table-bordered table-hover align-middle">
             <thead>
                 <tr>
-                    <th class="text-nowrap">No</th>
-                    <th class="text-nowrap">Tanggal</th>
-                    <th class="text-nowrap">Kasir</th>
-                    <th class="text-nowrap">Ticket</th>
-                    <th class="text-nowrap">Metode</th>
-                    <th class="text-nowrap">Harga</th>
-                    <th class="text-nowrap">Qty</th>
-                    <th class="text-nowrap">Total</th>
+                    <th style="width: 50px">No</th>
+                    <th>No Bukti</th>
+                    <th>Tanggal</th>
+                    <th>FO/Kasir</th>
+                    <th>Kode Transaksi</th>
+                    <th>Tiket</th>
+                    <th class="text-center">Qty</th>
+                    <th>Metode</th>
+                    <th class="text-end">PPN</th>
+                    <th class="text-end">Total Bayar</th>
                 </tr>
             </thead>
-            <tbody></tbody>
+            <tbody>
+                @php $hasData = false; @endphp
+                @forelse($groupedRows as $group)
+                    @php $hasData = true; @endphp
+                    @foreach($group['details'] as $detail)
+                    <tr>
+                        <td>{{ $detail['no'] }}</td>
+                        <td>{{ $detail['no_bukti'] }}</td>
+                        <td>{{ $detail['tanggal'] }}</td>
+                        <td>{{ $detail['kasir'] }}</td>
+                        <td>{{ $detail['kode_trx'] }}</td>
+                        <td>{{ $group['sewa_name'] }}</td>
+                        <td class="text-center">{{ number_format($detail['qty'], 0, ',', '.') }}</td>
+                        <td>{{ $detail['metode'] }}</td>
+                        <td class="text-end">Rp. {{ number_format($detail['ppn'], 0, ',', '.') }}</td>
+                        <td class="text-end">Rp. {{ number_format($detail['total_bayar'], 0, ',', '.') }}</td>
+                    </tr>
+                    @endforeach
+                    <tr style="background-color: #f5f5f5; font-weight: 700;">
+                        <td colspan="5">TOTAL</td>
+                        <td>{{ $group['sewa_name'] }}</td>
+                        <td class="text-center">{{ number_format($group['subtotal_qty'], 0, ',', '.') }}</td>
+                        <td></td>
+                        <td class="text-end">Rp. {{ number_format($group['subtotal_ppn'], 0, ',', '.') }}</td>
+                        <td class="text-end">Rp. {{ number_format($group['subtotal_total'], 0, ',', '.') }}</td>
+                    </tr>
+                @empty
+                @endforelse
+                @if(!$hasData)
+                    <tr>
+                        <td colspan="10" class="text-center text-muted">Tidak ada data transaksi lainnya pada rentang tanggal ini.</td>
+                    </tr>
+                @endif
+            </tbody>
+            <tfoot>
+                <tr>
+                    <th colspan="6" class="text-end">GRAND TOTAL</th>
+                    <th class="text-center">{{ number_format($grandQty, 0, ',', '.') }}</th>
+                    <th></th>
+                    <th class="text-end">Rp. {{ number_format($grandPpn, 0, ',', '.') }}</th>
+                    <th class="text-end">Rp. {{ number_format($grandTotal, 0, ',', '.') }}</th>
+                </tr>
+            </tfoot>
         </table>
     </div>
 </div>
 @endsection
 
 @push('script')
-<script src="{{ asset('/') }}plugins/datatables.net/js/jquery.dataTables.min.js"></script>
-<script src="{{ asset('/') }}plugins/datatables.net-bs4/js/dataTables.bootstrap4.min.js"></script>
-<script src="{{ asset('/') }}plugins/datatables.net-responsive/js/dataTables.responsive.min.js"></script>
-<script src="{{ asset('/') }}plugins/datatables.net-responsive-bs4/js/responsive.bootstrap4.min.js"></script>
-<script src="{{ asset('/') }}plugins/datatables.net-buttons/js/dataTables.buttons.min.js"></script>
-<script src="{{ asset('/') }}plugins/datatables.net-buttons-bs4/js/buttons.bootstrap4.min.js"></script>
-<script src="{{ asset('/') }}plugins/datatables.net-buttons/js/buttons.colVis.min.js"></script>
-<script src="{{ asset('/') }}plugins/datatables.net-buttons/js/buttons.flash.min.js"></script>
-<script src="{{ asset('/') }}plugins/datatables.net-buttons/js/buttons.html5.min.js"></script>
-<script src="{{ asset('/') }}plugins/datatables.net-buttons/js/buttons.print.min.js"></script>
-<script src="{{ asset('/') }}plugins/pdfmake/build/pdfmake.min.js"></script>
-<script src="{{ asset('/') }}plugins/pdfmake/build/vfs_fonts.js"></script>
-<script src="{{ asset('/') }}plugins/jszip/dist/jszip.min.js"></script>
-<script src="{{ asset('/') }}plugins/sweetalert/dist/sweetalert.min.js"></script>
+<script src="{{ asset('/') }}plugins/moment/min/moment.min.js"></script>
+<script src="{{ asset('/') }}plugins/bootstrap-daterangepicker/daterangepicker.js"></script>
 
 <script>
-    let from = $("#from").val();
-    let to = $("#to").val();
-    let kasir = $("#kasir").val();
-
-    var table = $('#datatable').DataTable({
-        processing: true,
-        serverSide: true,
-        responsive: true,
-        ajax: {
-            url: "{{ route('reports.penyewaan-list') }}",
-            type: "GET",
-            data: {
-                "from": from,
-                "to": to,
-                "kasir": kasir,
+    function syncReportDateRangeFields() {
+        const rangeValue = $("#daterange").val() || '';
+        if (rangeValue.includes(' - ')) {
+            const parts = rangeValue.split(' - ');
+            const start = moment(parts[0], 'MM/DD/YYYY', true);
+            const end = moment(parts[1], 'MM/DD/YYYY', true);
+            if (start.isValid() && end.isValid()) {
+                $("#from").val(start.format('YYYY-MM-DD'));
+                $("#to").val(end.format('YYYY-MM-DD'));
+                return;
             }
-        },
-        deferRender: true,
-        pagination: true,
-        columns: [{
-                data: 'DT_RowIndex',
-                name: 'DT_RowIndex',
-                searchable: false,
-                sortable: false
-            },
-            {
-                data: 'tanggal',
-                name: 'tanggal'
-            },
-            { data: 'kasir', name: 'user.name' },
-            {
-                data: 'sewa',
-                name: 'sewa'
-            },
-            {
-                data: 'metode',
-                name: 'metode'
-            },
-            {
-                data: 'harga',
-                name: 'harga'
-            },
-            {
-                data: 'qty',
-                name: 'qty',
-            },
-            {
-                data: 'total',
-                name: 'total',
-            },
-        ]
-    });
+        }
 
-    $("#btn-add").on('click', function() {
-        let route = $(this).attr('data-route')
-        $("#form-sewa").attr('action', route)
-    })
+        const today = moment().format('YYYY-MM-DD');
+        $("#from").val(today);
+        $("#to").val(today);
+    }
 
-    $("#btn-close").on('click', function() {
-        $("#form-sewa").removeAttr('action')
-    })
+    (function initDateRange() {
+        const today = moment();
+        let start = today.clone();
+        let end = today.clone();
+        const rangeValue = $("#daterange").val();
 
-    $("#datatable").on('click', '.btn-edit', function() {
-        let route = $(this).attr('data-route')
-        let id = $(this).attr('id')
-
-        $("#form-sewa").attr('action', route)
-        $("#form-sewa").append(`<input type="hidden" name="_method" value="PUT">`);
-
-        $.ajax({
-            url: "/sewa/" + id,
-            type: 'GET',
-            method: 'GET',
-            success: function(response) {
-                let sewa = response.sewa;
-
-                $("#name").val(sewa.name)
-                $("#harga").val(sewa.harga)
-                $("#device").val(sewa.device)
+        if (rangeValue && rangeValue.includes(' - ')) {
+            const parts = rangeValue.split(' - ');
+            const parsedStart = moment(parts[0], 'MM/DD/YYYY', true);
+            const parsedEnd = moment(parts[1], 'MM/DD/YYYY', true);
+            if (parsedStart.isValid() && parsedEnd.isValid()) {
+                start = parsedStart;
+                end = parsedEnd;
             }
-        })
-    })
-
-    $("#datatable").on('click', '.btn-delete', function(e) {
-        e.preventDefault();
-        let route = $(this).attr('data-route')
-        $("#form-delete").attr('action', route)
-
-        swal({
-            title: 'Hapus data ticket?',
-            text: 'Menghapus ticket bersifat permanen.',
-            icon: 'error',
-            buttons: {
-                cancel: {
-                    text: 'Cancel',
-                    value: null,
-                    visible: true,
-                    className: 'btn btn-default',
-                    closeModal: true,
-                },
-                confirm: {
-                    text: 'Yes',
-                    value: true,
-                    visible: true,
-                    className: 'btn btn-danger',
-                    closeModal: true
-                }
+        } else if ($("#from").val() && $("#to").val()) {
+            const parsedFrom = moment($("#from").val(), 'YYYY-MM-DD', true);
+            const parsedTo = moment($("#to").val(), 'YYYY-MM-DD', true);
+            if (parsedFrom.isValid() && parsedTo.isValid()) {
+                start = parsedFrom;
+                end = parsedTo;
             }
-        }).then((result) => {
-            if (result) {
-                $("#form-delete").submit()
-            } else {
-                $("#form-delete").attr('action', '')
-            }
+        }
+
+        $("#daterange").daterangepicker({
+            opens: "right",
+            autoUpdateInput: true,
+            locale: {
+                format: "MM/DD/YYYY",
+                separator: " - "
+            },
+            startDate: start,
+            endDate: end
         });
-    })
+
+        $("#daterange").val(start.format('MM/DD/YYYY') + ' - ' + end.format('MM/DD/YYYY'));
+        syncReportDateRangeFields();
+
+        $("#daterange").on('apply.daterangepicker', function() {
+            syncReportDateRangeFields();
+        });
+    })();
+
+    $("form").on('submit', function() {
+        syncReportDateRangeFields();
+    });
 </script>
 @endpush

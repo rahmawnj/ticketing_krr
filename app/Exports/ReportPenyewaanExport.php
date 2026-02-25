@@ -2,51 +2,89 @@
 
 namespace App\Exports;
 
-use Carbon\Carbon;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithMapping;
+use Illuminate\Support\Collection;
 
-class ReportPenyewaanExport implements FromCollection, WithHeadings, WithMapping, ShouldAutoSize
+class ReportPenyewaanExport implements FromCollection, WithHeadings, ShouldAutoSize
 {
-    protected $data;
-    function __construct($data)
+    protected $groupedRows;
+    protected $grandQty;
+    protected $grandPpn;
+    protected $grandTotal;
+
+    public function __construct($groupedRows, $grandQty, $grandPpn, $grandTotal)
     {
-        $this->data = $data;
+        $this->groupedRows = $groupedRows;
+        $this->grandQty = $grandQty;
+        $this->grandPpn = $grandPpn;
+        $this->grandTotal = $grandTotal;
     }
+
     public function collection()
     {
-        return $this->data;
-    }
+        $rows = new Collection();
 
-    public function map($data): array
-    {
-        $no = 1;
+        foreach ($this->groupedRows as $group) {
+            foreach ($group['details'] as $detail) {
+                $rows->push([
+                    $detail['no'],
+                    $detail['no_bukti'],
+                    $detail['tanggal'],
+                    $detail['kasir'],
+                    $detail['kode_trx'],
+                    $group['sewa_name'],
+                    $detail['qty'],
+                    $detail['metode'],
+                    $detail['ppn'],
+                    $detail['total_bayar'],
+                ]);
+            }
 
-        return [
-            $no++,
-            Carbon::parse($data->created_at)->format('d/m/Y H:i:s'),
-            $data->user->name ?? '',
-            $data->sewa->name ?? '',
-            $data->metode,
-            $data->sewa->harga ?? '',
-            $data->qty,
-            $data->jumlah,
-        ];
+            $rows->push([
+                'TOTAL',
+                '',
+                '',
+                '',
+                '',
+                $group['sewa_name'],
+                $group['subtotal_qty'],
+                '',
+                $group['subtotal_ppn'],
+                $group['subtotal_total'],
+            ]);
+        }
+
+        $rows->push([
+            'GRAND TOTAL',
+            '',
+            '',
+            '',
+            '',
+            '',
+            $this->grandQty,
+            '',
+            $this->grandPpn,
+            $this->grandTotal,
+        ]);
+
+        return $rows;
     }
 
     public function headings(): array
     {
         return [
-            '#',
+            'No',
+            'No Bukti',
             'Tanggal',
-            'Kasir',
-            'Sewa',
+            'FO/Kasir',
+            'Kode Transaksi',
+            'Tiket',
+            'Qty',
             'Metode',
-            'Harga',
-            'QTY',
-            'Total',
+            'PPN',
+            'Total Bayar',
         ];
     }
 }

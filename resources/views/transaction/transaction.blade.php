@@ -16,6 +16,13 @@ date_default_timezone_set('Asia/Jakarta')
 </head>
 
 <body>
+    @php
+    $receiptDetails = $transaction->detail()->with('ticket')->get();
+    $jumlahJenis = $receiptDetails->count();
+    $jumlahTicket = (int) $receiptDetails->sum('qty');
+    $subtotal = (float) $receiptDetails->sum('total') + (float) $receiptDetails->sum('ppn');
+    $discount = ((float) $transaction->discount * $subtotal) / 100;
+    @endphp
     <div class="ticket-row" style="margin-top: 10px;">
         <div class="qr-code" style="max-width:80mm !important;  margin: 0 auto 0 auto; vertical-align: top; border-style: solid;border-width: 1px;">
             <div class="detail" style="font-size: 10pt; line-height: 18px; margin-top: 10px; margin-bottom: 10px;">
@@ -28,24 +35,38 @@ date_default_timezone_set('Asia/Jakarta')
                     </span>
                 </span>
                 <div style="display: flex;font-weight: 900; justify-content: space-between; margin-left: 10px; margin-right: 10px;">
-                    <span>Jumlah Ticket : </span>
-                    <span>{{ $transaction->detail()->sum('qty') }}</span>
-                </div>
-                @if(($printMode ?? 'per_qty') === 'per_ticket')
-                <div style="display: flex;font-weight: 900; justify-content: space-between; margin-left: 10px; margin-right: 10px;">
                     <span>Jumlah Jenis : </span>
-                    <span>{{ $transaction->detail()->count() }}</span>
+                    <span>{{ $jumlahJenis }}</span>
                 </div>
-                @endif
+                <div style="display: flex;font-weight: 900; justify-content: space-between; margin-left: 10px; margin-right: 10px;">
+                    <span>Jumlah Ticket : </span>
+                    <span>{{ $jumlahTicket }}</span>
+                </div>
+                <div style="margin: 6px 10px;">
+                    <div style="font-weight: 900;">Rincian Pembelian:</div>
+                    @forelse($receiptDetails as $item)
+                    @php
+                    $lineQty = max((int) $item->qty, 1);
+                    $lineSubtotal = (float) $item->total + (float) $item->ppn;
+                    $lineUnitPrice = $lineSubtotal / $lineQty;
+                    @endphp
+                    <div style="margin-top: 2px;">
+                        <div style="font-weight: 700;">{{ $item->ticket->name ?? '-' }}</div>
+                        <div style="display: flex; justify-content: space-between; font-size: 9pt;">
+                            <span>{{ $lineQty }} x Rp. {{ number_format($lineUnitPrice, 0, ',', '.') }}</span>
+                            <span>Rp. {{ number_format($lineSubtotal, 0, ',', '.') }}</span>
+                        </div>
+                    </div>
+                    @empty
+                    <div style="font-size: 9pt;">-</div>
+                    @endforelse
+                </div>
                 <div style="display: flex;font-weight: 900; justify-content: space-between; margin-left: 10px; margin-right: 10px;">
                     <span>Total Harga : </span>
-                    <span>Rp. {{ number_format($transaction->detail()->sum('total'), 0, ',', '.') }}</span>
+                    <span>Rp. {{ number_format($subtotal, 0, ',', '.') }}</span>
                 </div>
                 <div style="display: flex;font-weight: 900; justify-content: space-between; margin-left: 10px; margin-right: 10px;">
                     <span>Discount : </span>
-                    @php
-                    $discount = $transaction->discount * $transaction->detail()->sum('total') / 100;
-                    @endphp
                     <span>Rp. {{ number_format($discount, 0, ',', '.') }}</span>
                 </div>
                 <div style="display: flex;font-weight: 900; justify-content: space-between; margin-left: 10px; margin-right: 10px;">

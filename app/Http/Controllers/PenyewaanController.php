@@ -18,15 +18,15 @@ use Yajra\DataTables\Facades\DataTables;
 
 class PenyewaanController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware('permission:penyewaan-access');
-    }
+    // public function __construct()
+    // {
+    //     $this->middleware('permission:penyewaan-access');
+    // }
 
     public function index()
     {
-        $title = 'Data Penyewaan';
-        $breadcrumbs = ['Master', 'Data Penyewaan'];
+        $title = 'Data Transaksi Lainnya';
+        $breadcrumbs = ['Master', 'Data Transaksi Lainnya'];
         $tickets = Sewa::get();
 
         return view('penyewaan.index', compact('title', 'breadcrumbs', 'tickets'));
@@ -80,8 +80,10 @@ public function store(Request $request)
         $request->validate([
             'ticket' => 'required|numeric',
             'qty' => 'required|numeric',
-            'metode' => 'required|string',
+            'metode' => 'required|in:cash,debit,qris,kredit,transfer,tap,lain-lain,qr,credit',
             'jumlah' => 'required|string',
+            'harga_ticket' => 'nullable|string',
+            'jam' => 'nullable|numeric|min:1',
             // Tambahkan validasi untuk bayar/kembali jika metodenya cash
             'bayar' => 'nullable|string',
             'kembali' => 'nullable|string',
@@ -91,17 +93,35 @@ public function store(Request $request)
 
         DB::beginTransaction();
         $now = Carbon::now('Asia/Jakarta');
+        $metode = $this->normalizePaymentMethod($request->metode);
 
         $ticketData = Sewa::findOrFail($request->ticket);
+        $qty = (int) $request->qty;
+        $startTime = $request->start_time ?: Carbon::now('Asia/Jakarta')->format('H:i');
+        $endTime = $request->end_time;
 
-        $basePrice = $ticketData->harga * $request->qty;
+        if ((int) ($ticketData->use_time ?? 0) === 1) {
+            $jamSewa = (float) $request->input('jam', 0);
+            if ($jamSewa <= 0) {
+                DB::rollBack();
+                return back()->with('error', 'Jam sewa wajib diisi untuk item berbasis waktu.');
+            }
 
-        $ppnAmount = 0;
-        $netPrice = $basePrice;
-
-        if ($ticketData->use_ppn) {
-            $ppnAmount = (float) $ticketData->ppn * $request->qty;
+            $startTimeObj = Carbon::createFromFormat('H:i', $startTime, 'Asia/Jakarta');
+            $endTime = $startTimeObj->copy()->addMinutes((int) round($jamSewa * 60))->format('H:i');
         }
+
+        // Harga per-item dari form (editable). Jika kosong, fallback ke harga default item.
+        $hargaTicketInput = (int) str_replace('.', '', (string) $request->harga_ticket);
+        $defaultHargaPerItem = (int) $ticketData->harga + ((int) $ticketData->use_ppn === 1 ? (int) $ticketData->ppn : 0);
+        $grossPerItem = $hargaTicketInput > 0 ? $hargaTicketInput : $defaultHargaPerItem;
+
+        // Simpan struktur lama: bayar(net) + ppn, tapi total tetap mengikuti harga editable.
+        $ppnPerItem = ((int) $ticketData->use_ppn === 1) ? (float) $ticketData->ppn : 0;
+        $netPerItem = max(0, $grossPerItem - $ppnPerItem);
+        $basePrice = $netPerItem * $qty;      // net total
+        $ppnAmount = $ppnPerItem * $qty;      // pbjt total
+        $grossAmountTotal = $grossPerItem * $qty; // total akhir sesuai form
 
         // ================== TRANSACTION ==================
 
@@ -116,7 +136,7 @@ public function store(Request $request)
         // ]);
 
         // ================== RENTAL / TAP / SALDO CHECK ==================
-        if ($request->metode == 'tap') {
+        if ($metode === 'tap') {
 
             $member = Member::where('rfid', $request->name)->first();
             if (!$member) {
@@ -124,7 +144,7 @@ public function store(Request $request)
                 return back()->with('error', "Member tidak ditemukan");
             }
 
-            $grossAmount = $basePrice;
+            $grossAmount = $grossAmountTotal;
 
             if ($member->saldo < $grossAmount) {
                 DB::rollBack();
@@ -134,13 +154,13 @@ public function store(Request $request)
             $penyewaan = Penyewaan::create([
                 'sewa_id' => $request->ticket,
                 'qty' => $request->qty,
-                'metode' => $request->metode,
+                'metode' => $metode,
                 'jumlah' => $grossAmount, // Simpan gross amount di sini (total yang dipotong dari saldo)
                 'bayar' => $grossAmount,
                 'kembali' => 0,
                 'keterangan' => $request->keterangan,
-                'start_time' => $request->start_time ?: Carbon::now('Asia/Jakarta')->format('H:i'),
-                'end_time' => $request->end_time,
+                'start_time' => $startTime,
+                'end_time' => $endTime,
                 'user_id' => auth()->user()->id
             ]);
 
@@ -161,7 +181,7 @@ public function store(Request $request)
             'ticket_code' => Transaction::buildTicketCodeByType('rental', $now, $rentalNoTrx),
             'transaction_type' => 'rental',
             'tipe' => 'individual',
-                'metode' => $request->metode,
+                'metode' => $metode,
             'amount' => $request->qty,       // harga bersih (net price)
             'bayar' => $basePrice,       // Total dibayar (gross price)
             'status' => 'open',
@@ -170,7 +190,7 @@ public function store(Request $request)
         ]);
 
             DB::commit();
-            return back()->with('success', "Penyewaan berhasil (TAP). Saldo terpotong sebesar " . number_format($grossAmount));
+            return back()->with('success', "Transaksi lainnya berhasil (TAP). Saldo terpotong sebesar " . number_format($grossAmount));
 
         } else { // CASH
 
@@ -181,13 +201,14 @@ public function store(Request $request)
             $sewa = Penyewaan::create([
                 'sewa_id' => $request->ticket,
                 'qty' => $request->qty,
-                'metode' => $request->metode,
-                'jumlah' => $basePrice, // Simpan total yang dibayar (gross amount)
+                'metode' => $metode,
+                // jumlah harus mengikuti total akhir (sudah termasuk PBJT)
+                'jumlah' => $grossAmountTotal,
                 'bayar' => $bayarCash,
                 'kembali' => $kembaliCash,
                 'keterangan' => $request->keterangan,
-                'start_time' => $request->start_time ?: Carbon::now('Asia/Jakarta')->format('H:i'),
-                'end_time' => $request->end_time,
+                'start_time' => $startTime,
+                'end_time' => $endTime,
                 'user_id' => auth()->user()->id
 
             ]);
@@ -200,7 +221,7 @@ public function store(Request $request)
             'ticket_code' => Transaction::buildTicketCodeByType('rental', $now, $rentalNoTrx),
             'transaction_type' => 'rental',
             'tipe' => 'individual',
-                'metode' => $request->metode,
+                'metode' => $metode,
             'amount' => $request->qty,       // harga bersih (net price)
             'bayar' => $basePrice,       // Total dibayar (gross price)
             'status' => 'open',
@@ -215,7 +236,7 @@ public function store(Request $request)
 
     } catch (\Throwable $th) {
         DB::rollBack();
-        return back()->with('error', "Penyewaan gagal. Error: " . $th->getMessage());
+        return back()->with('error', "Transaksi lainnya gagal. Error: " . $th->getMessage());
     }
 }
 
@@ -227,9 +248,9 @@ public function store(Request $request)
             ->where('transaction_type', 'rental')
             ->latest()
             ->first();
-        $setting = Setting::first();
+        $setting = Setting::asObject();
 
-        $logo = $setting ? asset('/storage/' . $setting->logo) : 'data:image/png;base64,' . base64_encode(file_get_contents(public_path('/images/rio.png')));
+        $logo = !empty($setting->logo) ? asset('/storage/' . $setting->logo) : 'data:image/png;base64,' . base64_encode(file_get_contents(public_path('/images/rio.png')));
         $name = $setting->name ?? 'Ticketing';
         $ucapan = $setting->ucapan ?? 'Terima Kasih';
         $deskripsi = $setting->deskripsi ?? 'qr code hanya berlaku satu kali';
@@ -254,12 +275,12 @@ public function store(Request $request)
 
                 DB::commit();
 
-                return back()->with('success', "Penyewaan berhasil dihapus");
+                return back()->with('success', "Transaksi lainnya berhasil dihapus");
             } else {
                 $penyewaan->delete();
 
                 DB::commit();
-                return back()->with('success', "Penyewaan berhasil dihapus");
+                return back()->with('success', "Transaksi lainnya berhasil dihapus");
             }
         } catch (\Throwable $th) {
             return back()->with('error', $th->getMessage());
@@ -268,10 +289,21 @@ public function store(Request $request)
 
     public function create()
     {
-        $title = 'Input Penyewaan Baru';
-        $breadcrumbs = ['Master', 'Data Penyewaan', 'Input Baru'];
+        $title = 'Input Transaksi Lainnya Baru';
+        $breadcrumbs = ['Master', 'Data Transaksi Lainnya', 'Input Baru'];
         $tickets = Sewa::get();
 
         return view('penyewaan.create', compact('title', 'breadcrumbs', 'tickets'));
+    }
+
+    private function normalizePaymentMethod(?string $method): string
+    {
+        $normalized = strtolower(trim((string) $method));
+
+        return match ($normalized) {
+            'qr' => 'qris',
+            'credit', 'credit card', 'kartu kredit' => 'kredit',
+            default => $normalized,
+        };
     }
 }

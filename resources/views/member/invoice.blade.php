@@ -16,6 +16,14 @@
 </head>
 
 <body>
+    @php
+        $qtyItem = max((int) ($transaction->amount ?? 1), 1);
+        $baseMembershipPrice = (float) ($member->membership->price ?? 0);
+        $adminFee = max(0, ((float) ($transaction->bayar ?? 0)) - $baseMembershipPrice);
+        $totalBayar = (float) ($transaction->bayar ?? 0) + (float) ($transaction->ppn ?? 0);
+        $hargaSatuan = $totalBayar / $qtyItem;
+        $membershipName = filled($member->membership->name ?? null) ? $member->membership->name : 'Membership';
+    @endphp
     <div class="container">
         <div style="margin-bottom: 10px; text-transform: uppercase; font-weight: bold;">
             <h4 style="margin: 0;">Invoice Membership</h4>
@@ -25,7 +33,15 @@
             <table style="width: 100%; border-collapse: collapse;">
                 <tr style="text-align: left;">
                     <td width="40%">Jenis</td>
-                    <td width="60%">{{ ($transaction->transaction_type ?? 'registration') === 'renewal' ? 'Perpanjangan' : 'Registrasi' }}</td>
+                    <td width="60%">
+                        @if($adminFee > 0)
+                            Perpanjangan Baru
+                        @elseif(($transaction->transaction_type ?? 'registration') === 'renewal')
+                            Perpanjangan
+                        @else
+                            Registrasi
+                        @endif
+                    </td>
                 </tr>
                 <tr style="text-align: left;">
                     <td>No Invoice</td>
@@ -74,6 +90,40 @@
                 <tr style="text-align: left;">
                     <td>Harga</td>
                     <td>{{ "Rp. " .  number_format(($member->membership->price ?? 0), 0, ',', '.') }}</td>
+                </tr>
+                <tr style="text-align: left;">
+                    <td>Jumlah Jenis</td>
+                    <td>1</td>
+                </tr>
+                <tr style="text-align: left;">
+                    <td>Jumlah Item</td>
+                    <td>{{ $qtyItem }}</td>
+                </tr>
+                <tr style="text-align: left;">
+                    <td>Rincian Item</td>
+                    <td>{{ $membershipName }}</td>
+                </tr>
+                <tr style="text-align: left;">
+                    <td>Qty x Satuan</td>
+                    <td>{{ $qtyItem }} x Rp. {{ number_format($hargaSatuan, 0, ',', '.') }}</td>
+                </tr>
+                <tr style="text-align: left;">
+                    <td>Subtotal</td>
+                    <td>Rp. {{ number_format($totalBayar, 0, ',', '.') }}</td>
+                </tr>
+                @if($adminFee > 0)
+                <tr style="text-align: left;">
+                    <td>Biaya Admin</td>
+                    <td>Rp. {{ number_format($adminFee, 0, ',', '.') }}</td>
+                </tr>
+                @endif
+                <tr style="text-align: left;">
+                    <td>Metode</td>
+                    <td>{{ strtoupper($transaction->metode ?? '-') }}</td>
+                </tr>
+                <tr style="text-align: left;">
+                    <td>Total Bayar</td>
+                    <td>Rp. {{ number_format($totalBayar, 0, ',', '.') }}</td>
                 </tr>
             </table>
         </div>

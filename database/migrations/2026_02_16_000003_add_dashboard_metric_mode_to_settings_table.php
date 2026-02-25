@@ -13,6 +13,10 @@ class AddDashboardMetricModeToSettingsTable extends Migration
      */
     public function up()
     {
+        if (Schema::hasColumn('settings', 'key')) {
+            return;
+        }
+
         Schema::table('settings', function (Blueprint $table) {
             $table->string('dashboard_metric_mode', 20)
                 ->default('amount')
@@ -27,6 +31,10 @@ class AddDashboardMetricModeToSettingsTable extends Migration
      */
     public function down()
     {
+        if (Schema::hasColumn('settings', 'key')) {
+            return;
+        }
+
         Schema::table('settings', function (Blueprint $table) {
             $table->dropColumn('dashboard_metric_mode');
         });

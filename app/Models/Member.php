@@ -11,7 +11,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Member extends Model
 {
     use HasFactory;
-    protected $fillable = ["parent_id", "membership_id", "rfid", "no_ktp", "no_hp", "nama", "alamat", "tgl_lahir", "tgl_register", "tgl_expired", "saldo", "jenis_kelamin", "image_profile", "qr_code", "is_active", "limit", "jenis_member", "access_used"];
+    private static ?int $cachedSuspendDays = null;
+
+    protected $fillable = ["parent_id", "membership_id", "member_code", "rfid", "no_ktp", "no_hp", "nama", "alamat", "tgl_lahir", "tgl_register", "tgl_expired", "saldo", "jenis_kelamin", "image_profile", "qr_code", "is_active", "limit", "jenis_member", "access_used"];
 
     function histories(): HasMany
     {
@@ -37,6 +39,7 @@ class Member extends Model
     {
         $today = Carbon::now('Asia/Jakarta')->startOfDay();
         $expiredAt = Carbon::parse($this->tgl_expired)->startOfDay();
+        $suspendDays = $this->getSuspendDays();
 
         if ($today->lessThanOrEqualTo($expiredAt)) {
             return $this->is_active ? 'active' : 'inactive';
@@ -44,7 +47,7 @@ class Member extends Model
 
         $daysAfterExpired = $expiredAt->diffInDays($today);
 
-        if ($daysAfterExpired <= 30) {
+        if ($daysAfterExpired <= $suspendDays) {
             return 'suspend';
         }
 
@@ -61,5 +64,25 @@ class Member extends Model
         }
 
         return $expiredAt->diffInDays($today);
+    }
+
+    private function getSuspendDays(): int
+    {
+        if (self::$cachedSuspendDays !== null) {
+            return self::$cachedSuspendDays;
+        }
+
+        self::$cachedSuspendDays = max((int) Setting::valueOf('member_suspend_after_days', 0), 0);
+        return self::$cachedSuspendDays;
+    }
+
+    public function getDisplayMemberCodeAttribute(): string
+    {
+        $membershipCode = strtoupper(preg_replace('/[^A-Z0-9]/', '', (string) optional($this->membership)->code));
+        if ($membershipCode === '') {
+            $membershipCode = 'MSH';
+        }
+
+        return sprintf('%s/%04d', $membershipCode, max((int) $this->id, 0));
     }
 }

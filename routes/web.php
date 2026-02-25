@@ -76,6 +76,7 @@ Route::middleware('auth')->group(function () {
     Route::resource('sewa', SewaController::class);
 
     Route::get('members/get', [MemberController::class, 'get'])->name('members.list');
+    Route::get('members/export', [MemberController::class, 'export'])->name('members.export');
     Route::get("member/download/example-import", [MemberController::class, 'download'])->name('members.download');
     Route::get('members/{member:id}/print-qr', [MemberController::class, 'print_qr'])->name('members.printqr');
     Route::post('member/{member:id}/expired', [MemberController::class, 'expired'])->name('members.expired');
@@ -94,6 +95,7 @@ Route::middleware('auth')->group(function () {
     Route::resource('memberships', MembershipController::class);
 
     Route::get('transactions/get', [TransactionController::class, 'get'])->name('transactions.list');
+    Route::get('transactions/export-daily', [TransactionController::class, 'exportDaily'])->name('transactions.export.daily');
     Route::get('transactions/{transaction:id}/print', [TransactionController::class, 'print'])->name('transactions.print');
     Route::get('transaction/create', [DetailTransactionController::class, 'store']);
     Route::post('transactions/{transaction}/full-scan', [TransactionController::class, 'setFullScan'])->name('transactions.set_full_scan');
@@ -121,8 +123,11 @@ Route::middleware('auth')->group(function () {
     Route::resource('permissions', PermissionController::class);
 
     Route::get('report/transactions', [ReportController::class, 'transaction'])->name('reports.transactions');
+    Route::get('report/ringkasan-transaksi', [ReportController::class, 'ringkasanTransaksi'])->name('reports.ringkasan-transaksi');
+    Route::get('report/ringkasan-transaksi/export', [ReportController::class, 'exportRingkasanTransaksi'])->name('reports.ringkasan-transaksi.export');
     Route::get('report/transactions-list', [ReportController::class, 'transactionList'])->name('reports.transaction-list');
     Route::get('/report/transactions/export', [ReportController::class, 'export_transaction'])->name('report.transaction.export');
+    Route::get('/report/transactions/export-txt', [ReportController::class, 'export_transaction_txt'])->name('report.transaction.export.txt');
     Route::get('rekap/transactions', [ReportController::class, 'rekapTransaction'])->name('rekap.transactions');
     Route::get('export-transaction', [ReportController::class, 'exportTransaction'])->name('transactions.export');
     Route::get('print-transaction', [ReportController::class, 'printTransaction'])->name('transactions.download');

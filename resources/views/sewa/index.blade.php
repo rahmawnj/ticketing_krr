@@ -18,7 +18,7 @@
     </div>
 
     <div class="panel-body">
-        <a href="#modal-dialog" id="btn-add" class="btn btn-primary mb-3" data-route="{{ route('sewa.store') }}" data-bs-toggle="modal"><i class="ion-ios-add"></i> Add Sewa</a>
+        <a href="#modal-dialog" id="btn-add" class="btn btn-primary mb-3" data-route="{{ route('sewa.store') }}" data-bs-toggle="modal"><i class="ion-ios-add"></i> Add Data Lainnya</a>
 
         <table id="datatable" class="table table-striped table-bordered align-middle">
             <thead>
@@ -26,7 +26,7 @@
                     <th class="text-nowrap">No</th>
                     <th class="text-nowrap">Name</th>
                     <th class="text-nowrap">Harga (Total)</th>
-                    <th class="text-nowrap">Status PPN</th> {{-- Kolom baru --}}
+                    <th class="text-nowrap">Status PBJT</th> {{-- Kolom baru --}}
                     <th class="text-nowrap">Device</th>
                     <th class="text-nowrap">Action</th>
                 </tr>
@@ -39,7 +39,7 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h4 class="modal-title">Form Sewa</h4>
+                    <h4 class="modal-title">Form Data Lainnya</h4>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-hidden="true"></button>
                 </div>
                 <form action="{{ route('sewa.store') }}" method="post" id="form-sewa">
@@ -54,22 +54,22 @@
                         </div>
 
                         <div class="form-group mb-3">
-                            <label for="harga">Harga Pokok (Tanpa PPN)</label>
+                            <label for="harga">Harga Pokok (Tanpa PBJT)</label>
                             <input type="number" name="harga" id="harga" class="form-control" value="">
                             @error('harga')
                             <small class="text-danger">{{ $message }}</small>
                             @enderror
                         </div>
 
-                        {{-- PPN Checkbox --}}
+                        {{-- PBJT Checkbox --}}
                         <div class="form-check mb-3">
                             <input class="form-check-input" type="checkbox" id="ppn" name="ppn" />
-                            <label class="form-check-label" for="ppn">Gunakan PPN ({{ $setting->ppn ?? 0 }}%)</label>
+                            <label class="form-check-label" for="ppn">Gunakan PBJT ({{ $setting->ppn ?? 0 }}%)</label>
                         </div>
 
-                        {{-- Jumlah PPN (Readonly) --}}
+                        {{-- Jumlah PBJT (Readonly) --}}
                         <div class="form-group mb-3">
-                            <label for="jumlah_ppn">Jumlah PPN (Rp)</label>
+                            <label for="jumlah_ppn">Jumlah PBJT (Rp)</label>
                             <input type="number" id="jumlah_ppn" class="form-control" value="0" readonly>
                         </div>
 
@@ -109,17 +109,17 @@
 <script src="{{ asset('/') }}plugins/sweetalert/dist/sweetalert.min.js"></script>
 
 <script>
-    // Ambil persentase PPN dari PHP
-    const PPN_PERCENTAGE = parseFloat("{{ $setting->ppn ?? 0 }}");
+    // Ambil persentase PBJT dari PHP
+    const PBJT_PERCENTAGE = parseFloat("{{ $setting->ppn ?? 0 }}");
 
-    // Fungsi untuk menghitung dan menampilkan jumlah PPN
+    // Fungsi untuk menghitung dan menampilkan jumlah PBJT
     function calculatePpn() {
         const harga = parseFloat($('#harga').val()) || 0;
         const isPpnChecked = $('#ppn').prop('checked');
         let ppnAmount = 0;
 
         if (isPpnChecked) {
-            ppnAmount = (harga * PPN_PERCENTAGE) / 100;
+            ppnAmount = (harga * PBJT_PERCENTAGE) / 100;
         }
 
         $('#jumlah_ppn').val(ppnAmount.toFixed(0)); // Tampilkan 0 desimal
@@ -137,13 +137,13 @@
             { data: 'DT_RowIndex', name: 'DT_RowIndex' },
             { data: 'name', name: 'name' },
             { data: 'harga', name: 'harga' },
-            { data: 'ppn_status', name: 'ppn_status' }, // Tambahkan kolom PPN Status
+            { data: 'ppn_status', name: 'ppn_status' }, // Tambahkan kolom PBJT Status
             { data: 'device', name: 'device' },
             { data: 'action', name: 'action' },
         ]
     });
 
-    // 2. Event Handler untuk PPN Calculation
+    // 2. Event Handler untuk PBJT Calculation
     $(document).on('change keyup', '#harga, #ppn', calculatePpn);
 
     // 3. Logic Form Modal (Add/Edit)
@@ -152,7 +152,7 @@
         $("#form-sewa").trigger('reset');
         $("#form-sewa").attr('method', 'POST');
         $("#form-sewa input[name='_method']").remove();
-        $("#jumlah_ppn").val(0); // Pastikan PPN di-reset
+        $("#jumlah_ppn").val(0); // Pastikan PBJT di-reset
         $('#use_time').prop('checked', false);
 
         let route = $(this).attr('data-route');
@@ -194,7 +194,7 @@
                 $('#use_time').prop('checked', sewa.use_time == 1);
                 $("#route-target").val($("#form-sewa").attr('action'));
 
-                // Set PPN checkbox dan nilai PPN
+                // Set PBJT checkbox dan nilai PBJT
                 if (sewa.use_ppn == 1) {
                     $('#ppn').prop('checked', true);
                     $('#jumlah_ppn').val(sewa.ppn);

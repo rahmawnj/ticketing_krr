@@ -30,16 +30,18 @@
 <body>
 
 @php
+    $kasir = filled($kasir ?? null) ? $kasir : 'all';
+
     // Penentuan Nama Kasir
     $namaKasir = 'All';
-    if($kasir != 'all') {
+    if($kasir && $kasir != 'all') {
         $u = $users->where('id', $kasir)->first();
         $namaKasir = $u ? $u->name : 'Unknown';
     }
 
     // Query Dasar Transaksi
     $baseQuery = App\Models\Transaction::where('is_active', 1)->whereBetween('created_at', [$from, $to]);
-    if ($kasir != 'all') {
+    if ($kasir && $kasir != 'all') {
         $baseQuery->where('user_id', $kasir);
     }
 
@@ -160,8 +162,9 @@
                         App\Models\Transaction::whereIn('id', $idTrxAll)->whereIn('transaction_type', ['renewal', 'registration', 'rental'])->sum('ppn');
 
             // Per Method Calculation
-            $calculateMethod = function($m, $idAll) {
-                $ids = App\Models\Transaction::whereIn('id', $idAll)->where('metode', $m)->pluck('id');
+            $calculateMethod = function($methods, $idAll) {
+                $methods = (array) $methods;
+                $ids = App\Models\Transaction::whereIn('id', $idAll)->whereIn('metode', $methods)->pluck('id');
                 $d = App\Models\DetailTransaction::whereIn('transaction_id', $ids)->sum(\DB::raw('total + ppn'));
                 $n = App\Models\Transaction::whereIn('id', $ids)->whereIn('transaction_type', ['renewal', 'registration', 'rental'])->sum(\DB::raw('bayar - kembali'));
                 return $d + $n;
@@ -169,8 +172,8 @@
 
             $cashTotal = $calculateMethod('cash', $idTrxAll);
             $debitTotal = $calculateMethod('debit', $idTrxAll);
-            $kreditTotal = $calculateMethod('kredit', $idTrxAll);
-            $qrisTotal = $calculateMethod('qris', $idTrxAll);
+            $kreditTotal = $calculateMethod(['kredit', 'credit', 'credit card'], $idTrxAll);
+            $qrisTotal = $calculateMethod(['qris', 'qr'], $idTrxAll);
             $transferTotal = $calculateMethod('transfer', $idTrxAll);
 
             $finalTotalAmount = $totalSalesAmount - $totalDiscount;
@@ -186,7 +189,7 @@
     {{ $totalDiscount > 0 ? '-' : '' }}{{ number_format($totalDiscount, 0, ',', '.') }}
 </td>            </tr>
             <tr>
-                <td colspan="2">Total PPN</td>
+                <td colspan="2">Total PBJT</td>
                 <td class="text-end">{{ number_format($totalPPN, 0, ',', '.') }}</td>
             </tr>
             <tr style="background-color: #eee;">

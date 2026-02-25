@@ -27,6 +27,14 @@
 </head>
 
 <body>
+    @php
+        $qtyItem = max((int) ($transaction->amount ?? 1), 1);
+        $baseMembershipPrice = (float) ($member->membership->price ?? 0);
+        $adminFee = max(0, ((float) ($transaction->bayar ?? 0)) - $baseMembershipPrice);
+        $totalBayar = (float) ($transaction->bayar ?? 0) + (float) ($transaction->ppn ?? 0);
+        $hargaSatuan = $totalBayar / $qtyItem;
+        $membershipName = filled($member->membership->name ?? null) ? $member->membership->name : 'Membership';
+    @endphp
     <div class="page">
         <div class="header">
             <div class="brand">
@@ -91,6 +99,40 @@
             <tr>
                 <td class="label">Harga</td>
                 <td class="value">{{ $price }}</td>
+            </tr>
+            <tr>
+                <td class="label">Jumlah Jenis</td>
+                <td class="value">1</td>
+            </tr>
+            <tr>
+                <td class="label">Jumlah Item</td>
+                <td class="value">{{ $qtyItem }}</td>
+            </tr>
+            <tr>
+                <td class="label">Rincian Item</td>
+                <td class="value">{{ $membershipName }}</td>
+            </tr>
+            <tr>
+                <td class="label">Qty x Satuan</td>
+                <td class="value">{{ $qtyItem }} x Rp. {{ number_format($hargaSatuan, 0, ',', '.') }}</td>
+            </tr>
+            <tr>
+                <td class="label">Subtotal</td>
+                <td class="value">Rp. {{ number_format($totalBayar, 0, ',', '.') }}</td>
+            </tr>
+            @if($adminFee > 0)
+            <tr>
+                <td class="label">Biaya Admin</td>
+                <td class="value">Rp. {{ number_format($adminFee, 0, ',', '.') }}</td>
+            </tr>
+            @endif
+            <tr>
+                <td class="label">Metode</td>
+                <td class="value">{{ strtoupper($transaction->metode ?? '-') }}</td>
+            </tr>
+            <tr>
+                <td class="label">Total Bayar</td>
+                <td class="value">Rp. {{ number_format($totalBayar, 0, ',', '.') }}</td>
             </tr>
         </table>
 

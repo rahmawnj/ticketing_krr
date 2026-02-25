@@ -12,61 +12,134 @@ use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
-public function index()
+public function index(Request $request)
 {
     $title = 'Dashboard';
     $breadcrumbs = ['Dashboard'];
-    $selectedDateInput = request('date');
-    $selectedDate = Carbon::today();
-
-    if (!empty($selectedDateInput)) {
-        try {
-            $selectedDate = Carbon::createFromFormat('Y-m-d', $selectedDateInput);
-        } catch (\Throwable $th) {
-            $selectedDate = Carbon::today();
-        }
+    $timezone = 'Asia/Jakarta';
+    $now = Carbon::now($timezone);
+    $periodType = strtolower((string) $request->get('period_type', 'hourly'));
+    if (!in_array($periodType, ['hourly', 'daily', 'monthly', 'yearly'], true)) {
+        $periodType = 'hourly';
     }
 
-    $selectedDateYmd = $selectedDate->format('Y-m-d');
-    $todayLabel = $selectedDate->copy()->locale('id')->translatedFormat('l, d M Y');
-    $setting = Setting::query()->first();
+    $periodValue = trim((string) $request->get('period_value', ''));
+    $startDate = $now->copy()->startOfDay();
+    $endDate = $now->copy()->endOfDay();
+    $todayLabel = '';
+    $periodBadge = '';
+    $chartTitle = '';
+    $xAxisTitle = 'Jam';
+
+    if ($periodType === 'hourly') {
+        $selectedDate = $now->copy();
+        if ($periodValue !== '') {
+            try {
+                $selectedDate = Carbon::createFromFormat('Y-m-d', $periodValue, $timezone);
+            } catch (\Throwable $th) {
+                $selectedDate = $now->copy();
+            }
+        }
+
+        $startDate = $selectedDate->copy()->startOfDay();
+        $endDate = $selectedDate->copy()->endOfDay();
+        $periodValue = $selectedDate->format('Y-m-d');
+        $todayLabel = $selectedDate->copy()->locale('id')->translatedFormat('l, d M Y');
+        $periodBadge = 'Per Jam';
+        $chartTitle = 'Rekap Transaksi ' . $todayLabel . ' (24 Jam)';
+        $xAxisTitle = 'Jam';
+    } elseif ($periodType === 'daily') {
+        $rangeStart = $now->copy()->startOfDay();
+        $rangeEnd = $now->copy()->endOfDay();
+
+        if (preg_match('/^\d{4}-\d{2}-\d{2}\s-\s\d{4}-\d{2}-\d{2}$/', $periodValue) === 1) {
+            try {
+                [$startRaw, $endRaw] = explode(' - ', $periodValue);
+                $rangeStart = Carbon::createFromFormat('Y-m-d', $startRaw, $timezone)->startOfDay();
+                $rangeEnd = Carbon::createFromFormat('Y-m-d', $endRaw, $timezone)->endOfDay();
+            } catch (\Throwable $th) {
+                $rangeStart = $now->copy()->startOfDay();
+                $rangeEnd = $now->copy()->endOfDay();
+            }
+        }
+
+        if ($rangeStart->greaterThan($rangeEnd)) {
+            [$rangeStart, $rangeEnd] = [$rangeEnd->copy()->startOfDay(), $rangeStart->copy()->endOfDay()];
+        }
+
+        $startDate = $rangeStart;
+        $endDate = $rangeEnd;
+        $periodValue = $rangeStart->format('Y-m-d') . ' - ' . $rangeEnd->format('Y-m-d');
+        $todayLabel = $rangeStart->format('d/m/Y') . ' - ' . $rangeEnd->format('d/m/Y');
+        $periodBadge = 'Harian';
+        $chartTitle = 'Rekap Transaksi Harian';
+        $xAxisTitle = 'Tanggal';
+    } elseif ($periodType === 'monthly') {
+        $selectedMonth = $now->copy()->startOfMonth();
+        if ($periodValue !== '') {
+            try {
+                $selectedMonth = Carbon::createFromFormat('Y-m', $periodValue, $timezone)->startOfMonth();
+            } catch (\Throwable $th) {
+                $selectedMonth = $now->copy()->startOfMonth();
+            }
+        }
+
+        $startDate = $selectedMonth->copy()->startOfMonth();
+        $endDate = $selectedMonth->copy()->endOfMonth();
+        $periodValue = $selectedMonth->format('Y-m');
+        $todayLabel = $selectedMonth->copy()->locale('id')->translatedFormat('F Y');
+        $periodBadge = 'Bulanan';
+        $chartTitle = 'Rekap Transaksi Bulanan';
+        $xAxisTitle = 'Tanggal';
+    } else {
+        $selectedYear = (int) $now->format('Y');
+        if (preg_match('/^\d{4}$/', $periodValue) === 1) {
+            $selectedYear = (int) $periodValue;
+        }
+
+        $startDate = Carbon::create($selectedYear, 1, 1, 0, 0, 0, $timezone);
+        $endDate = Carbon::create($selectedYear, 12, 31, 23, 59, 59, $timezone);
+        $periodValue = (string) $selectedYear;
+        $todayLabel = 'Tahun ' . $selectedYear;
+        $periodBadge = 'Tahunan';
+        $chartTitle = 'Rekap Transaksi Tahunan';
+        $xAxisTitle = 'Bulan';
+    }
+
+    $setting = Setting::asObject();
     $dashboardMetricMode = $setting->dashboard_metric_mode ?? 'amount';
-    $isToday = $selectedDateYmd === Carbon::now('Asia/Jakarta')->toDateString();
     $isCountMode = $dashboardMetricMode === 'count';
-    $periodBadge = $isToday ? 'Hari Ini' : $selectedDate->copy()->locale('id')->translatedFormat('d M Y');
-    $chartTitle = $isToday ? 'Rekap Transaksi Hari Ini (24 Jam)' : 'Rekap Transaksi ' . $todayLabel . ' (24 Jam)';
     $chartSubtitle = $isCountMode
-        ? ($isToday
-            ? 'Perbandingan jumlah transaksi per tipe setiap jam'
-            : 'Perbandingan jumlah transaksi per tipe setiap jam pada tanggal terpilih')
-        : ($isToday
-            ? 'Perbandingan nominal transaksi per tipe setiap jam'
-            : 'Perbandingan nominal transaksi per tipe setiap jam pada tanggal terpilih');
+        ? 'Perbandingan jumlah transaksi per tipe pada periode terpilih'
+        : 'Perbandingan nominal transaksi per tipe pada periode terpilih';
 
-    // Data summary harian berdasarkan 4 tipe transaksi.
-    $renewal = Transaction::whereDate('created_at', $selectedDateYmd)->where('transaction_type', 'renewal')->sum('bayar');
-    $renewalCount = Transaction::whereDate('created_at', $selectedDateYmd)->where('transaction_type', 'renewal')->count();
-    $newMember = Transaction::whereDate('created_at', $selectedDateYmd)->where('transaction_type', 'registration')->sum('bayar');
-    $newMemberCount = Transaction::whereDate('created_at', $selectedDateYmd)->where('transaction_type', 'registration')->count();
-    $rental = Transaction::whereDate('created_at', $selectedDateYmd)->where('transaction_type', 'rental')->sum('bayar');
-    $rentalCount = Transaction::whereDate('created_at', $selectedDateYmd)->where('transaction_type', 'rental')->count();
-    $ticket = Transaction::whereDate('created_at', $selectedDateYmd)->where('transaction_type', 'ticket')->sum('bayar');
-    $ticketCount = Transaction::whereDate('created_at', $selectedDateYmd)->where('transaction_type', 'ticket')->count();
+    // Data summary berdasarkan periode terpilih.
+    $renewal = Transaction::whereBetween('created_at', [$startDate, $endDate])->where('transaction_type', 'renewal')->sum('bayar');
+    $renewalCount = Transaction::whereBetween('created_at', [$startDate, $endDate])->where('transaction_type', 'renewal')->count();
+    $newMember = Transaction::whereBetween('created_at', [$startDate, $endDate])->where('transaction_type', 'registration')->sum('bayar');
+    $newMemberCount = Transaction::whereBetween('created_at', [$startDate, $endDate])->where('transaction_type', 'registration')->count();
+    $rental = Transaction::whereBetween('created_at', [$startDate, $endDate])->where('transaction_type', 'rental')->sum('bayar');
+    $rentalCount = Transaction::whereBetween('created_at', [$startDate, $endDate])->where('transaction_type', 'rental')->count();
+    $ticket = Transaction::whereBetween('created_at', [$startDate, $endDate])->where('transaction_type', 'ticket')->sum('bayar');
+    $ticketCount = Transaction::whereBetween('created_at', [$startDate, $endDate])->where('transaction_type', 'ticket')->count();
 
-    // --- Persiapan Data Chart Hari Ini (24 Jam) ---
-    $startDate = $selectedDate->copy()->startOfDay();
-    $endDate = $selectedDate->copy()->endOfDay();
+    $bucketExpression = 'HOUR(created_at)';
+    if ($periodType === 'daily' || $periodType === 'monthly') {
+        $bucketExpression = 'DATE(created_at)';
+    } elseif ($periodType === 'yearly') {
+        $bucketExpression = 'MONTH(created_at)';
+    }
 
-    // 1. Ambil data per jam untuk 4 kategori: renewal, registration, rental, ticket.
+    // 1. Ambil data chart berdasarkan bucket periode.
     $chartDataRaw = Transaction::whereBetween('created_at', [$startDate, $endDate])
         ->whereIn('transaction_type', ['rental', 'ticket', 'registration', 'renewal'])
         ->selectRaw(
             $isCountMode
-                ? 'HOUR(created_at) as hour, transaction_type, COUNT(*) as total_value'
-                : 'HOUR(created_at) as hour, transaction_type, SUM(bayar) as total_value'
+                ? $bucketExpression . ' as bucket, transaction_type, COUNT(*) as total_value'
+                : $bucketExpression . ' as bucket, transaction_type, SUM(bayar) as total_value'
         )
-        ->groupBy('hour', 'transaction_type')
-        ->orderBy('hour', 'asc')
+        ->groupBy('bucket', 'transaction_type')
+        ->orderBy('bucket', 'asc')
         ->get();
 
     $chartLabels = [];
@@ -76,12 +149,47 @@ public function index()
     $data_ticket = [];
     $formattedHours = [];
 
-    for ($hour = 0; $hour < 24; $hour++) {
-        $formattedHourKey = (string) $hour;
-        $chartLabels[] = sprintf('%02d:00', $hour);
+    if ($periodType === 'hourly') {
+        for ($hour = 0; $hour < 24; $hour++) {
+            $formattedHourKey = (string) $hour;
+            $chartLabels[] = sprintf('%02d:00', $hour);
+            $formattedHours[$formattedHourKey] = [
+                'renewal' => 0,
+                'new_member' => 0,
+                'rental' => 0,
+                'ticket' => 0,
+            ];
+        }
+    } elseif ($periodType === 'yearly') {
+        for ($month = 1; $month <= 12; $month++) {
+            $key = (string) $month;
+            $chartLabels[] = Carbon::create(null, $month, 1)->locale('id')->translatedFormat('M');
+            $formattedHours[$key] = [
+                'renewal' => 0,
+                'new_member' => 0,
+                'rental' => 0,
+                'ticket' => 0,
+            ];
+        }
+    } else {
+        $loopDate = $startDate->copy()->startOfDay();
+        while ($loopDate->lessThanOrEqualTo($endDate)) {
+            $key = $loopDate->format('Y-m-d');
+            // Gunakan format ISO agar export CSV tidak salah dibaca Excel (mm/dd).
+            $chartLabels[] = $key;
+            $formattedHours[$key] = [
+                'renewal' => 0,
+                'new_member' => 0,
+                'rental' => 0,
+                'ticket' => 0,
+            ];
+            $loopDate->addDay();
+        }
+    }
 
-        // 2. Inisialisasi data untuk 4 kategori utama per jam.
-        $formattedHours[$formattedHourKey] = [
+    // 2. Inisialisasi data untuk 4 kategori utama per bucket.
+    foreach ($formattedHours as $key => $value) {
+        $formattedHours[$key] = [
             'renewal' => 0,
             'new_member' => 0,
             'rental' => 0,
@@ -89,9 +197,9 @@ public function index()
         ];
     }
 
-    // 3. Isi array data dari hasil database berdasarkan tipe transaksi per jam.
+    // 3. Isi array data dari hasil database berdasarkan tipe transaksi per bucket.
     foreach ($chartDataRaw as $item) {
-        $hourKey = (string) $item->hour;
+        $hourKey = (string) $item->bucket;
         $type = $item->transaction_type;
         $value = (int) $item->total_value;
 
@@ -141,7 +249,9 @@ public function index()
         'chartTitle',
         'chartSubtitle',
         'dashboardMetricMode',
-        'selectedDateYmd',
+        'periodType',
+        'periodValue',
+        'xAxisTitle',
         'chartData'
     ));
 }

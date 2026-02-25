@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="utf-8" />
-    <title>{{ App\Models\Setting::first('name') ? App\Models\Setting::first('name')->name : config('app.name') }} | {{ $title }}</title>
+    <title>{{ App\Models\Setting::valueOf('name', config('app.name')) }} | {{ $title }}</title>
     <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport" />
     <meta content="" name="description" />
     <meta content="" name="author" />
@@ -147,7 +147,7 @@
                             <div class="menu-item {{ request()->routeIs('sewa.*') ? 'active' : '' }}">
                                 @can('sewa-access')
                                 <a href="{{ route('sewa.index') }}" class="menu-link">
-                                    <div class="menu-text">Data Sewa</div>
+                                    <div class="menu-text">Data Lainnya</div>
                                 </a>
                                 @endcan
                             </div>
@@ -164,7 +164,7 @@
                     @endcan
 
                     @can('member-access')
-                    <div class="menu-item {{ request()->routeIs('members.*') ? 'active' : '' }}">
+                    <div class="menu-item {{ (request()->routeIs('members.*') && !request()->routeIs('members.bulk_renew') && !request()->routeIs('members.process_bulk_renew')) ? 'active' : '' }}">
                         <a href="{{ route('members.index') }}" class="menu-link">
                             <div class="menu-icon">
                                 <i class="ion-ios-people bg-green"></i>
@@ -173,8 +173,8 @@
                                 Data Member
                                 <span class="menu-label bg-danger fw-800">
                                     @php
-                                        $setting = App\Models\Setting::first();
-                                        $reminderDays = $setting->member_reminder_days ?? 7;
+                                        $setting = App\Models\Setting::asObject();
+                                        $reminderDays = $setting->member_suspend_before_days ?? 7;
                                         $limitDate = Carbon\Carbon::now('Asia/Jakarta')->addDays($reminderDays)->format('Y-m-d');
 
                                         $count = App\Models\Member::where('tgl_expired', '<=', $limitDate)
@@ -190,7 +190,7 @@
                     @endcan
 
                     @can('transaction-access')
-                    <div class="menu-item {{ request()->is('transactions*') ? 'active' : '' }}">
+                    <div class="menu-item {{ (request()->is('transactions*') || request()->routeIs('members.bulk_renew') || request()->routeIs('members.process_bulk_renew')) ? 'active' : '' }}">
                         <a href="{{ route('transactions.index') }}" class="menu-link">
                             <div class="menu-icon">
                                 <i class="ion-ios-stats bg-cyan"></i>
@@ -199,17 +199,7 @@
                         </a>
                     </div>
                     @endcan
-
-                    @can('penyewaan-access')
-                    <div class="menu-item {{ request()->is('penyewaan*') ? 'active' : '' }}">
-                        <a href="{{ route('penyewaan.index') }}" class="menu-link">
-                            <div class="menu-icon">
-                                <i class="ion-ios-clock bg-teal"></i>
-                            </div>
-                            <div class="menu-text">Data Penyewaan</div>
-                        </a>
-                    </div>
-                    @endcan
+                    {{-- Menu Data Transaksi Lainnya disembunyikan --}}
 
                     @can('topup-access')
                     <div class="menu-item {{ request()->is('topup*') ? 'active' : '' }}">
@@ -241,6 +231,13 @@
                             @endcan
                             @can('report-transaction-access')
                             <div class="menu-item">
+                                <a href="{{ route('reports.ringkasan-transaksi') }}" class="menu-link">
+                                    <div class="menu-text">Report Ringkasan</div>
+                                </a>
+                            </div>
+                            @endcan
+                            @can('report-transaction-access')
+                            <div class="menu-item">
                                 <a href="{{ route('rekap.transactions') }}" class="menu-link">
                                     <div class="menu-text">Rekap Transaction</div>
                                 </a>
@@ -249,35 +246,22 @@
                             @can('report-transaction-access')
                             <div class="menu-item">
                                 <a href="{{ route('reports.penyewaan') }}" class="menu-link">
-                                    <div class="menu-text">Report Penyewaan</div>
+                                    <div class="menu-text">Report Transaksi Lainnya</div>
                                 </a>
                             </div>
                             @endcan
+                            {{-- Hidden menu: Rekap Transaksi Lainnya --}}
+                            {{--
                             @can('report-transaction-access')
                             <div class="menu-item">
                                 <a href="{{ route('rekap.penyewaan') }}" class="menu-link">
-                                    <div class="menu-text">Rekap Penyewaan</div>
+                                    <div class="menu-text">Rekap Transaksi Lainnya</div>
                                 </a>
                             </div>
                             @endcan
+                            --}}
 
-                            <div class="menu-item">
-                                <a href="{{ route('history-transactions.index') }}" class="menu-link">
-                                    <div class="menu-text">History Transaction</div>
-                                </a>
-                            </div>
-
-                            <div class="menu-item">
-                                <a href="{{ route('history-member.index') }}" class="menu-link">
-                                    <div class="menu-text">History Access Member</div>
-                                </a>
-                            </div>
-
-                            <div class="menu-item">
-                                <a href="{{ route('history-memberships.index') }}" class="menu-link">
-                                    <div class="menu-text">History Membership</div>
-                                </a>
-                            </div>
+                            {{-- Hidden menus: History Transaction / History Access Member / History Membership --}}
                         </div>
                     </div>
                     @endcan
@@ -369,3 +353,6 @@
 </body>
 
 </html>
+
+
+

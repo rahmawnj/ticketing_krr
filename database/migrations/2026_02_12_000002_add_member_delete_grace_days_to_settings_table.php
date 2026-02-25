@@ -13,6 +13,10 @@ return new class extends Migration
      */
     public function up()
     {
+        if (Schema::hasColumn('settings', 'key')) {
+            return;
+        }
+
         Schema::table('settings', function (Blueprint $table) {
             $table->integer('member_delete_grace_days')->default(0)->after('member_reminder_days');
         });
@@ -25,6 +29,10 @@ return new class extends Migration
      */
     public function down()
     {
+        if (Schema::hasColumn('settings', 'key')) {
+            return;
+        }
+
         Schema::table('settings', function (Blueprint $table) {
             $table->dropColumn('member_delete_grace_days');
         });

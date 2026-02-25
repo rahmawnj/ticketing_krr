@@ -49,7 +49,7 @@
                         @error('deskripsi') <small class="text-danger">{{ $message }}</small> @enderror
                     </div>
 
-                    <div class="form-check mb-3">
+                    <div class="form-check mb-3 d-none">
                         <input class="form-check-input" type="checkbox" id="show_logo_toggle" name="use_logo" value="1" {{ (isset($setting) && $setting->use_logo == 1) ? 'checked' : '' }} />
                         <label class="form-check-label" for="show_logo_toggle">Show Logo</label>
                     </div>
@@ -72,7 +72,7 @@
 
                 <div class="col-lg-6">
                     <div class="form-group mb-3">
-                        <label for="ppn">PPN <sup class="text-danger">(%)</sup></label>
+                        <label for="ppn">PBJT <sup class="text-danger">(%)</sup></label>
                         <input type="number" name="ppn" id="ppn" class="form-control" value="{{ $setting->ppn ?? old('ppn') }}">
                         @error('ppn') <small class="text-danger">{{ $message }}</small> @enderror
                     </div>
@@ -95,6 +95,23 @@
                     </div>
 
                     <div class="form-group mb-3">
+                        <label for="ticket_print_orientation">Orientasi Cetak Tiket</label>
+                        <select name="ticket_print_orientation" id="ticket_print_orientation" class="form-control">
+                            @php
+                                $ticketPrintOrientation = $setting->ticket_print_orientation ?? old('ticket_print_orientation', 'portrait');
+                            @endphp
+                            <option value="portrait" {{ $ticketPrintOrientation === 'portrait' ? 'selected' : '' }}>
+                                Portrait (Default)
+                            </option>
+                            <option value="landscape" {{ $ticketPrintOrientation === 'landscape' ? 'selected' : '' }}>
+                                Landscape (Khusus blok tiket)
+                            </option>
+                        </select>
+                        <small class="text-muted">Mengubah layout bagian tiket pada halaman print transaksi.</small>
+                        @error('ticket_print_orientation') <br><small class="text-danger">{{ $message }}</small> @enderror
+                    </div>
+
+                    <div class="form-group mb-3">
                         <label for="dashboard_metric_mode">Mode Nilai Kartu Dashboard</label>
                         <select name="dashboard_metric_mode" id="dashboard_metric_mode" class="form-control">
                             @php
@@ -112,26 +129,27 @@
                     </div>
 
                     <div class="form-group mb-3">
-                        <label for="member_reminder_days">Reminder Expire Member <sup class="text-danger">(Hari)</sup></label>
+                        <label for="member_suspend_before_days">Rentang Perpanjangan Member <sup class="text-danger">(Hari)</sup></label>
                         <div class="input-group">
-                            <input type="number" name="member_reminder_days" id="member_reminder_days" class="form-control" value="{{ $setting->member_reminder_days ?? old('member_reminder_days', 7) }}">
+                            <span class="input-group-text">Mulai H-</span>
+                            <input type="number" name="member_suspend_before_days" id="member_suspend_before_days" class="form-control" value="{{ $setting->member_suspend_before_days ?? old('member_suspend_before_days', 7) }}">
+                            <span class="input-group-text">sampai H+</span>
+                            <input type="number" name="member_suspend_after_days" id="member_suspend_after_days" class="form-control" value="{{ $setting->member_suspend_after_days ?? old('member_suspend_after_days', 0) }}">
                             <span class="input-group-text">Hari</span>
                         </div>
-                        <small class="text-muted">Munculkan peringatan X hari sebelum member kedaluwarsa.</small>
-                        @error('member_reminder_days') <br><small class="text-danger">{{ $message }}</small> @enderror
+                        <small class="text-muted">Contoh: H-7 sampai H+0. H-7 tetap Active, mulai H+1 status Expired.</small>
+                        @error('member_suspend_before_days') <br><small class="text-danger">{{ $message }}</small> @enderror
+                        @error('member_suspend_after_days') <br><small class="text-danger">{{ $message }}</small> @enderror
                     </div>
 
                     <div class="form-group mb-3">
-                        <label for="member_delete_grace_days">Hapus Member Setelah Masa Tenggang <sup class="text-danger">(Hari)</sup></label>
-                        <div class="input-group">
-                            <input type="number" name="member_delete_grace_days" id="member_delete_grace_days" class="form-control" value="{{ $setting->member_delete_grace_days ?? old('member_delete_grace_days', 0) }}">
-                            <span class="input-group-text">Hari</span>
-                        </div>
-                        <small class="text-muted">Member dihapus otomatis jika expired lebih dari X hari (cron harian).</small>
-                        @error('member_delete_grace_days') <br><small class="text-danger">{{ $message }}</small> @enderror
+                        <label for="member_reactivation_admin_fee">Biaya Admin Renewal Baru <sup class="text-danger">(Rp)</sup></label>
+                        <input type="number" name="member_reactivation_admin_fee" id="member_reactivation_admin_fee" class="form-control" value="{{ $setting->member_reactivation_admin_fee ?? old('member_reactivation_admin_fee', 0) }}">
+                        <small class="text-muted">Dipakai saat member sudah lewat H+30 dari tanggal expired.</small>
+                        @error('member_reactivation_admin_fee') <br><small class="text-danger">{{ $message }}</small> @enderror
                     </div>
 
-                    <div class="form-check mb-3">
+                    <div class="form-check mb-3 d-none">
                         <input class="form-check-input" type="checkbox" id="whatsapp_enabled" name="whatsapp_enabled" value="1" {{ old('whatsapp_enabled', isset($setting) ? (int) $setting->whatsapp_enabled : 0) ? 'checked' : '' }}>
                         <label class="form-check-label" for="whatsapp_enabled">Aktifkan Pengiriman WhatsApp</label>
                         <div><small class="text-muted">Default nonaktif. Centang jika notifikasi WhatsApp sudah siap digunakan.</small></div>
@@ -190,3 +208,4 @@
     });
 </script>
 @endpush
+

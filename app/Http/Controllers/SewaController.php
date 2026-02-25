@@ -19,9 +19,9 @@ class SewaController extends Controller
 
     public function index()
     {
-        $title = 'Data Sewa';
-        $breadcrumbs = ['Master', 'Data Sewa'];
-        $setting = Setting::first(); // Ambil data setting
+        $title = 'Data Lainnya';
+        $breadcrumbs = ['Master', 'Data Lainnya'];
+        $setting = Setting::asObject(); // Ambil data setting
 
         return view('sewa.index', compact('title', 'breadcrumbs', 'setting')); // Kirim setting ke view
     }
@@ -71,7 +71,7 @@ class SewaController extends Controller
             DB::beginTransaction();
 
             $harga = $request->harga;
-            $setting = Setting::first();
+            $setting = Setting::asObject();
 
             // Hitung PPN jika checkbox "ppn" dicentang ("on")
             $usePpn = $request->ppn == "on" ? 1 : 0;
@@ -125,7 +125,7 @@ class SewaController extends Controller
             DB::beginTransaction();
 
             $harga = $request->harga;
-            $setting = Setting::first();
+            $setting = Setting::asObject();
 
             // Hitung PPN jika checkbox "ppn" dicentang ("on")
             $usePpn = $request->ppn == "on" ? 1 : 0;

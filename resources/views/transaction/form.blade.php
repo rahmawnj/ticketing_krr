@@ -49,7 +49,7 @@
                     {{-- <div class="form-group mb-3">
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" id="ppn" />
-                            <label class="form-check-label" for="ppn">PPN {{ $setting->ppn . '%' }}</label>
+                            <label class="form-check-label" for="ppn">PBJT {{ $setting->ppn . '%' }}</label>
                 </div>
             </div> --}}
 
@@ -57,10 +57,27 @@
                 <label for="metode">Metode Pembayaran</label>
                 <select name="metode" id="metode" class="form-control">
                     <option value="cash">Cash</option>
+                    <option value="qris">QRIS</option>
                     <option value="debit">Debit</option>
                     <option value="kredit">Kredit</option>
-                    <option value="qris">QRIS</option>
+                    <option value="transfer">Transfer</option>
+                    <option value="lain-lain">Lain-lain</option>
                 </select>
+            </div>
+
+            <div class="form-group mb-3 card-fields d-none">
+                <label for="nama_kartu">Nama Pemilik Kartu</label>
+                <input type="text" name="nama_kartu" id="nama_kartu" class="form-control" value="">
+            </div>
+
+            <div class="form-group mb-3 card-fields d-none">
+                <label for="no_kartu">No Kartu</label>
+                <input type="text" name="no_kartu" id="no_kartu" class="form-control" value="">
+            </div>
+
+            <div class="form-group mb-3 card-fields d-none">
+                <label for="bank">Bank</label>
+                <input type="text" name="bank" id="bank" class="form-control" value="">
             </div>
 
             <div class="form-group mb-3">
@@ -303,6 +320,23 @@
             let show = $(this).is(':checked') ? 1 : 0;
             $("#form-transaction").append('<input type="hidden" name="hide_print" value="' + show + '">')
         })
+
+        function toggleCardFields() {
+            const metode = $("#metode").val();
+            const isCardMethod = metode === 'debit' || metode === 'kredit';
+
+            if (isCardMethod) {
+                $(".card-fields").removeClass('d-none');
+                $("#nama_kartu, #no_kartu, #bank").attr('required', 'required');
+                return;
+            }
+
+            $(".card-fields").addClass('d-none');
+            $("#nama_kartu, #no_kartu, #bank").removeAttr('required').val('');
+        }
+
+        $("#metode").on('change', toggleCardFields);
+        toggleCardFields();
     })
 </script>
 

@@ -41,7 +41,7 @@
         </div>
 
         <div class="form-group mb-3">
-            <label for="jumlah_ppn" class="form-label">Jumlah PPN</label>
+            <label for="jumlah_ppn" class="form-label">Jumlah PBJT</label>
             {{-- Hapus error check untuk jumlah_ppn karena ini readonly dan tidak divalidasi di controller --}}
             <input type="number" name="jumlah_ppn" id="jumlah_ppn" class="form-control" value="{{ $ticket->ppn ?? old('jumlah_ppn') }}" readonly>
         </div>
@@ -95,7 +95,7 @@
 
         <div class="form-check mb-3">
             <input class="form-check-input" type="checkbox" id="ppn" name="ppn" {{ $ticket->use_ppn == 1 ? 'checked' : '' }} />
-            <label class="form-check-label" for="ppn">PPN</label>
+            <label class="form-check-label" for="ppn">PBJT</label>
         </div>
 
         <div class="form-group">

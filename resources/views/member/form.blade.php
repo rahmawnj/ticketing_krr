@@ -83,6 +83,32 @@
 
             <div class="form-group row mb-3">
                 <div class="col-md-4">
+                    <label for="metode" class="form-label"><sup class="text-danger">*</sup>Metode Pembayaran</label>
+                    <select name="metode" id="metode" class="form-control">
+                        <option value="">-- Pilih Metode --</option>
+                        <option value="qris" {{ old('metode') == 'qris' ? 'selected' : '' }}>QRIS</option>
+                        <option value="debit" {{ old('metode') == 'debit' ? 'selected' : '' }}>Debit</option>
+                        <option value="kredit" {{ old('metode') == 'kredit' ? 'selected' : '' }}>Kredit</option>
+                        <option value="transfer" {{ old('metode') == 'transfer' ? 'selected' : '' }}>Transfer</option>
+                        <option value="lain-lain" {{ old('metode') == 'lain-lain' ? 'selected' : '' }}>Lain-lain</option>
+                        <option value="cash" {{ old('metode') == 'cash' ? 'selected' : '' }}>Cash</option>
+                    </select>
+                    @error('metode')
+                    <small class="text-danger">{{ $message }}</small>
+                    @enderror
+                </div>
+                <div class="col-md-4">
+                    <label for="price_base" class="form-label">Harga Dasar (Rp.)</label>
+                    <input type="text" id="price_base" class="form-control" disabled value="">
+                </div>
+                <div class="col-md-4">
+                    <label for="price_ppn" class="form-label">PBJT (Rp.)</label>
+                    <input type="text" id="price_ppn" class="form-control" disabled value="">
+                </div>
+            </div>
+
+            <div class="form-group row mb-3">
+                <div class="col-md-4">
                     <label for="rfid" class="form-label">RFID</label>
                     <input type="text" name="rfid" id="rfid" class="form-control" value="{{ old('rfid', $member->rfid) }}" placeholder="0192029300">
 
@@ -171,6 +197,7 @@
             <div class="form-group mb-3">
                 <label for="tgl_expired" class="form-label">Tanggal Expired</label>
                 <input type="date" name="tgl_expired" id="tgl_expired" class="form-control" value="{{ $member->tgl_expired }}" readonly>
+                <small class="text-muted d-block">Masa aktif anggota grup mengikuti member utama.</small>
 
                 @error('tgl_expired')
                 <small class="text-danger">{{ $message }}</small>
@@ -200,6 +227,9 @@
                     <label for="image_profile" class="form-label">Foto</label>
                     <input type="file" name="image_profile" id="image_profile" class="form-control" accept="image/*">
                 </div>
+            </div>
+            <div class="form-group mb-3">
+                <small class="text-muted">Masa aktif anggota grup mengikuti member utama.</small>
             </div>
             @endif
 
@@ -251,14 +281,12 @@
             }
 
             // --- Kalkulasi Harga Total (Harga Dasar + PPN jika ada) ---
-            var totalPrice = basePrice;
-            if (usePpn) {
-                // PPN Rate dari data-attribute sudah berupa persentase, tapi perlu dibagi 100 untuk kalkulasi
-                var ppnAmount =  ppnRate;
-                totalPrice = basePrice + ppnAmount;
-            }
+            var ppnAmount = usePpn ? ppnRate : 0;
+            var totalPrice = basePrice + ppnAmount;
 
             $('#duration').val(duration);
+            $('#price_base').val(formatRupiah(Math.round(basePrice)));
+            $('#price_ppn').val(formatRupiah(Math.round(ppnAmount)));
             $('#price').val(formatRupiah(Math.round(totalPrice))); // Tampilkan harga total dengan format Rupiah
 
             // --- Kalkulasi Tanggal Expired (hanya di create/saat ganti member) ---
@@ -313,6 +341,8 @@
         } else {
             // Jika user memilih "-- Pilih --", kosongkan field
             $('#duration').val('');
+            $('#price_base').val('');
+            $('#price_ppn').val('');
             $('#price').val('');
             $('#tgl_expired').val('');
             if ("{{ $method }}" === "POST") {

@@ -5,10 +5,14 @@ namespace App\Http\Controllers;
 use Carbon\Carbon;
 use App\Models\Sewa;
 use App\Models\Ticket;
+use App\Models\Membership;
+use App\Models\Member;
+use App\Models\Penyewaan;
 use App\Models\Setting;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
 use App\Exports\ReportExport;
+use App\Exports\TransactionDailyReceiptExport;
 use App\Models\DetailTransaction;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -16,6 +20,7 @@ use App\Http\Controllers\Controller;
 use Yajra\DataTables\Facades\DataTables;
 use App\Http\Requests\Transaction\CreateTransactionRequest;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Maatwebsite\Excel\Facades\Excel;
 
 class TransactionController extends Controller
 {
@@ -29,24 +34,32 @@ class TransactionController extends Controller
         $title = 'Data Transaction';
         $breadcrumbs = ['Master', 'Data Transaction'];
         $tickets = Ticket::get();
+        $setting = Setting::asObject();
+        $reminderDays = (int) ($setting->member_suspend_before_days ?? 7);
+        $limitDate = Carbon::now('Asia/Jakarta')->addDays($reminderDays)->toDateString();
+        $renewalCount = Member::where('tgl_expired', '<=', $limitDate)
+            ->where('is_active', 1)
+            ->where('parent_id', 0)
+            ->count();
 
-        return view('transaction.index', compact('title', 'breadcrumbs', 'tickets'));
+        return view('transaction.index', compact('title', 'breadcrumbs', 'tickets', 'renewalCount'));
     }
 
     public function get(Request $request)
     {
         if ($request->ajax()) {
-            $tanggal = $request->tanggal ? $request->tanggal : Carbon::now()->format('Y-m-d');
+            [$startDate, $endDate] = $this->resolveDateRange($request);
+
             $transactionType = $request->transaction_type;
 
             // --- Query Building Logic ---
             if (auth()->user()->roles()->first()->id == 1) {
                 $data = Transaction::where('is_active', 1)
-                    ->whereDate('created_at', $tanggal)
+                    ->whereBetween('created_at', [$startDate, $endDate])
                     ->orderBy('created_at', 'DESC');
             } else {
                 $data = Transaction::where(['is_active' => 1, 'user_id' => auth()->user()->id])
-                    ->whereDate('created_at', $tanggal)
+                    ->whereBetween('created_at', [$startDate, $endDate])
                     ->orderBy('created_at', 'DESC');
             }
 
@@ -56,6 +69,9 @@ class TransactionController extends Controller
 
             return DataTables::eloquent($data)
                 ->addIndexColumn()
+                ->addColumn('tanggal', function ($row) {
+                    return optional($row->created_at)->timezone('Asia/Jakarta')->format('d/m/Y H:i:s');
+                })
 
                 ->addColumn('transaction_type', function ($row) {
                     return ucfirst($row->transaction_type);
@@ -157,6 +173,287 @@ class TransactionController extends Controller
         }
     }
 
+    public function exportDaily(Request $request)
+    {
+        [$startDate, $endDate] = $this->resolveDateRange($request);
+        $transactionType = $request->input('transaction_type');
+
+        $query = Transaction::with(['detail.ticket', 'user', 'member'])
+            ->where('is_active', 1)
+            ->whereBetween('created_at', [$startDate, $endDate]);
+
+        if (auth()->user()->roles()->first()->id != 1) {
+            $query->where('user_id', auth()->id());
+        }
+
+        if (!empty($transactionType)) {
+            $query->where('transaction_type', $transactionType);
+        }
+
+        $transactions = $query->orderBy('created_at')->orderBy('id')->get();
+        $exportRows = $this->buildDataTransactionExportRows($transactions);
+        $setting = Setting::asObject();
+        $reportTitle = strtoupper(trim((string) ($setting->name ?? config('app.name', 'TICKETING'))));
+
+        $fileName = 'Laporan_Penerimaan_Harian_' . now('Asia/Jakarta')->format('Ymd_His') . '.xlsx';
+
+        return Excel::download(
+            new TransactionDailyReceiptExport($startDate, $endDate, $exportRows, $reportTitle),
+            $fileName
+        );
+    }
+
+    private function buildDataTransactionExportRows($transactions): array
+    {
+        $rows = [];
+
+        foreach ($transactions as $trx) {
+            $tanggal = optional($trx->created_at)->timezone('Asia/Jakarta')->format('d/m/Y H:i:s');
+            $kasir = $trx->user->name ?? '-';
+            $caraBayar = strtoupper((string) ($trx->metode ?? '-'));
+
+            if ($trx->transaction_type === 'ticket' && $trx->detail->isNotEmpty()) {
+                foreach ($trx->detail as $detail) {
+                    $qty = max((int) ($detail->qty ?? 1), 1);
+                    $ppn = (float) ($detail->ppn ?? 0);
+                    $harga = (float) ($detail->total ?? 0) + $ppn;
+
+                    $rows[] = $this->makeExportRow(
+                        (string) ($trx->ticket_code ?? ('TRX/' . $trx->id)),
+                        $kasir,
+                        $tanggal,
+                        $harga,
+                        $qty,
+                        $caraBayar,
+                        $harga
+                    );
+                }
+                continue;
+            }
+
+            $qty = max((int) ($trx->amount ?? 1), 1);
+            $ppn = (float) ($trx->ppn ?? 0);
+            $harga = (float) ($trx->bayar ?? 0) - (float) ($trx->kembali ?? 0) + $ppn;
+
+            $rows[] = $this->makeExportRow(
+                (string) ($trx->ticket_code ?? ('TRX/' . $trx->id)),
+                $kasir,
+                $tanggal,
+                $harga,
+                $qty,
+                $caraBayar,
+                $harga
+            );
+        }
+
+        return $rows;
+    }
+
+    private function makeExportRow(
+        string $noTransaksi,
+        string $namaKasir,
+        string $tanggal,
+        float $harga,
+        int $qty,
+        string $caraBayar,
+        float $totalBayar
+    ): array {
+        $tunai = 0.0;
+        $debit = 0.0;
+        $qr = 0.0;
+        $creditCard = 0.0;
+        $transfer = 0.0;
+        $pembayaranLainnya = 0.0;
+
+        $metode = $this->normalizePaymentMethod($caraBayar);
+        if ($metode === 'cash') {
+            $tunai = $totalBayar;
+        } elseif ($metode === 'debit') {
+            $debit = $totalBayar;
+        } elseif ($metode === 'qris') {
+            $qr = $totalBayar;
+        } elseif ($metode === 'transfer') {
+            $transfer = $totalBayar;
+        } elseif ($metode === 'kredit') {
+            $creditCard = $totalBayar;
+        } else {
+            $pembayaranLainnya = $totalBayar;
+        }
+
+        return [
+            'no_transaksi' => $noTransaksi,
+            'nama_kasir' => $namaKasir,
+            'tanggal' => $tanggal,
+            'harga' => $harga,
+            'qty' => $qty,
+            'cara_bayar' => $caraBayar,
+            'tunai' => $tunai,
+            'debit' => $debit,
+            'qr' => $qr,
+            'credit_card' => $creditCard,
+            'transfer' => $transfer,
+            'pembayaran_lainnya' => $pembayaranLainnya,
+            'total_bayar' => $totalBayar,
+        ];
+    }
+
+    private function resolveDateRange(Request $request): array
+    {
+        $startDate = Carbon::now('Asia/Jakarta')->startOfDay();
+        $endDate = Carbon::now('Asia/Jakarta')->endOfDay();
+        $daterange = trim((string) $request->input('daterange', ''));
+
+        if ($daterange !== '') {
+            $parts = explode(' - ', $daterange);
+            if (count($parts) === 2) {
+                try {
+                    $startDate = Carbon::createFromFormat('m/d/Y', trim($parts[0]), 'Asia/Jakarta')->startOfDay();
+                    $endDate = Carbon::createFromFormat('m/d/Y', trim($parts[1]), 'Asia/Jakarta')->endOfDay();
+                } catch (\Throwable $e) {
+                    $startDate = Carbon::now('Asia/Jakarta')->startOfDay();
+                    $endDate = Carbon::now('Asia/Jakarta')->endOfDay();
+                }
+            }
+        } elseif ($request->filled('tanggal')) {
+            try {
+                $legacyDate = Carbon::parse($request->input('tanggal'), 'Asia/Jakarta');
+                $startDate = $legacyDate->copy()->startOfDay();
+                $endDate = $legacyDate->copy()->endOfDay();
+            } catch (\Throwable $e) {
+                $startDate = Carbon::now('Asia/Jakarta')->startOfDay();
+                $endDate = Carbon::now('Asia/Jakarta')->endOfDay();
+            }
+        }
+
+        return [$startDate, $endDate];
+    }
+
+    private function buildDailyReceiptGroups($transactions): array
+    {
+        $membershipIds = $transactions
+            ->whereIn('transaction_type', ['registration', 'renewal'])
+            ->pluck('ticket_id')
+            ->filter()
+            ->unique()
+            ->values();
+
+        $rentalIds = $transactions
+            ->where('transaction_type', 'rental')
+            ->pluck('ticket_id')
+            ->filter()
+            ->unique()
+            ->values();
+
+        $memberships = Membership::query()
+            ->whereIn('id', $membershipIds)
+            ->get()
+            ->keyBy('id');
+
+        $penyewaans = Penyewaan::query()
+            ->with('sewa')
+            ->whereIn('id', $rentalIds)
+            ->get()
+            ->keyBy('id');
+
+        $groups = [];
+
+        $pushRow = function (array $row) use (&$groups) {
+            $groupCode = $row['group_code'];
+            if (!isset($groups[$groupCode])) {
+                $groups[$groupCode] = [
+                    'group_code' => $groupCode,
+                    'group_name' => $row['group_name'],
+                    'rows' => [],
+                    'subtotal_qty' => 0,
+                    'subtotal_tunai' => 0,
+                    'subtotal_non_tunai' => 0,
+                    'subtotal_total' => 0,
+                ];
+            }
+
+            $groups[$groupCode]['rows'][] = $row;
+            $groups[$groupCode]['subtotal_qty'] += $row['qty'];
+            $groups[$groupCode]['subtotal_tunai'] += $row['tunai'];
+            $groups[$groupCode]['subtotal_non_tunai'] += $row['non_tunai'];
+            $groups[$groupCode]['subtotal_total'] += $row['total_bayar'];
+        };
+
+        foreach ($transactions as $trx) {
+            $shift = (int) $trx->created_at->timezone('Asia/Jakarta')->format('H') < 15 ? 1 : 2;
+            $jam = $trx->created_at->timezone('Asia/Jakarta')->format('H:i:s');
+            $fc = strtoupper((string) ($trx->user->name ?? '-'));
+            $metode = strtolower((string) ($trx->metode ?? ''));
+            $memberFlag = in_array($trx->transaction_type, ['registration', 'renewal']) ? 'Y' : 'T';
+            $voucherFlag = 'T';
+
+            if ($trx->transaction_type === 'ticket') {
+                foreach ($trx->detail as $detail) {
+                    $qty = max((int) ($detail->qty ?? 1), 1);
+                    $total = (float) ($detail->total ?? 0) + (float) ($detail->ppn ?? 0);
+                    $tarif = $qty > 0 ? $total / $qty : $total;
+                    $productCode = 'TK' . str_pad((string) ($detail->ticket_id ?? 0), 2, '0', STR_PAD_LEFT);
+                    $productName = strtoupper((string) ($detail->ticket->name ?? 'TIKET'));
+
+                    $pushRow([
+                        'no_bukti' => $trx->ticket_code,
+                        'shift' => $shift,
+                        'jam' => $jam,
+                        'fc' => $fc,
+                        'member' => $memberFlag,
+                        'voucher' => $voucherFlag,
+                        'group_code' => $productCode,
+                        'group_name' => $productName,
+                        'qty' => $qty,
+                        'tarif' => (float) $tarif,
+                        'tunai' => $metode === 'cash' ? (float) $total : 0.0,
+                        'non_tunai' => $metode === 'cash' ? 0.0 : (float) $total,
+                        'total_bayar' => (float) $total,
+                    ]);
+                }
+                continue;
+            }
+
+            if (in_array($trx->transaction_type, ['registration', 'renewal'])) {
+                $membership = $memberships->get($trx->ticket_id);
+                $productCode = strtoupper((string) ($membership->code ?? ('M' . str_pad((string) ($trx->ticket_id ?? 0), 2, '0', STR_PAD_LEFT))));
+                $productName = strtoupper((string) ($membership->name ?? ucfirst($trx->transaction_type)));
+            } elseif ($trx->transaction_type === 'rental') {
+                $penyewaan = $penyewaans->get($trx->ticket_id);
+                $sewa = $penyewaan?->sewa;
+                $sewaId = $sewa->id ?? 0;
+                $productCode = 'SR' . str_pad((string) $sewaId, 2, '0', STR_PAD_LEFT);
+                $productName = strtoupper((string) ($sewa->name ?? 'RENTAL'));
+            } else {
+                $productCode = strtoupper((string) $trx->transaction_type);
+                $productName = strtoupper((string) $trx->transaction_type);
+            }
+
+            $qty = max((int) ($trx->amount ?? 1), 1);
+            $total = (float) ($trx->bayar ?? 0) - (float) ($trx->kembali ?? 0) + (float) ($trx->ppn ?? 0);
+            $tarif = $qty > 0 ? $total / $qty : $total;
+
+            $pushRow([
+                'no_bukti' => $trx->ticket_code,
+                'shift' => $shift,
+                'jam' => $jam,
+                'fc' => $fc,
+                'member' => $memberFlag,
+                'voucher' => $voucherFlag,
+                'group_code' => $productCode,
+                'group_name' => $productName,
+                'qty' => $qty,
+                'tarif' => (float) $tarif,
+                'tunai' => $metode === 'cash' ? (float) $total : 0.0,
+                'non_tunai' => $metode === 'cash' ? 0.0 : (float) $total,
+                'total_bayar' => (float) $total,
+            ]);
+        }
+
+        ksort($groups);
+
+        return $groups;
+    }
+
     public function create()
     {
         $title = 'Input Ticket';
@@ -187,7 +484,7 @@ class TransactionController extends Controller
             ]);
         }
 
-        $setting = Setting::first();
+        $setting = Setting::asObject();
 
 
         $total = $transaction->detail()->sum('total') + $transaction->detail()->sum('ppn');
@@ -213,7 +510,7 @@ class TransactionController extends Controller
             $attr['ticket_id'] = $request->ticket;
             $attr['tipe'] = $tipe;
             $attr['nama_customer'] = $request->name;
-            $attr['metode'] = $request->metode;
+            $attr['metode'] = $this->normalizePaymentMethod($request->metode);
             $attr['cash'] = $request->cash;
             $attr['amount'] = 1;
             $attr['harga_ticket'] = $request->harga_ticket;
@@ -323,7 +620,7 @@ class TransactionController extends Controller
         }
     }
 
-   public function print(Transaction $transaction)
+    public function print(Transaction $transaction)
 {
     if ($transaction->transaction_type === 'rental') {
         if (!$transaction->ticket_id) {
@@ -333,7 +630,7 @@ class TransactionController extends Controller
         return redirect()->route('penyewaan.print', $transaction->ticket_id);
     }
 
-    $setting = Setting::first();
+    $setting = Setting::asObject();
 
     // 1. TAMBAHKAN INI: Inisialisasi agar variabel selalu ada
     $tickets = [];
@@ -360,16 +657,18 @@ class TransactionController extends Controller
         }
     }
 
-    $logo = $setting ? asset('/storage/' . $setting->logo) : 'data:image/png;base64,' . base64_encode(file_get_contents(public_path('/images/rio.png')));
+    $logo = !empty($setting->logo) ? asset('/storage/' . $setting->logo) : 'data:image/png;base64,' . base64_encode(file_get_contents(public_path('/images/rio.png')));
     $name = $setting->name ?? 'Ticketing';
     $ucapan = $setting->ucapan ?? 'Terima Kasih';
     $deskripsi = $setting->deskripsi ?? 'qr code hanya berlaku satu kali';
     $use = $setting->use_logo ?? false;
     $ppn = $setting->ppn ?? 0;
     $print = 0;
+    $ticketPrintOrientation = $setting->ticket_print_orientation ?? 'portrait';
 
-    return view('transaction.print', compact('transaction', 'logo', 'ucapan', 'deskripsi', 'use', 'name', "tickets", 'ppn', 'print', 'printMode'));
+    return view('transaction.print', compact('transaction', 'logo', 'ucapan', 'deskripsi', 'use', 'name', "tickets", 'ppn', 'print', 'printMode', 'ticketPrintOrientation'));
 }
+
     public function report(Request $request)
     {
         $title = 'Report Transaction';
@@ -395,7 +694,7 @@ class TransactionController extends Controller
 
         $member->load(['membership', 'childs']);
         $cashierName = $transaction->user?->name ?? '-';
-        $setting = Setting::first();
+        $setting = Setting::asObject();
         $ucapan = $setting->ucapan ?? 'Terima Kasih';
         $deskripsi = $setting->deskripsi ?? '';
 
@@ -415,13 +714,17 @@ class TransactionController extends Controller
 
         $member->load(['membership', 'childs']);
 
-        $type = $transaction->transaction_type === 'renewal' ? 'Perpanjangan' : 'Registrasi';
+        $baseMembershipPrice = (float) ($member->membership->price ?? 0);
+        $adminFee = max(0, ((float) ($transaction->bayar ?? 0)) - $baseMembershipPrice);
+        $type = $adminFee > 0
+            ? 'Perpanjangan Baru'
+            : ($transaction->transaction_type === 'renewal' ? 'Perpanjangan' : 'Registrasi');
         $invoiceCode = $transaction->ticket_code;
         $price = 'Rp. ' . number_format($member->membership->price ?? 0, 0, ',', '.');
         $date = $transaction->created_at?->format('d/m/Y H:i:s') ?? now('Asia/Jakarta')->format('d/m/Y H:i:s');
         $cashierName = $transaction->user?->name ?? '-';
 
-        $setting = Setting::first();
+        $setting = Setting::asObject();
         $appName = $setting->name ?? 'Ticketing App';
         $ucapan = $setting->ucapan ?? 'Terima Kasih';
         $deskripsi = $setting->deskripsi ?? '';
@@ -495,4 +798,15 @@ public function setFullScan(Transaction $transaction)
         return back()->with('error', $th->getMessage());
     }
 }
+
+    private function normalizePaymentMethod(?string $method): string
+    {
+        $normalized = strtolower(trim((string) $method));
+
+        return match ($normalized) {
+            'qr' => 'qris',
+            'credit', 'credit card', 'kartu kredit' => 'kredit',
+            default => $normalized,
+        };
+    }
 }

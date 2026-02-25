@@ -18,14 +18,14 @@ class NotifyRenewalH1Members extends Command
     {
         $timezone = 'Asia/Jakarta';
         $today = Carbon::now($timezone)->startOfDay();
-        $setting = Setting::query()->first();
+        $setting = Setting::asObject();
 
         if (!$setting || !(bool) $setting->whatsapp_enabled) {
             $this->info('WhatsApp nonaktif di setting. Tidak membuat log pengingat.');
             return Command::SUCCESS;
         }
 
-        $reminderDays = max((int) ($setting->member_reminder_days ?? 7), 1);
+        $reminderDays = max((int) ($setting->member_suspend_before_days ?? 7), 1);
         $limitDate = $today->copy()->addDays($reminderDays);
 
         $members = Member::query()

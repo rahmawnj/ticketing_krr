@@ -13,6 +13,10 @@ class AddUseLogoToSettingsTable extends Migration
      */
     public function up()
     {
+        if (Schema::hasColumn('settings', 'key')) {
+            return;
+        }
+
         Schema::table('settings', function (Blueprint $table) {
             $table->integer('use_logo')->default(1);
         });
@@ -25,6 +29,10 @@ class AddUseLogoToSettingsTable extends Migration
      */
     public function down()
     {
+        if (Schema::hasColumn('settings', 'key')) {
+            return;
+        }
+
         Schema::table('settings', function (Blueprint $table) {
             $table->dropColumn('use_logo');
         });

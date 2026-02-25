@@ -18,7 +18,7 @@ class SettingController extends Controller
     {
         $title = 'Setting';
         $breadcrumbs = ['Setting'];
-        $setting = Setting::first() ?? new Setting();
+        $setting = Setting::asObject();
 
         return view('setting.index', compact('title', 'breadcrumbs', 'setting'));
     }
@@ -31,9 +31,11 @@ class SettingController extends Controller
             'deskripsi' => 'required|string',
             'logo' => 'nullable|mimes:jpg,jpeg,png,gif',
             'ppn' => 'required|numeric',
-            'member_reminder_days' => 'required|numeric|min:1',
-            'member_delete_grace_days' => 'required|integer|min:0',
+            'member_suspend_before_days' => 'required|integer|min:1',
+            'member_suspend_after_days' => 'required|integer|min:0',
+            'member_reactivation_admin_fee' => 'required|integer|min:0',
             'print_mode' => 'required|in:per_qty,per_ticket',
+            'ticket_print_orientation' => 'required|in:portrait,landscape',
             'dashboard_metric_mode' => 'required|in:amount,count',
             'whatsapp_enabled' => 'nullable|boolean',
         ]);
@@ -41,32 +43,23 @@ class SettingController extends Controller
         try {
             DB::beginTransaction();
 
-            $setting = Setting::first();
+            $setting = Setting::asObject();
             $logo = $request->file('logo');
             $logoUrl = null;
             $attr['use_logo'] = $request->has('use_logo') ? 1 : 0;
             $attr['whatsapp_enabled'] = $request->has('whatsapp_enabled') ? 1 : 0;
 
-            if ($setting) {
-                if ($logo) {
-                    if ($setting->logo && Storage::exists($setting->logo)) {
-                        Storage::delete($setting->logo);
-                    }
-                    $logoUrl = $logo->storeAs('logo', date('ymdhis') . rand(100, 990) . '.' . $logo->extension());
-                } else {
-                    $logoUrl = $setting->logo;
+            if ($logo) {
+                if (!empty($setting->logo) && Storage::exists($setting->logo)) {
+                    Storage::delete($setting->logo);
                 }
-                $attr["logo"] = $logoUrl;
-                $setting->update($attr);
+                $logoUrl = $logo->storeAs('logo', date('ymdhis') . rand(100, 990) . '.' . $logo->extension());
             } else {
-                if ($logo) {
-                    $logoUrl = $logo->storeAs('logo', date('ymdhis') . rand(100, 990) . '.' . $logo->extension());
-                    $attr["logo"] = $logoUrl;
-                } else {
-                    unset($attr['logo']);
-                }
-                Setting::create($attr);
+                $logoUrl = $setting->logo ?? null;
             }
+
+            $attr['logo'] = $logoUrl;
+            Setting::putMany($attr);
 
             DB::commit();
             return back()->with('success', "Setting successfully saved");

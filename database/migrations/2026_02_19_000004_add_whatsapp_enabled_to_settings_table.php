@@ -13,6 +13,10 @@ class AddWhatsappEnabledToSettingsTable extends Migration
      */
     public function up()
     {
+        if (Schema::hasColumn('settings', 'key')) {
+            return;
+        }
+
         Schema::table('settings', function (Blueprint $table) {
             $table->boolean('whatsapp_enabled')
                 ->default(false)
@@ -27,9 +31,12 @@ class AddWhatsappEnabledToSettingsTable extends Migration
      */
     public function down()
     {
+        if (Schema::hasColumn('settings', 'key')) {
+            return;
+        }
+
         Schema::table('settings', function (Blueprint $table) {
             $table->dropColumn('whatsapp_enabled');
         });
     }
 }
-

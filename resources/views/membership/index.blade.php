@@ -25,10 +25,12 @@
                 <tr>
                     <th class="text-nowrap">No</th>
                     <th class="text-nowrap">Name</th>
+                    <th class="text-nowrap">Kode</th>
                     <th class="text-nowrap">Price (Total)</th>
-                    <th class="text-nowrap">Status PPN</th> {{-- Kolom Baru --}}
+                    <th class="text-nowrap">Status PBJT</th> {{-- Kolom Baru --}}
                     <th class="text-nowrap">Duration</th>
                     <th class="text-nowrap">Max Person</th>
+                    <th class="text-nowrap">Registered Member</th>
                     <th class="text-nowrap">Action</th>
                 </tr>
             </thead>
@@ -58,22 +60,30 @@
                     </div>
 
                     <div class="form-group mb-3">
-                        <label for="price">Price Pokok (Tanpa PPN)</label>
+                        <label for="code">Kode Membership</label>
+                        <input type="text" name="code" id="code" class="form-control" value="" placeholder="Contoh: FP3B">
+                        @error('code')
+                        <small class="text-danger">{{ $message }}</small>
+                        @enderror
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="price">Price Pokok (Tanpa PBJT)</label>
                         <input type="number" name="price" id="price" class="form-control" value="">
                         @error('price')
                         <small class="text-danger">{{ $message }}</small>
                         @enderror
                     </div>
 
-                    {{-- PPN Checkbox --}}
+                    {{-- PBJT Checkbox --}}
                     <div class="form-check mb-3">
                         <input class="form-check-input" type="checkbox" id="use_ppn" name="use_ppn" />
-                        <label class="form-check-label" for="use_ppn">Gunakan PPN ({{ $setting->ppn ?? 0 }}%)</label>
+                        <label class="form-check-label" for="use_ppn">Gunakan PBJT ({{ $setting->ppn ?? 0 }}%)</label>
                     </div>
 
-                    {{-- Jumlah PPN (Readonly) --}}
+                    {{-- Jumlah PBJT (Readonly) --}}
                     <div class="form-group mb-3">
-                        <label for="calculated_ppn">Jumlah PPN (Rp)</label>
+                        <label for="calculated_ppn">Jumlah PBJT (Rp)</label>
                         <input type="number" id="calculated_ppn" class="form-control" value="0" readonly>
                     </div>
 
@@ -144,17 +154,17 @@
         dropdownParent: $("#modal-dialog")
     });
 
-    // Ambil persentase PPN dari PHP
-    const PPN_PERCENTAGE = parseFloat("{{ $setting->ppn ?? 0 }}");
+    // Ambil persentase PBJT dari PHP
+    const PBJT_PERCENTAGE = parseFloat("{{ $setting->ppn ?? 0 }}");
 
-    // Fungsi untuk menghitung dan menampilkan jumlah PPN
+    // Fungsi untuk menghitung dan menampilkan jumlah PBJT
     function calculatePpn() {
         const price = parseFloat($('#price').val()) || 0;
         const isPpnChecked = $('#use_ppn').prop('checked');
         let ppnAmount = 0;
 
         if (isPpnChecked) {
-            ppnAmount = (price * PPN_PERCENTAGE) / 100;
+            ppnAmount = (price * PBJT_PERCENTAGE) / 100;
         }
 
         $('#calculated_ppn').val(ppnAmount.toFixed(0)); // Tampilkan 0 desimal
@@ -176,7 +186,7 @@
         // 4. Hapus semua pesan error <small>
         $form.find("small.text-danger").remove();
 
-        // 5. Reset Select2 dan PPN display
+        // 5. Reset Select2 dan PBJT display
         $('#gates').val(null).trigger('change');
         $('#calculated_ppn').val(0);
     }
@@ -200,6 +210,10 @@
                 name: 'name'
             },
             {
+                data: 'code',
+                name: 'code'
+            },
+            {
                 data: 'price',
                 name: 'price'
             },
@@ -217,6 +231,11 @@
                 name: 'max_person'
             },
             {
+                data: 'total_members',
+                name: 'total_members',
+                searchable: false
+            },
+            {
                 data: 'action',
                 name: 'action',
                 sortable: false,
@@ -225,8 +244,11 @@
         ]
     });
 
-    // Event Handler untuk PPN Calculation
+    // Event Handler untuk PBJT Calculation
     $(document).on('change keyup', '#price, #use_ppn', calculatePpn);
+    $(document).on('input', '#code', function() {
+        this.value = (this.value || '').toUpperCase().replace(/\s+/g, '');
+    });
 
     // --- EVENT TOMBOL ADD ---
     $("#btn-add").on('click', function() {
@@ -260,12 +282,13 @@
 
                 // Isi form
                 $("#name").val(membership.name);
+                $("#code").val(membership.code);
                 $("#price").val(membership.price);
                 $("#duration_days").val(membership.duration_days);
                 $("#max_person").val(membership.max_person);
                 $("#max_access").val(membership.max_access ?? 0);
 
-                // Isi PPN
+                // Isi PBJT
                 if (membership.use_ppn == 1) {
                     $('#use_ppn').prop('checked', true);
                     $('#calculated_ppn').val(membership.ppn);

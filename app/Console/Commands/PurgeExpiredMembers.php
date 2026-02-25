@@ -35,8 +35,8 @@ class PurgeExpiredMembers extends Command
     public function handle()
     {
         $today = Carbon::now('Asia/Jakarta')->startOfDay();
-        $setting = Setting::query()->first();
-        $graceDays = (int) ($setting->member_delete_grace_days ?? 0);
+        $setting = Setting::asObject();
+        $graceDays = max((int) ($setting->member_suspend_after_days ?? 0), 0);
         $cutoffDate = $today->copy()->subDays($graceDays)->toDateString();
 
         $blockedIds = array_values(array_unique(array_merge(

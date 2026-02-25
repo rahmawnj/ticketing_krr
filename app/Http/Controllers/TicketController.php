@@ -66,7 +66,7 @@ class TicketController extends Controller
         $ticket = new Ticket();
         $jenis = JenisTicket::get();
         $terusan = Terusan::get();
-        $setting = Setting::first();
+        $setting = Setting::asObject();
         $gates = GateAccess::whereIsActive(1)->get();
 
         return view('ticket.form', compact('title', 'breadcrumbs', 'action', 'method', 'ticket', 'jenis', 'terusan', 'setting', 'gates'));
@@ -85,7 +85,7 @@ class TicketController extends Controller
             DB::beginTransaction();
 
             $harga = $request->harga;
-            $ppn = Setting::first();
+            $ppn = Setting::asObject();
 
             if ($request->ppn && $request->ppn == "on") {
                 $ppn = $harga * $ppn->ppn / 100;
@@ -129,7 +129,7 @@ class TicketController extends Controller
         $method = 'PUT';
         $jenis = JenisTicket::get();
         $terusan = Terusan::get();
-        $setting = Setting::first();
+        $setting = Setting::asObject();
         $gates = GateAccess::whereIsActive(1)->get();
 
         return view('ticket.form', compact('title', 'breadcrumbs', 'action', 'method', 'ticket', 'jenis', 'terusan', 'setting', 'gates'));
@@ -149,7 +149,7 @@ class TicketController extends Controller
             DB::beginTransaction();
 
             $harga = $request->harga;
-            $ppn = Setting::first();
+            $ppn = Setting::asObject();
 
             $ppn = $harga * $ppn->ppn / 100;
 

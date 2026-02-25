@@ -178,7 +178,7 @@ class DetailTransactionController extends Controller
             // $setting = Setting::first();
 
 
-            $setting = Setting::first();
+            $setting = Setting::asObject();
             $printMode = $setting->print_mode ?? 'per_qty';
 
             foreach ($transaction->detail as $detail) {
@@ -212,10 +212,25 @@ class DetailTransactionController extends Controller
             $ticketPpn = Ticket::whereIn('id', $ticketPpnId)->where('use_ppn', 1)->get();
             $totalPpn = $ticketPpn->sum('ppn') * count($ticketPpnId);
             $bayar = intval(str_replace('.', '', $request->bayar)) - intval($totalPpn);
+            $metode = strtolower(trim((string) $request->metode));
+            $metode = match ($metode) {
+                'qr' => 'qris',
+                'credit', 'credit card', 'kartu kredit' => 'kredit',
+                default => $metode,
+            };
+            $isCardMethod = in_array($metode, ['debit', 'kredit'], true);
 
             // $ppn = $request->ppn ?? 0;
             $print = $request->hide_print ?? 0;
             // $totalPpn = ($totalHarga - $disc) * $ppn / 100;
+
+            if ($isCardMethod) {
+                $request->validate([
+                    'nama_kartu' => 'required|string|max:100',
+                    'no_kartu' => 'required|string|max:100',
+                    'bank' => 'required|string|max:100',
+                ]);
+            }
 
             $transaction->update([
                 'ticket_id' => 0,
@@ -226,18 +241,22 @@ class DetailTransactionController extends Controller
                 'bayar' => $bayar,
                 'transaction_type' => 'ticket',
                 'kembali' => str_replace('.', '', $request->kembali),
-                'metode' => request('metode'),
+                'metode' => $metode,
+                'nama_kartu' => $isCardMethod ? $request->nama_kartu : null,
+                'no_kartu' => $isCardMethod ? $request->no_kartu : null,
+                'bank' => $isCardMethod ? $request->bank : null,
                 'ppn' => $totalPpn,
             ]);
 
             DB::commit();
-            $logo = $setting ? asset('/storage/' . $setting->logo) : 'data:image/png;base64,' . base64_encode(file_get_contents(public_path('/images/rio.png')));
+            $logo = !empty($setting->logo) ? asset('/storage/' . $setting->logo) : 'data:image/png;base64,' . base64_encode(file_get_contents(public_path('/images/rio.png')));
             $ucapan = $setting->ucapan ?? 'Terima Kasih';
             $name = $setting->name ?? 'Ticketing';
             $deskripsi = $setting->deskripsi ?? 'qr code hanya berlaku satu kali';
             $use = $setting->use_logo ?? false;
 
-            return view('transaction.print', compact('transaction', 'logo', 'ucapan', 'deskripsi', 'use', 'name', "tickets", 'print', 'printMode'));
+            $ticketPrintOrientation = $setting->ticket_print_orientation ?? 'portrait';
+            return view('transaction.print', compact('transaction', 'logo', 'ucapan', 'deskripsi', 'use', 'name', "tickets", 'print', 'printMode', 'ticketPrintOrientation'));
             // $print = $this->print($transaction);
             // if ($print["status"] == "success") {
             //     return back()->with('success', "Transaction success");

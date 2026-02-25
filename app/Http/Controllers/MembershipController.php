@@ -29,7 +29,7 @@ class MembershipController extends Controller
         $title = 'Data Membership';
         $breadcrumbs = ['Master', 'Data Membership'];
         $gates = GateAccess::whereIsActive(1)->get();
-        $setting = Setting::first(); // <-- Ambil data setting
+        $setting = Setting::asObject(); // <-- Ambil data setting
 
         // Kirim setting ke view
         return view('membership.index', compact('title', 'breadcrumbs', 'gates', 'setting'));
@@ -41,7 +41,11 @@ class MembershipController extends Controller
     public function get(Request $request)
     {
         if ($request->ajax()) {
-            $data = Membership::orderBy('name', 'asc')->get();
+            $data = Membership::withCount([
+                'members as total_members' => function ($query) {
+                    $query->where('parent_id', 0);
+                }
+            ])->orderBy('name', 'asc')->get();
 
             return DataTables::of($data)
                 ->addIndexColumn()
@@ -59,6 +63,9 @@ class MembershipController extends Controller
                     $totalPrice = $row->price + $row->ppn;
                     return 'Rp ' . number_format($totalPrice, 0, ',', '.');
                 })
+                ->editColumn('code', function ($row) {
+                    return $row->code ?: '-';
+                })
                 ->addColumn('ppn_status', function ($row) {
                     // Kolom baru untuk status PPN
                     if ($row->use_ppn == 1) {
@@ -69,6 +76,9 @@ class MembershipController extends Controller
                 ->editColumn('duration_days', function ($row) {
                     // Tambahkan "Hari"
                     return $row->duration_days . ' Hari';
+                })
+                ->addColumn('total_members', function ($row) {
+                    return (int) ($row->total_members ?? 0);
                 })
                 ->rawColumns(['action', 'ppn_status']) // Tambahkan 'ppn_status' ke rawColumns
                 ->make(true);
@@ -83,6 +93,7 @@ class MembershipController extends Controller
         // Validasi
         $request->validate([
             'name' => 'required|string|max:255|unique:memberships,name',
+            'code' => 'required|string|max:20|unique:memberships,code',
             'price' => 'required|numeric|min:0',
             'duration_days' => 'required|integer|min:1',
             'max_person' => 'nullable|integer|min:1',
@@ -95,13 +106,14 @@ class MembershipController extends Controller
             DB::beginTransaction();
 
             $harga = $request->price;
-            $setting = Setting::first();
+            $setting = Setting::asObject();
 
             // Hitung PPN
             $usePpn = $request->use_ppn == "on" ? 1 : 0;
             $calculatedPpn = $usePpn ? ($harga * $setting->ppn / 100) : 0;
 
             $data = $request->all();
+            $data['code'] = strtoupper(trim((string) $request->code));
             $data['use_ppn'] = $usePpn;
             $data['ppn'] = $calculatedPpn;
             $data['max_access'] = $request->max_access ?? 0;
@@ -141,6 +153,7 @@ class MembershipController extends Controller
         // Validasi dengan rule unique (ignore ID saat ini)
         $request->validate([
             'name' => 'required|string|max:255|' . Rule::unique('memberships')->ignore($membership->id),
+            'code' => ['required', 'string', 'max:20', Rule::unique('memberships', 'code')->ignore($membership->id)],
             'price' => 'required|numeric|min:0',
             'duration_days' => 'required|integer|min:1',
             'max_person' => 'nullable|integer|min:1',
@@ -153,13 +166,14 @@ class MembershipController extends Controller
             DB::beginTransaction();
 
             $harga = $request->price;
-            $setting = Setting::first();
+            $setting = Setting::asObject();
 
             // Hitung PPN
             $usePpn = $request->use_ppn == "on" ? 1 : 0;
             $calculatedPpn = $usePpn ? ($harga * $setting->ppn / 100) : 0;
 
             $data = $request->all();
+            $data['code'] = strtoupper(trim((string) $request->code));
             $data['use_ppn'] = $usePpn;
             $data['ppn'] = $calculatedPpn;
             $data['max_access'] = $request->max_access ?? 0;

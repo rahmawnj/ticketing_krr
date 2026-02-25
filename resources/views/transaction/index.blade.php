@@ -3,6 +3,7 @@
 @push('style')
 <link href="{{ asset('/') }}plugins/datatables.net-bs4/css/dataTables.bootstrap4.min.css" rel="stylesheet" />
 <link href="{{ asset('/') }}plugins/datatables.net-responsive-bs4/css/responsive.bootstrap4.min.css" rel="stylesheet" />
+<link href="{{ asset('/') }}plugins/bootstrap-daterangepicker/daterangepicker.css" rel="stylesheet" />
 <style>
     #datatable tbody img {
         cursor: zoom-in;
@@ -32,8 +33,9 @@
     {{-- Kolom Kiri: Input Tanggal + Submit --}}
     <div class="col-md-6 d-flex align-items-end">
         <div class="form-group me-3">
-            <label for="tanggal">Tanggal</label>
-            <input type="date" name="tanggal" id="tanggal" class="form-control" value="{{ request('tanggal') ?? Carbon\Carbon::now()->format('Y-m-d') }}">
+            <label for="daterange">Tanggal</label>
+            <input type="text" name="daterange" id="daterange" class="form-control"
+                   value="{{ request('daterange') ?: now('Asia/Jakarta')->format('m/d/Y') . ' - ' . now('Asia/Jakarta')->format('m/d/Y') }}">
         </div>
         <div class="form-group me-3">
             <label for="transaction_type">Transaction Type</label>
@@ -52,6 +54,11 @@
         <div class="form-group">
             <button type="submit" class="btn btn-success mt-3">Submit</button>
         </div>
+        <div class="form-group ms-2">
+            <a href="#" id="btn-export-excel" class="btn btn-outline-success mt-3">
+                <i class="fas fa-file-excel"></i> Export Excel
+            </a>
+        </div>
     </div>
 
     {{-- Kolom Kanan: Tiga Tombol Link Aksi --}}
@@ -61,9 +68,9 @@
         <i class="fas fa-user-plus"></i> Registrasi Member
     </a>
 
-    {{-- 2. Input Penyewaan (Warna: Secondary / Abu-abu, Ikon: Shopping Cart) --}}
+    {{-- 2. Input Transaksi Lainnya (Warna: Secondary / Abu-abu, Ikon: Shopping Cart) --}}
     <a href="{{ route('penyewaan.create') }}" class="btn btn-secondary mt-3 ms-2">
-        <i class="fas fa-shopping-cart"></i> Input Penyewaan
+        <i class="fas fa-shopping-cart"></i> Input Transaksi Lainnya
     </a>
 
     {{-- 3. Input Ticket (Warna: Primary / Biru, Ikon: Ticket Alt) --}}
@@ -74,6 +81,7 @@
     {{-- 4. Renewal (Warna: Warning / Kuning, Ikon: History) --}}
     <a href="{{ route('members.bulk_renew') }}" class="btn btn-warning mt-3 ms-2">
         <i class="fas fa-history"></i> Renewal
+        <span class="badge bg-dark ms-1">{{ $renewalCount ?? 0 }}</span>
     </a>
 </div>
 </form>
@@ -81,6 +89,7 @@
         <table id="datatable" class="table table-striped table-bordered align-middle">
             <thead>
                 <tr>
+                    <th class="text-nowrap">Tanggal</th>
                     <th class="text-nowrap">No</th>
                     <!-- <th class="text-nowrap">No Trx</th> -->
                     <th class="text-nowrap">Invoice</th>
@@ -91,7 +100,7 @@
 <th class="text-nowrap">Transaction Type</th>
                     <th class="text-nowrap">Scanned</th>
                     <th class="text-nowrap">Bayar</th>
-                    <th class="text-nowrap">PPN</th>
+                    <th class="text-nowrap">PBJT</th>
                     <th class="text-nowrap">Discount</th>
                     <th class="text-nowrap">Total</th>
                     <th class="text-nowrap">Status</th>
@@ -189,6 +198,9 @@
                                 <select name="metode" id="metode" class="form-control">
                                     <option value="cash">Cash</option>
                                     <option value="debit">Debit</option>
+                                    <option value="qris">QRIS</option>
+                                    <option value="kredit">Kredit</option>
+                                    <option value="transfer">Transfer</option>
                                     <option value="lain-lain">Lain-lain</option>
                                 </select>
 
@@ -287,9 +299,11 @@
 <script src="{{ asset('/') }}plugins/datatables.net-responsive/js/dataTables.responsive.min.js"></script>
 <script src="{{ asset('/') }}plugins/datatables.net-responsive-bs4/js/responsive.bootstrap4.min.js"></script>
 <script src="{{ asset('/') }}plugins/sweetalert/dist/sweetalert.min.js"></script>
+<script src="{{ asset('/') }}plugins/moment/min/moment.min.js"></script>
+<script src="{{ asset('/') }}plugins/bootstrap-daterangepicker/daterangepicker.js"></script>
 
 <script>
-    let tanggal = $("#tanggal").val();
+    let daterange = $("#daterange").val();
     let transactionType = $("#transaction_type").val();
 
     var table = $('#datatable').DataTable({
@@ -300,13 +314,17 @@
             url: "{{ route('transactions.list') }}",
             type: "GET",
             data: {
-                "tanggal": tanggal,
+                "daterange": daterange,
                 "transaction_type": transactionType,
             }
         },
         deferRender: true,
         pagination: true,
         columns: [{
+                data: 'tanggal',
+                name: 'tanggal'
+            },
+            {
                 data: 'DT_RowIndex',
                 name: 'DT_RowIndex',
                 sortable: false,
@@ -364,6 +382,36 @@
             },
         ]
     });
+
+    (function initDateRange() {
+        let today = moment();
+        let rangeValue = $("#daterange").val();
+        let start = today.clone();
+        let end = today.clone();
+
+        if (rangeValue && rangeValue.includes(' - ')) {
+            let parts = rangeValue.split(' - ');
+            let parsedStart = moment(parts[0], 'MM/DD/YYYY', true);
+            let parsedEnd = moment(parts[1], 'MM/DD/YYYY', true);
+            if (parsedStart.isValid() && parsedEnd.isValid()) {
+                start = parsedStart;
+                end = parsedEnd;
+            }
+        }
+
+        $("#daterange").daterangepicker({
+            opens: "right",
+            autoUpdateInput: true,
+            locale: {
+                format: "MM/DD/YYYY",
+                separator: " - "
+            },
+            startDate: start,
+            endDate: end
+        });
+
+        $("#daterange").val(start.format('MM/DD/YYYY') + ' - ' + end.format('MM/DD/YYYY'));
+    })();
 
     $("#btn-add").on('click', function() {
         let route = $(this).attr('data-route')
@@ -533,6 +581,15 @@
 
         $("#modal-photo-img").attr('src', src);
         $('#modal-photo').modal('show');
+    });
+
+    $("#btn-export-excel").on('click', function(e) {
+        e.preventDefault();
+        const params = new URLSearchParams({
+            daterange: $("#daterange").val() || "",
+            transaction_type: $("#transaction_type").val() || ""
+        });
+        window.location.href = "{{ route('transactions.export.daily') }}" + "?" + params.toString();
     });
 </script>
 @endpush

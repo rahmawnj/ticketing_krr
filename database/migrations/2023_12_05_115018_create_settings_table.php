@@ -15,12 +15,8 @@ class CreateSettingsTable extends Migration
     {
         Schema::create('settings', function (Blueprint $table) {
             $table->id();
-            $table->string('name')->nullable();
-            $table->string('logo')->nullable();
-            $table->string('ucapan')->nullable();
-            $table->string('deskripsi')->nullable();
-            $table->integer('ppn')->nullable();
-            $table->integer('member_reminder_days')->default(7);
+            $table->string('key')->unique();
+            $table->text('value')->nullable();
             $table->timestamps();
         });
     }

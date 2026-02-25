@@ -1,5 +1,3 @@
-<a href="#modal-dialog-import" id="btn-add" class="btn btn-success " data-bs-toggle="modal"><i class="ion-ios-document"></i> Import Member</a>
-
 <div class="modal fade" id="modal-dialog-import">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">

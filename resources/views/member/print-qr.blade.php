@@ -14,23 +14,38 @@
             width: 85.6mm;
             height: 54mm;
             border: 1px solid #0f2a3c;
-            padding: 6mm;
+            padding: 3.5mm 6mm 6mm 6mm;
             position: relative;
         }
         .header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-bottom: 4mm;
+            margin-bottom: 2.5mm;
+        }
+        .brand-wrap {
+            display: flex;
+            align-items: center;
+            gap: 2mm;
+            min-width: 0;
         }
         .brand {
             font-weight: 700;
             font-size: 12px;
             text-transform: uppercase;
         }
+        .brand-logo {
+            max-height: 8mm;
+            max-width: 28mm;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            display: block;
+        }
         .member-id {
             font-size: 10px;
             color: #2a4b5f;
+            text-align: right;
         }
         .content {
             display: grid;
@@ -56,16 +71,43 @@
             font-size: 8px;
             color: #4b5b66;
             display: flex;
-            justify-content: space-between;
+            justify-content: flex-end;
+        }
+        .app-footer {
+            font-size: 9px;
+            font-weight: 700;
+            color: #2a4b5f;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+        .member-code-big {
+            position: absolute;
+            left: 6mm;
+            bottom: 3.5mm;
+            font-size: 13px;
+            line-height: 1;
+            font-weight: 700;
+            color: #0f2a3c;
+            letter-spacing: 0.3px;
         }
     </style>
 </head>
 
 <body>
+    @php
+        $membershipCode = $member->membership->code ?? '-';
+        $showLogo = (int) ($setting->use_logo ?? 0) === 1 && !empty($setting->logo ?? null);
+        $logoUrl = $showLogo ? asset('storage/' . $setting->logo) : null;
+    @endphp
+
     <div class="card">
         <div class="header">
-            <div class="brand">Member Card</div>
-            <div class="member-id">No. Member: {{ $member->qr_code }}</div>
+            <div class="brand-wrap">
+                @if ($showLogo)
+                    <img src="{{ $logoUrl }}" alt="Logo" class="brand-logo">
+                @endif
+            </div>
+            <div class="member-id">{{ $member->display_member_code ?? '-' }}</div>
         </div>
 
         <div class="content">
@@ -85,14 +127,15 @@
             </div>
 
             <div class="qr">
-                {!! QrCode::size(90)->margin(0)->generate($member->qr_code) !!}
+                {!! QrCode::size(100)->margin(0)->errorCorrection('H')->generate($member->qr_code) !!}
             </div>
         </div>
 
         <div class="footer">
-            <span>QR berlaku selama masa aktif</span>
-            <span>MyMemberID</span>
+            <span class="app-footer">{{ $setting->name ?? 'ANWA' }}</span>
         </div>
+
+        <div class="member-code-big">{{ $membershipCode }}</div>
     </div>
 
 

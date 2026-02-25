@@ -1,6 +1,7 @@
 @extends('layouts.master')
 
 @push('style')
+<link href="{{ asset('/') }}plugins/bootstrap-daterangepicker/daterangepicker.css" rel="stylesheet" />
 <style>
     .dashboard-kpi-card {
         position: relative;
@@ -150,30 +151,39 @@
     }
     .dashboard-chart-date {
         display: inline-flex;
-        align-items: center;
+        align-items: stretch;
         gap: 8px;
-        font-size: 12px;
-        font-weight: 700;
-        color: #275287;
-        background: #eaf3ff;
-        border: 1px solid #cfe3ff;
-        border-radius: 999px;
-        padding: 5px 9px;
         white-space: nowrap;
     }
-    .dashboard-date-input {
-        border: 0;
+    .dashboard-filter-select,
+    .dashboard-filter-input {
+        border: 1px solid #cfe3ff;
         background: #fff;
         color: #1f3e66;
         font-size: 12px;
         font-weight: 700;
         border-radius: 999px;
-        padding: 4px 8px;
-        min-width: 138px;
+        padding: 6px 10px;
         outline: none;
     }
-    .dashboard-date-input:focus {
+    .dashboard-filter-select {
+        min-width: 140px;
+    }
+    .dashboard-filter-input {
+        min-width: 190px;
+    }
+    .dashboard-filter-select:focus,
+    .dashboard-filter-input:focus {
         box-shadow: 0 0 0 2px rgba(47, 124, 255, 0.2);
+    }
+    .dashboard-filter-btn {
+        border: 1px solid #cfe3ff;
+        background: #eaf3ff;
+        color: #275287;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+        padding: 6px 12px;
     }
     .dashboard-date-label {
         font-size: 12px;
@@ -290,9 +300,25 @@
                         <p class="dashboard-chart-subtitle">{{ $chartSubtitle }}</p>
                     </div>
                     <div>
-                        <form method="GET" class="dashboard-chart-date">
-                            <span>Tanggal</span>
-                            <input type="date" name="date" value="{{ $selectedDateYmd }}" class="dashboard-date-input" onchange="this.form.submit()">
+                        <form method="GET" class="dashboard-chart-date" id="dashboard-filter-form">
+                            <select name="period_type" id="period_type" class="dashboard-filter-select">
+                                <option value="hourly" {{ $periodType === 'hourly' ? 'selected' : '' }}>Per Jam</option>
+                                <option value="daily" {{ $periodType === 'daily' ? 'selected' : '' }}>Harian</option>
+                                <option value="monthly" {{ $periodType === 'monthly' ? 'selected' : '' }}>Bulanan</option>
+                                <option value="yearly" {{ $periodType === 'yearly' ? 'selected' : '' }}>Tahunan</option>
+                            </select>
+                            <input type="text" id="period_value_display" class="dashboard-filter-input" autocomplete="off">
+                            <select id="period_year_select" class="dashboard-filter-input d-none">
+                                @php
+                                    $currentYear = (int) \Carbon\Carbon::now('Asia/Jakarta')->format('Y');
+                                    $selectedYear = (int) ($periodType === 'yearly' ? $periodValue : $currentYear);
+                                @endphp
+                                @for($year = $currentYear + 2; $year >= $currentYear - 10; $year--)
+                                    <option value="{{ $year }}" {{ $selectedYear === $year ? 'selected' : '' }}>{{ $year }}</option>
+                                @endfor
+                            </select>
+                            <input type="hidden" name="period_value" id="period_value" value="{{ $periodValue }}">
+                            <button type="submit" class="dashboard-filter-btn">Terapkan</button>
                         </form>
                         <div class="dashboard-date-label">{{ $todayLabel }}</div>
                     </div>
@@ -300,7 +326,7 @@
             </div>
             <div class="dashboard-chart-body">
                 <div class="chart-wrap">
-                    <canvas id="bar-chart"></canvas>
+                    <div id="bar-chart"></div>
                 </div>
             </div>
         </div>
@@ -308,123 +334,201 @@
 </div>
 @endsection
 @push('script')
-<script src="{{ asset('/') }}plugins/chart.js/dist/chart.min.js"></script>
+<script src="{{ asset('/') }}plugins/apexcharts/dist/apexcharts.min.js"></script>
+<script src="{{ asset('/') }}plugins/moment/min/moment.min.js"></script>
+<script src="{{ asset('/') }}plugins/bootstrap-daterangepicker/daterangepicker.js"></script>
 <script>
     const chartData = @json($chartData);
     const dashboardMetricMode = @json($dashboardMetricMode);
+    const currentPeriodType = @json($periodType);
     const isCountMode = dashboardMetricMode === 'count';
     const formatNumberID = (value) => new Intl.NumberFormat('id-ID').format(Number(value || 0));
-    var ctx2 = document.getElementById('bar-chart').getContext('2d');
-    var barChart = new Chart(ctx2, {
-        type: 'bar',
-        data: {
-            labels: chartData.labels,
-            datasets: [
-            {
-                label: 'Renewal',
-                borderWidth: 2,
-                borderColor: '#17a2b8',
-                backgroundColor: 'rgba(23, 162, 184, 0.5)',
-                data: chartData.renewal
-            },
-            {
-                label: 'New Member',
-                borderWidth: 2,
-                borderColor: '#fd7e14',
-                backgroundColor: 'rgba(253, 126, 20, 0.5)',
-                data: chartData.new_member
-            },
-            {
-                label: 'Ticket',
-                borderWidth: 2,
-                borderColor: '#007bff',
-                backgroundColor: 'rgba(0, 123, 255, 0.5)',
-                data: chartData.ticket
-            },
-            {
-                label: 'Penyewaan',
-                borderWidth: 2,
-                borderColor: '#28a745',
-                backgroundColor: 'rgba(40, 167, 69, 0.5)',
-                data: chartData.rental
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'top',
-                    labels: {
-                        usePointStyle: true,
-                        pointStyle: 'rectRounded',
-                        boxWidth: 12,
-                        boxHeight: 12,
-                        padding: 14,
-                        color: '#425466',
-                        font: {
-                            size: 12,
-                            weight: '600'
-                        }
-                    }
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            const val = context.parsed?.y ?? 0;
-                            return isCountMode
-                                ? context.dataset.label + ': ' + formatNumberID(val)
-                                : context.dataset.label + ': Rp ' + formatNumberID(val);
-                        }
-                    }
-                },
-                title: {
-                    display: false
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        color: '#5f7085',
-                        callback: function(value) {
-                            return isCountMode
-                                ? formatNumberID(value)
-                                : 'Rp ' + formatNumberID(value);
-                        }
-                    },
-                    grid: {
-                        color: 'rgba(125, 141, 163, 0.18)',
-                        drawBorder: false
-                    },
-                    title: {
-                        display: true,
-                        text: isCountMode ? 'Jumlah Transaksi' : 'Amount (Rp)',
-                        color: '#506175',
-                        font: {
-                            weight: '700'
-                        }
-                    }
-                },
-                x: {
-                    ticks: {
-                        color: '#5f7085'
-                    },
-                    grid: {
-                        color: 'rgba(125, 141, 163, 0.12)',
-                        drawBorder: false
-                    },
-                    title: {
-                        display: true,
-                        text: 'Jam',
-                        color: '#506175',
-                        font: {
-                            weight: '700'
-                        }
-                    }
-                }
-            }
+    const periodTypeEl = document.getElementById('period_type');
+    const periodValueDisplayEl = document.getElementById('period_value_display');
+    const periodYearSelectEl = document.getElementById('period_year_select');
+    const periodValueEl = document.getElementById('period_value');
+    let daterangeInitialized = false;
+
+    function destroyDaterange() {
+        if (daterangeInitialized && $(periodValueDisplayEl).data('daterangepicker')) {
+            $(periodValueDisplayEl).data('daterangepicker').remove();
+        }
+        daterangeInitialized = false;
+    }
+
+    function setupPeriodInput() {
+        const currentType = periodTypeEl.value;
+        const currentValue = periodValueEl.value || '';
+        destroyDaterange();
+        periodValueDisplayEl.classList.remove('d-none');
+        periodYearSelectEl.classList.add('d-none');
+
+        if (currentType === 'daily') {
+            periodValueDisplayEl.type = 'text';
+            periodValueDisplayEl.placeholder = 'YYYY-MM-DD - YYYY-MM-DD';
+            periodValueDisplayEl.readOnly = false;
+            periodValueDisplayEl.value = currentValue || moment().format('YYYY-MM-DD') + ' - ' + moment().format('YYYY-MM-DD');
+
+            $(periodValueDisplayEl).daterangepicker({
+                autoUpdateInput: true,
+                locale: { format: 'YYYY-MM-DD' },
+                startDate: (periodValueDisplayEl.value.split(' - ')[0]) || moment().format('YYYY-MM-DD'),
+                endDate: (periodValueDisplayEl.value.split(' - ')[1]) || moment().format('YYYY-MM-DD')
+            });
+            daterangeInitialized = true;
+            return;
+        }
+
+        if (currentType === 'hourly') {
+            periodValueDisplayEl.type = 'date';
+            periodValueDisplayEl.readOnly = false;
+            periodValueDisplayEl.value = currentValue || moment().format('YYYY-MM-DD');
+            return;
+        }
+
+        if (currentType === 'monthly') {
+            periodValueDisplayEl.type = 'month';
+            periodValueDisplayEl.readOnly = false;
+            periodValueDisplayEl.value = currentValue || moment().format('YYYY-MM');
+            return;
+        }
+
+        periodValueDisplayEl.classList.add('d-none');
+        periodYearSelectEl.classList.remove('d-none');
+        periodYearSelectEl.value = currentValue || moment().format('YYYY');
+    }
+
+    document.getElementById('dashboard-filter-form').addEventListener('submit', function() {
+        if (periodTypeEl.value === 'yearly') {
+            periodValueEl.value = periodYearSelectEl.value || moment().format('YYYY');
+        } else {
+            periodValueEl.value = periodValueDisplayEl.value || '';
         }
     });
+
+    periodTypeEl.addEventListener('change', setupPeriodInput);
+    setupPeriodInput();
+    const apexOptions = {
+        chart: {
+            type: 'bar',
+            height: 336,
+            stacked: false,
+            toolbar: {
+                show: true,
+                tools: {
+                    download: true,
+                    selection: false,
+                    zoom: false,
+                    zoomin: false,
+                    zoomout: false,
+                    pan: false,
+                    reset: false
+                },
+                export: {
+                    csv: {
+                        filename: 'rekap-transaksi-' + (periodTypeEl.value || 'periode'),
+                        columnDelimiter: ',',
+                        headerCategory: @json($xAxisTitle),
+                        headerValue: isCountMode ? 'Jumlah Transaksi' : 'Nominal'
+                    },
+                    png: {
+                        filename: 'rekap-transaksi-' + (periodTypeEl.value || 'periode')
+                    },
+                    svg: {
+                        filename: 'rekap-transaksi-' + (periodTypeEl.value || 'periode')
+                    }
+                }
+            },
+            fontFamily: 'inherit'
+        },
+        series: [
+            { name: 'Renewal', data: chartData.renewal || [] },
+            { name: 'New Member', data: chartData.new_member || [] },
+            { name: 'Ticket', data: chartData.ticket || [] },
+            { name: 'Transaksi Lainnya', data: chartData.rental || [] }
+        ],
+        colors: ['#22b8cf', '#ff922b', '#3b82f6', '#40c057'],
+        plotOptions: {
+            bar: {
+                borderRadius: 8,
+                columnWidth: '52%',
+                endingShape: 'rounded'
+            }
+        },
+        dataLabels: {
+            enabled: false
+        },
+        stroke: {
+            show: true,
+            width: 1.5,
+            colors: ['transparent']
+        },
+        xaxis: {
+            categories: chartData.labels || [],
+            title: {
+                text: @json($xAxisTitle),
+                style: {
+                    color: '#506175',
+                    fontWeight: 700
+                }
+            },
+            labels: {
+                formatter: function(value) {
+                    if (currentPeriodType === 'daily' || currentPeriodType === 'monthly') {
+                        return moment(value, 'YYYY-MM-DD').isValid()
+                            ? moment(value, 'YYYY-MM-DD').format('DD/MM')
+                            : value;
+                    }
+                    return value;
+                },
+                style: {
+                    colors: '#5f7085'
+                }
+            }
+        },
+        yaxis: {
+            min: 0,
+            title: {
+                text: isCountMode ? 'Jumlah Transaksi' : 'Amount (Rp)',
+                style: {
+                    color: '#506175',
+                    fontWeight: 700
+                }
+            },
+            labels: {
+                formatter: function(value) {
+                    return isCountMode
+                        ? formatNumberID(value)
+                        : 'Rp ' + formatNumberID(value);
+                },
+                style: {
+                    colors: '#5f7085'
+                }
+            }
+        },
+        legend: {
+            position: 'top',
+            horizontalAlign: 'center',
+            labels: {
+                colors: '#425466'
+            }
+        },
+        tooltip: {
+            y: {
+                formatter: function(value) {
+                    return isCountMode
+                        ? formatNumberID(value)
+                        : 'Rp ' + formatNumberID(value);
+                }
+            }
+        },
+        grid: {
+            borderColor: 'rgba(125, 141, 163, 0.16)',
+            strokeDashArray: 3
+        }
+    };
+
+    const barChart = new ApexCharts(document.querySelector('#bar-chart'), apexOptions);
+    barChart.render();
 </script>
 @endpush

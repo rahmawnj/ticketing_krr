@@ -16,7 +16,7 @@ class ProcessWhatsappNotificationLogs extends Command
 
     public function handle(KirimiWhatsappService $kirimi): int
     {
-        $setting = Setting::query()->first();
+        $setting = Setting::asObject();
         if (!$setting || !(bool) $setting->whatsapp_enabled) {
             $this->info('WhatsApp nonaktif di setting. Proses dihentikan.');
             return Command::SUCCESS;
@@ -82,4 +82,3 @@ class ProcessWhatsappNotificationLogs extends Command
         return Command::SUCCESS;
     }
 }
-

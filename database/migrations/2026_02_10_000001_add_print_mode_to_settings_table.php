@@ -13,6 +13,10 @@ class AddPrintModeToSettingsTable extends Migration
      */
     public function up()
     {
+        if (Schema::hasColumn('settings', 'key')) {
+            return;
+        }
+
         Schema::table('settings', function (Blueprint $table) {
             $table->string('print_mode', 20)->default('per_qty');
         });
@@ -25,6 +29,10 @@ class AddPrintModeToSettingsTable extends Migration
      */
     public function down()
     {
+        if (Schema::hasColumn('settings', 'key')) {
+            return;
+        }
+
         Schema::table('settings', function (Blueprint $table) {
             $table->dropColumn('print_mode');
         });

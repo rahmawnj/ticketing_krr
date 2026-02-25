@@ -58,19 +58,31 @@
     </div>
 
     <div class="panel-body">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <div>
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+            <div class="d-flex align-items-center gap-2">
                 <a href="{{ route('members.create') }}" class="btn btn-primary"><i class="ion-ios-add"></i> Add Member</a>
+                <div class="btn-group" role="group" aria-label="Import Export Member">
+                    <a href="#modal-dialog-import" class="btn btn-success" data-bs-toggle="modal"><i class="ion-ios-document"></i> Import Member</a>
+                    <a href="{{ route('members.export') }}" id="btn-export-member" class="btn btn-success">
+                        <i class="fas fa-file-excel"></i> Export Member
+                    </a>
+                </div>
                 @include("member.import")
             </div>
 
-            {{-- START: BUTTON FILTER BARU --}}
-            <div class="btn-group" role="group" aria-label="Filter Member">
-                <button type="button" class="btn btn-default btn-filter active" data-filter="member">Member</button>
-                <button type="button" class="btn btn-default btn-filter" data-filter="submember">Submember</button>
-                <button type="button" class="btn btn-default btn-filter" data-filter="all">All</button>
+            <div class="d-flex align-items-center gap-2">
+                <select id="filter-membership" class="form-control">
+                    <option value="0" selected>Semua Membership</option>
+                    @foreach ($memberships as $membership)
+                        <option value="{{ $membership->id }}">{{ $membership->name }}</option>
+                    @endforeach
+                </select>
+                <div class="btn-group" role="group" aria-label="Filter Member">
+                    <button type="button" class="btn btn-default btn-filter active" data-filter="member">Member</button>
+                    <button type="button" class="btn btn-default btn-filter" data-filter="submember">Submember</button>
+                    <button type="button" class="btn btn-default btn-filter" data-filter="all">All</button>
+                </div>
             </div>
-            {{-- END: BUTTON FILTER BARU --}}
         </div>
 
         <table id="datatable" class="table table-striped table-bordered align-middle">
@@ -79,6 +91,7 @@
                     <th class="text-nowrap">No</th>
                     <th class="text-nowrap">Foto</th>
                     <th class="text-nowrap">No. Identitas</th> {{-- Tambah ini --}}
+                    <th class="text-nowrap">Member Code</th>
                     <th class="text-nowrap">RFID</th>
                     <th class="text-nowrap">Nama</th>
                     <th class="text-nowrap">No. HP</th>        {{-- Tambah ini --}}
@@ -183,6 +196,7 @@
 <script>
     // Menyimpan nilai filter saat ini
     var currentFilter = 'member';
+    var currentMembershipId = 0;
 
     var table = $('#datatable').DataTable({
         processing: true,
@@ -193,6 +207,7 @@
             url: "{{ route('members.list') }}",
             data: function (d) {
                 d.filter = currentFilter;
+                d.membership_id = currentMembershipId;
             }
         },
         deferRender: true,
@@ -201,6 +216,7 @@
             { data: 'DT_RowIndex', name: 'DT_RowIndex', sortable: false, searchable: false },
             { data: 'image_profile', name: 'image_profile' },
             { data: 'no_ktp', name: 'no_ktp' }, // Kolom Identitas
+            { data: 'member_code', name: 'member_code' },
             { data: 'rfid', name: 'rfid' },
             { data: 'nama', name: 'nama' },
             { data: 'no_hp', name: 'no_hp' },    // Kolom No HP
@@ -218,20 +234,29 @@
         ]
     });
 
-    // START: LOGIC FILTER BARU
+    function updateExportUrl() {
+        var params = $.param({
+            filter: currentFilter,
+            membership_id: currentMembershipId
+        });
+        $('#btn-export-member').attr('href', "{{ route('members.export') }}" + '?' + params);
+    }
+
     $('.btn-filter').on('click', function() {
-        // Hapus class 'active' dari semua tombol
         $('.btn-filter').removeClass('active');
-        // Tambahkan class 'active' ke tombol yang diklik
         $(this).addClass('active');
-
-        // Ambil nilai data-filter
-        currentFilter = $(this).data('filter');
-
-        // Reload DataTables dengan parameter baru
+        currentFilter = $(this).data('filter') || 'member';
+        updateExportUrl();
         table.ajax.reload();
     });
-    // END: LOGIC FILTER BARU
+
+    $('#filter-membership').on('change', function() {
+        currentMembershipId = parseInt($(this).val() || '0', 10);
+        updateExportUrl();
+        table.ajax.reload();
+    });
+
+    updateExportUrl();
 
 
     $('#image_profile').change(function() {
@@ -362,20 +387,29 @@
                 let paymentHistory = response.payment_history || [];
                 let paymentHistoryOwner = response.payment_history_owner || null;
                 let paymentHistoryNote = response.payment_history_note || 'Riwayat pembayaran membership masih dalam tahap development.';
+                let familyMembers = response.family_members || [];
 
                 const textOrDash = (value) => value ? value : '-';
 
                 $("#info-name").text(textOrDash(member.nama))
+                $("#info-member-id").val(member.id || '')
                 $("#info-id").text(textOrDash(member.no_ktp))
                 $("#info-phone").text(textOrDash(member.no_hp))
                 $("#info-birth").text(textOrDash(member.tgl_lahir))
                 $("#info-gender").text(textOrDash(member.jenis_kelamin))
                 $("#info-address").text(textOrDash(member.alamat))
+                $("#info-member-code").text(textOrDash(member.member_code))
                 $("#info-rfid").text(textOrDash(member.rfid))
                 $("#info-register").text(textOrDash(member.tgl_register))
                 $("#info-expired").text(textOrDash(member.tgl_expired))
 
-                $("#image-member").attr("src", member.image_profile)
+                const defaultMemberImage = "{{ asset('img/user/user-10.jpg') }}";
+                $("#image-member")
+                    .attr("src", member.image_profile || defaultMemberImage)
+                    .off("error")
+                    .on("error", function() {
+                        $(this).attr("src", defaultMemberImage);
+                    });
 
                 if (member.membership_id != 0) {
                     $("#info-membership").text(member.membership.name)
@@ -383,19 +417,31 @@
                     $("#info-membership").text("-")
                 }
 
-                $("#qrcode").empty();
+                $("#qrcode").html(response.qr_markup || '');
 
-                qr = new QRCode(document.getElementById("qrcode"), {
-                    text: member.qr_code,
-                    width: 100,
-                    height: 100,
-                    colorDark: "#000000",
-                    colorLight: "#ffffff",
-                    correctLevel: QRCode.CorrectLevel.H
-                });
+                const printUrl = `/members/${member.id}/print-qr?t=${Date.now()}`;
+                $("#btn-print-qr").attr("href", printUrl)
+                $("#btn-download-card").attr("href", printUrl)
 
-                $("#btn-print-qr").attr("href", `/members/${member.id}/print-qr`)
-                $("#btn-download-card").attr("href", `/members/${member.id}/print-qr`)
+                $("#family-member-count").text(`Total anggota: ${familyMembers.length}`);
+                let familyRows = '';
+                if (familyMembers.length === 0) {
+                    familyRows = '<tr><td colspan="5" class="text-center text-muted">Belum ada data anggota grup</td></tr>';
+                } else {
+                    familyMembers.forEach(function(item) {
+                        const relationBadge = item.is_current
+                            ? `<span class="badge bg-primary">${textOrDash(item.relation)}</span>`
+                            : `<span class="badge bg-secondary">${textOrDash(item.relation)}</span>`;
+                        familyRows += `<tr>
+                            <td class="text-nowrap">${textOrDash(item.nama)}</td>
+                            <td class="text-nowrap">${relationBadge}</td>
+                            <td class="text-nowrap">${textOrDash(item.rfid)}</td>
+                            <td class="text-nowrap">${textOrDash(item.no_hp)}</td>
+                            <td class="text-nowrap">${textOrDash(item.tgl_expired)}</td>
+                        </tr>`;
+                    });
+                }
+                $("#family-members-body").html(familyRows);
 
                 if (paymentHistoryOwner && paymentHistoryOwner.name) {
                     $("#payment-history-owner").text(`Akun pembayaran: ${paymentHistoryOwner.name}`);
@@ -433,6 +479,17 @@
             return false;
         }
     })
+
+    $("#btn-print-qr, #btn-download-card").on('click', function(e) {
+        const memberId = $("#info-member-id").val();
+        if (!memberId) {
+            e.preventDefault();
+            return false;
+        }
+
+        const url = `/members/${memberId}/print-qr?t=${Date.now()}`;
+        $(this).attr('href', url);
+    });
 
     $("#datatable").on('click', '.btn-membership', function() {
         let route = $(this).attr('data-route')

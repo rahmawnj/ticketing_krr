@@ -21,11 +21,11 @@
                 {{-- Kiri --}}
                 <div class="col-md-6">
                     <div class="form-group mb-3">
-                        <label for="ticket">Jenis Sewa</label>
+                        <label for="ticket">Jenis Lainnya</label>
                         <select name="ticket" id="ticket" class="form-control">
-                            <option disabled selected>-- Select Penyewaan --</option>
+                            <option disabled selected>-- Select Transaksi Lainnya --</option>
                             @foreach($tickets as $ticket)
-                            {{-- MENAMBAH DATA-ATTRIBUTES UNTUK PPN --}}
+                            {{-- MENAMBAH DATA-ATTRIBUTES UNTUK PBJT --}}
                             <option
                                 value="{{ $ticket->id }}"
                                 data-harga="{{ $ticket->harga }}"
@@ -42,19 +42,17 @@
                     </div>
 
                     <div class="form-group mb-3">
-                        <label for="qty">Qty</label>
-                        <input type="number" name="qty" id="qty" class="form-control" value="1">
-                        @error('qty')
-                        <small class="text-danger">{{ $message }}</small>
-                        @enderror
-                    </div>
-
-                    <div class="form-group mb-3">
-                        <label for="harga_ticket">Harga Sewa (Per Item, sudah termasuk PPN)</label>
-                        {{-- NOTE: Input ini harus diisi oleh JS, pastikan type adalah text atau number yang sesuai --}}
-                        <input type="text" name="harga_ticket" id="harga_ticket" class="form-control" value="0" readonly>
+                        <label for="harga_ticket">Harga Lainnya (Per Item, sudah termasuk PBJT)</label>
+                        <div class="input-group">
+                            <input type="text" name="harga_ticket" id="harga_ticket" class="form-control" value="0">
+                            <span class="input-group-text">Qty</span>
+                            <input type="number" name="qty" id="qty" class="form-control" value="1" min="1" style="max-width: 110px;">
+                        </div>
                         @error('harga_ticket')
-                        <small class="text-danger">{{ $message }}</small>
+                        <small class="text-danger d-block">{{ $message }}</small>
+                        @enderror
+                        @error('qty')
+                        <small class="text-danger d-block">{{ $message }}</small>
                         @enderror
                     </div>
 
@@ -76,17 +74,18 @@
                             <option disabled selected>-- Pilih Metode --</option>
                             <option value="cash">Cash</option>
                             <option value="debit">Debit</option>
+                            <option value="qris">QRIS</option>
+                            <option value="kredit">Kredit</option>
                             <option value="transfer">Transfer</option>
-                            <option value="credit">Credit Card</option>
-                            <option value="qr">QR</option>
                             <option value="tap">Emoney (Tap)</option>
+                            <option value="lain-lain">Lain-lain</option>
                         </select>
                         @error('metode')
                         <small class="text-danger">{{ $message }}</small>
                         @enderror
                     </div>
 
-                    <div class="form-group mb-3">
+                    <div class="form-group mb-3 rfid-fields d-none">
                         <label for="name">RFID (Jika Emoney)</label>
                         <input type="text" name="name" id="name" class="form-control" value="" readonly>
                         @error('name')
@@ -94,10 +93,18 @@
                         @enderror
                     </div>
 
-                    <div class="form-group mb-3">
+                    <div class="form-group mb-3 rfid-fields d-none">
                         <label for="sisa">Saldo (Jika Emoney)</label>
                         <input type="text" name="sisa" id="sisa" class="form-control" value="0" readonly>
                         @error('sisa')
+                        <small class="text-danger">{{ $message }}</small>
+                        @enderror
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="jumlah">Total Jumlah Bayar (sudah termasuk PBJT)</label>
+                        <input type="text" name="jumlah" id="jumlah" class="form-control" value="0" readonly>
+                        @error('jumlah')
                         <small class="text-danger">{{ $message }}</small>
                         @enderror
                     </div>
@@ -126,20 +133,21 @@
                         </div>
 
                         <div class="col-md-6">
-                            <div class="form-group mb-3">
-                                <label for="jumlah">Total Jumlah Bayar (sudah termasuk PPN)</label>
-                                <input type="text" name="jumlah" id="jumlah" class="form-control" value="0" readonly>
-                                @error('jumlah')
-                                <small class="text-danger">{{ $message }}</small>
-                                @enderror
-                            </div>
-
                             <div class="form-group mb-3 time-fields d-none">
-                                <label for="end_time">End Time</label>
-                                <input type="time" name="end_time" id="end_time" class="form-control" value="">
-                                @error('end_time')
+                                <label for="jam">Jam Sewa</label>
+                                <div class="input-group">
+                                    <input type="number" name="jam" id="jam" class="form-control" value="1" min="1" step="1">
+                                    <span class="input-group-text">Jam</span>
+                                </div>
+                                <small class="text-muted">End Time tersimpan otomatis.</small>
+                                <input type="hidden" name="end_time" id="end_time" value="">
+                                @error('jam')
                                 <small class="text-danger">{{ $message }}</small>
                                 @enderror
+                                <div class="mt-2">
+                                    <label for="end_time_preview" class="form-label mb-1">End Time (Otomatis)</label>
+                                    <input type="text" id="end_time_preview" class="form-control" value="" readonly placeholder="--:--">
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -147,7 +155,7 @@
             </div>
 
             <div class="mt-3">
-                <button type="submit" class="btn btn-primary">Submit Penyewaan</button>
+                <button type="submit" class="btn btn-primary">Submit Transaksi Lainnya</button>
                 <a href="{{ route('penyewaan.index') }}" class="btn btn-white">Batal</a>
             </div>
         </form>
@@ -185,36 +193,28 @@
             return parseInt(cleaned) || 0; // Pastikan hasilnya integer atau 0 jika gagal
         }
 
-        // --- Fungsi Kalkulasi Harga (TERMASUK PPN) ---
-        function calculatePrice() {
+        // Set default harga per item dari master (+PBJT jika aktif)
+        function setDefaultHargaPerItem() {
             let selectedOption = $("#ticket").find('option:selected');
-            let baseHarga = parseInt(selectedOption.attr("data-harga")) || 0;
+            let masterHarga = parseInt(selectedOption.attr("data-harga")) || 0;
             let usePpn = selectedOption.attr("data-use-ppn") == '1' || selectedOption.attr("data-use-ppn") == 'true';
             let ppnRate = parseFloat(selectedOption.attr("data-ppn-rate")) || 0;
-            let qty = parseInt($("#qty").val()) || 1;
-
-            if (baseHarga === 0) {
-                $("#harga_ticket").val(formatRupiah('0'));
-                $("#jumlah").val(formatRupiah('0'));
-                $("#bayar").val(formatRupiah('0'));
-                $("#kembali").val(formatRupiah('0'));
-                return;
-            }
-
-            // 1. Hitung Harga Per Item setelah PPN
-            let hargaPerItem = baseHarga;
+            let hargaPerItem = masterHarga;
 
             if (usePpn && ppnRate > 0) {
                 let ppnAmountPerItem = ppnRate ;
-
-                hargaPerItem = Math.round(baseHarga + ppnAmountPerItem);
+                hargaPerItem = Math.round(masterHarga + ppnAmountPerItem);
             }
 
+            $("#harga_ticket").val(formatRupiah(hargaPerItem.toString()));
+        }
 
+        // Kalkulasi total dari harga per item (editable) x qty
+        function calculatePrice() {
+            let hargaPerItem = cleanRupiah($("#harga_ticket").val() || '0');
+            let qty = parseInt($("#qty").val()) || 1;
             let jumlahTotal = hargaPerItem * qty;
 
-
-            $("#harga_ticket").val(formatRupiah(hargaPerItem.toString()));
             $("#jumlah").val(formatRupiah(jumlahTotal.toString()));
 
             let metode = $("#metode").val();
@@ -231,36 +231,79 @@
             let useTime = selectedOption.attr("data-use-time") == '1';
             if (useTime) {
                 $(".time-fields").removeClass('d-none');
+                calculateEndTimeFromJam();
             } else {
                 $(".time-fields").addClass('d-none');
                 $("#end_time").val('');
+                $("#jam").val(1);
+                $("#end_time_preview").val('');
             }
         }
 
+        function calculateEndTimeFromJam() {
+            let selectedOption = $("#ticket").find('option:selected');
+            let useTime = selectedOption.attr("data-use-time") == '1';
+            if (!useTime) {
+                $("#end_time").val('');
+                $("#end_time_preview").val('');
+                return;
+            }
+
+            let jam = parseFloat($("#jam").val()) || 0;
+            if (jam <= 0) {
+                $("#end_time").val('');
+                $("#end_time_preview").val('');
+                return;
+            }
+
+            let now = new Date();
+            let minutesToAdd = Math.round(jam * 60);
+            let endDate = new Date(now.getTime() + (minutesToAdd * 60000));
+            let hh = String(endDate.getHours()).padStart(2, '0');
+            let mm = String(endDate.getMinutes()).padStart(2, '0');
+            let endTimeValue = `${hh}:${mm}`;
+
+            $("#end_time").val(endTimeValue);
+            $("#end_time_preview").val(endTimeValue);
+        }
+
         $("#ticket").on('change', function() {
+            setDefaultHargaPerItem();
             calculatePrice();
             toggleTimeFields();
         });
         $("#qty").on('change', calculatePrice);
+        $("#harga_ticket").on('keyup change', function() {
+            this.value = formatRupiah(this.value);
+            calculatePrice();
+        });
+        $("#jam").on('keyup change', calculateEndTimeFromJam);
 
 
-        $("#metode").on('change', function() {
-            let metode = $(this).val()
+        function togglePaymentFields() {
+            let metode = $("#metode").val();
             if (metode == 'tap') {
+                $(".rfid-fields").removeClass('d-none');
                 $("#name").removeAttr('readonly').val('');
                 $("#sisa").val('0'); // Kosongkan Saldo
                 $(".bayar").addClass('d-none');
                 $(".kembali").addClass('d-none');
             } else {
+                $(".rfid-fields").addClass('d-none');
                 $("#name").attr("readonly", "readonly").val('');
+                $("#sisa").val('0');
                 $(".bayar").removeClass('d-none');
                 $(".kembali").removeClass('d-none');
 
-                // Set Bayar kembali ke Jumlah saat ganti ke Cash
+                // Set Bayar kembali ke Jumlah saat ganti ke non-tap
                 let jumlah = $("#jumlah").val();
                 $("#bayar").val(jumlah);
                 $("#kembali").val(formatRupiah('0'));
             }
+        }
+
+        $("#metode").on('change', function() {
+            togglePaymentFields();
         })
 
         // --- Logika Perhitungan Kembalian (Cash) ---
@@ -332,6 +375,17 @@
                 })
             }
         })
+
+        // Pastikan nilai total pada posisi lama (#jumlah) selalu ter-update saat submit
+        $('#form-penyewaan').on('submit', function() {
+            calculatePrice();
+            calculateEndTimeFromJam();
+        });
+
+        // Inisialisasi awal
+        setDefaultHargaPerItem();
+        calculatePrice();
+        togglePaymentFields();
     })
 </script>
 @endpush

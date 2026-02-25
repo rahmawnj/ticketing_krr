@@ -25,8 +25,14 @@
 
                      <div class="col-xl-8">
                          <h4 id="info-name"></h4>
+                         <input type="hidden" id="info-member-id" value="">
 
                          <div class="row d-flex mb-3 justify-content-between flex-wrap">
+                             <div class="col-md-4">
+                                 <span class="d-block">Member Code</span>
+                                 <b class="fs-14px" id="info-member-code"></b>
+                             </div>
+
                              <div class="col-md-4">
                                  <span class="d-block">RFID</span>
                                  <b class="fs-14px" id="info-rfid"></b>
@@ -79,6 +85,30 @@
 
                          <hr>
                          <div class="d-flex justify-content-between align-items-center mb-2">
+                             <h5 class="mb-0">Anggota Grup</h5>
+                             <small class="text-muted" id="family-member-count"></small>
+                         </div>
+                         <div class="table-responsive mb-2">
+                             <table class="table table-sm table-bordered mb-0">
+                                 <thead>
+                                     <tr>
+                                         <th class="text-nowrap">Nama</th>
+                                         <th class="text-nowrap">Relasi</th>
+                                         <th class="text-nowrap">RFID</th>
+                                         <th class="text-nowrap">No. HP</th>
+                                         <th class="text-nowrap">Expired</th>
+                                     </tr>
+                                 </thead>
+                                 <tbody id="family-members-body">
+                                     <tr>
+                                         <td colspan="5" class="text-center text-muted">Belum ada data anggota grup</td>
+                                     </tr>
+                                 </tbody>
+                             </table>
+                         </div>
+
+                         <hr>
+                         <div class="d-flex justify-content-between align-items-center mb-2">
                              <h5 class="mb-0">Riwayat Pembayaran Membership</h5>
                              <small class="text-muted" id="payment-history-owner"></small>
                          </div>
@@ -93,7 +123,7 @@
                                          <th class="text-nowrap">Metode</th>
                                          <th class="text-nowrap">Kasir</th>
                                          <th class="text-nowrap">Bayar</th>
-                                         <th class="text-nowrap">PPN</th>
+                                         <th class="text-nowrap">PBJT</th>
                                          <th class="text-nowrap">Total</th>
                                      </tr>
                                  </thead>

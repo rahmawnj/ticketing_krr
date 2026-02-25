@@ -3,6 +3,42 @@
 @push('style')
 <link href="{{ asset('/') }}plugins/datatables.net-bs4/css/dataTables.bootstrap4.min.css" rel="stylesheet" />
 <link href="{{ asset('/') }}plugins/datatables.net-responsive-bs4/css/responsive.bootstrap4.min.css" rel="stylesheet" />
+<link href="{{ asset('/') }}plugins/bootstrap-daterangepicker/daterangepicker.css" rel="stylesheet" />
+<style>
+    @media print {
+        #header,
+        #sidebar,
+        .app-sidebar-bg,
+        .app-sidebar-mobile-backdrop,
+        .breadcrumb,
+        .page-header {
+            display: none !important;
+        }
+
+        #content.app-content {
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        .no-print,
+        .panel-heading-btn {
+            display: none !important;
+        }
+
+        .panel {
+            border: 0 !important;
+            box-shadow: none !important;
+        }
+
+        .panel-body {
+            padding: 0 !important;
+        }
+
+        .table {
+            width: 100% !important;
+        }
+    }
+</style>
 @endpush
 
 @section('content')
@@ -19,15 +55,13 @@
 
     <div class="panel-body">
 
-        <form action="" method="get" class="row mb-3">
+        <form action="" method="get" class="row mb-3 no-print">
             <div class="col-md-3">
-                <label for="from">From</label>
-                <input type="date" name="from" id="from" class="form-control" value="{{ request('from') ?? Carbon\Carbon::now()->format('Y-m-d') }}">
-            </div>
-
-            <div class="col-md-3">
-                <label for="to">To</label>
-                <input type="date" name="to" id="to" class="form-control" value="{{ request('to') ?? Carbon\Carbon::now()->format('Y-m-d') }}">
+                <label for="daterange">Tanggal</label>
+                <input type="text" name="daterange" id="daterange" class="form-control"
+                    value="{{ request('daterange') ?: now('Asia/Jakarta')->format('m/d/Y') . ' - ' . now('Asia/Jakarta')->format('m/d/Y') }}">
+                <input type="hidden" name="from" id="from" value="{{ request('from') ?? Carbon\Carbon::now()->format('Y-m-d') }}">
+                <input type="hidden" name="to" id="to" value="{{ request('to') ?? Carbon\Carbon::now()->format('Y-m-d') }}">
             </div>
 
             <div class="col-md-3">
@@ -45,7 +79,7 @@
             <div class="col-md-3 mt-1">
                 <button type="submit" class="btn btn-primary mt-3">Submit</button>
                 <a href="{{ route('transactions.export') }}?from={{ request('from') }}&to={{ request('to') }}&kasir={{ request('kasir') }}" class="btn btn-success mt-3">Export</a>
-                <a href="{{ route('transactions.download') }}?from={{ request('from') }}&to={{ request('to') }}&kasir={{ request('kasir') }}" class="btn btn-info mt-3"><i class="fas fa-print me-1"></i>Print</a>
+                <a href="#" id="btn-print-view" class="btn btn-info mt-3"><i class="fas fa-print me-1"></i>Print</a>
             </div>
         </form>
 
@@ -59,7 +93,7 @@
                         <th>Jenis Ticket</th>
                         <th class="text-center">Jumlah</th>
                         <th class="text-center">Harga Ticket</th>
-                        <th class="text-center">PPN</th>
+                        <th class="text-center">PBJT</th>
                         <th class="text-end">Total Harga Ticket</th>
                     </tr>
                 </thead>
@@ -122,7 +156,7 @@
                         <th>Jenis Transaksi</th>
                         <th class="text-center">Jumlah</th>
                         <th class="text-center">Harga</th>
-                        <th class="text-center">PPN</th>
+                        <th class="text-center">PBJT</th>
                         <th class="text-end">Total Harga</th>
                     </tr>
                 </thead>
@@ -130,12 +164,12 @@
                     @php
                         $totalQtyNonTicket = 0;
                         $totalAmountNonTicket = 0;
-
-                        $membershipTrxTypes = ['renewal', 'registration'];
+                        $orderedMemberships = $memberships->sortBy('name');
+                        $membershipTrxTypes = ['registration', 'renewal'];
                     @endphp
 
-                    @foreach($memberships as $membership)
-                        @foreach($membershipTrxTypes as $type)
+                    @foreach($membershipTrxTypes as $type)
+                        @foreach($orderedMemberships as $membership)
                             @php
                                 $queryTrxMembership = App\Models\Transaction::where(['is_active' => 1, 'transaction_type' => $type, 'ticket_id' => $membership->id])->whereBetween('created_at', [$from, $to]);
                                 if (request('kasir') != 'all' && request('kasir')) {
@@ -167,7 +201,10 @@ $totalAmountNonTicket += $queryTrxMembership->sum(\DB::raw('bayar - kembali'));
                     @endphp
                     @foreach($sewa as $sewaItem)
                         @php
-                            $queryTrxRental = App\Models\Transaction::where(['is_active' => 1, 'transaction_type' => $typeRental, 'ticket_id' => $sewaItem->id])->whereBetween('created_at', [$from, $to]);
+                            $rentalPenyewaanIds = App\Models\Penyewaan::where('sewa_id', $sewaItem->id)->pluck('id');
+                            $queryTrxRental = App\Models\Transaction::where(['is_active' => 1, 'transaction_type' => $typeRental])
+                                ->whereIn('ticket_id', $rentalPenyewaanIds)
+                                ->whereBetween('created_at', [$from, $to]);
                             if (request('kasir') != 'all' && request('kasir')) {
                                 $queryTrxRental->where('user_id', request('kasir'));
                             }
@@ -212,16 +249,32 @@ $totalAmountNonTicket += $queryTrxMembership->sum(\DB::raw('bayar - kembali'));
             $idTrxAll = $queryTrxAll->pluck('id');
 
             $totalSalesQty = App\Models\DetailTransaction::whereIn('transaction_id', $idTrxTicket)->sum('qty') + $totalQtyNonTicket;
-            $totalSalesAmount = $totalAmountTicket + $totalAmountNonTicket;
 
             $totalDiscount = $queryTrxAll->sum('disc');
             $totalPPN = App\Models\DetailTransaction::whereIn('transaction_id', $idTrxAll)->sum('ppn') +
                                 App\Models\Transaction::whereIn('id', $idTrxAll)->whereIn('transaction_type', ['renewal', 'registration', 'rental'])->sum('ppn');
-            $cashid = $queryTrxAll->clone()->where('metode', 'cash')->pluck('id');
-            $debitid = $queryTrxAll->clone()->where('metode', 'debit')->pluck('id');
-            $kreditid = $queryTrxAll->clone()->where('metode', 'kredit')->pluck('id');
-            $qrisid = $queryTrxAll->clone()->where('metode', 'qris')->pluck('id');
-            $transferid = $queryTrxAll->clone()->where('metode', 'transfer')->pluck('id');
+            $cashid = $queryTrxAll->clone()
+                ->where('metode', 'cash')
+                ->pluck('id');
+            $debitid = $queryTrxAll->clone()
+                ->where('metode', 'debit')
+                ->pluck('id');
+            $kreditid = $queryTrxAll->clone()
+                ->whereIn('metode', ['kredit', 'credit', 'credit card'])
+                ->pluck('id');
+            $qrisid = $queryTrxAll->clone()
+                ->whereIn('metode', ['qris', 'qr'])
+                ->pluck('id');
+            $transferid = $queryTrxAll->clone()
+                ->where('metode', 'transfer')
+                ->pluck('id');
+            $lainnyaid = $queryTrxAll->clone()
+                ->where(function ($q) {
+                    $q->whereIn('metode', ['tap', 'lain-lain'])
+                        ->orWhereNull('metode')
+                        ->orWhere('metode', '');
+                })
+                ->pluck('id');
 
             $calculateTotalPerMethod = function ($trxIds) {
                 $detailTotal = App\Models\DetailTransaction::whereIn('transaction_id', $trxIds)->sum(\DB::raw('total + ppn'));
@@ -234,14 +287,24 @@ $totalAmountNonTicket += $queryTrxMembership->sum(\DB::raw('bayar - kembali'));
             $kreditTotal = $calculateTotalPerMethod($kreditid);
             $qrisTotal = $calculateTotalPerMethod($qrisid);
             $transferTotal = $calculateTotalPerMethod($transferid);
+            $lainnyaTotal = $calculateTotalPerMethod($lainnyaid);
 
-            $finalTotalAmount = $cashTotal + $debitTotal + $kreditTotal + $qrisTotal + $transferTotal; // Ini harusnya sama dengan totalSalesAmount - totalDiscount
+            $cashQty = $cashid->count();
+            $debitQty = $debitid->count();
+            $kreditQty = $kreditid->count();
+            $qrisQty = $qrisid->count();
+            $transferQty = $transferid->count();
+            $lainnyaQty = $lainnyaid->count();
 
-            // Perhitungan baru
-            $totalAmountSetelahDiskon = $totalSalesAmount - $totalDiscount;
-            $totalAmountAkhirPlusPPN = $totalAmountSetelahDiskon + $totalPPN; // Ini berdasarkan Total Penjualan (sudah termasuk PPN) - Diskon + PPN (ini mungkin TIDAK AKURAT, lihat catatan di bawah)
+            $pembayaranLainnyaTotal = $lainnyaTotal;
+            $pembayaranLainnyaQty = $lainnyaQty;
+            $grandTotalIncome = $cashTotal + $debitTotal + $qrisTotal + $kreditTotal + $transferTotal + $pembayaranLainnyaTotal;
+            $grandTotalQtyAll = $cashQty + $debitQty + $qrisQty + $kreditQty + $transferQty + $pembayaranLainnyaQty;
 
-
+            // Samakan basis hitung total akhir dengan ringkasan metode pembayaran
+            // agar tidak terjadi selisih antar bagian report.
+            $totalSalesAmount = $grandTotalIncome;
+            $totalAmountSetelahDiskon = $grandTotalIncome - $totalDiscount;
             $totalAmountAkhirPlusPPN = $totalAmountSetelahDiskon + $totalPPN;
         @endphp
 
@@ -266,42 +329,53 @@ $totalAmountNonTicket += $queryTrxMembership->sum(\DB::raw('bayar - kembali'));
                     </th>
                 </tr>
                 <tr>
-                    <th colspan="4">Total PPN :</th>
+                    <th colspan="4">Total PBJT :</th>
                     <th class="text-end">
                         <b>{{ number_format($totalPPN, 0, ',', '.') }}</b>
                     </th>
                 </tr>
                 <tr>
-                    <th>Metode Pembayaran :</th>
-                    <th class="text-center">Cash</th>
-                    <th colspan="3" class="text-end">
-                        {{ number_format($cashTotal, 0, ',', '.') }}
-                    </th>
+                    <th rowspan="7"></th>
+                    <th>TOTAL TUNAI</th>
+                    <th class="text-end">Rp {{ number_format($cashTotal, 2, ',', '.') }}</th>
+                    <th>QTY TUNAI</th>
+                    <th class="text-end">{{ $cashQty }} Orang</th>
                 </tr>
                 <tr>
-                    <th rowspan="4"></th>
-                    <th class="text-center">Debit</th>
-                    <th colspan="3" class="text-end">
-                        {{ number_format($debitTotal, 0, ',', '.') }}
-                    </th>
+                    <th>TOTAL DEBIT</th>
+                    <th class="text-end">Rp {{ number_format($debitTotal, 2, ',', '.') }}</th>
+                    <th>QTY DEBIT</th>
+                    <th class="text-end">{{ $debitQty }} Orang</th>
                 </tr>
                 <tr>
-                    <th class="text-center">Kredit</th>
-                    <th colspan="3" class="text-end">
-                        {{ number_format($kreditTotal, 0, ',', '.') }}
-                    </th>
+                    <th>TOTAL QRIS</th>
+                    <th class="text-end">Rp {{ number_format($qrisTotal, 2, ',', '.') }}</th>
+                    <th>QTY QRIS</th>
+                    <th class="text-end">{{ $qrisQty }} Orang</th>
                 </tr>
                 <tr>
-                    <th class="text-center">QRIS</th>
-                    <th colspan="3" class="text-end">
-                        {{ number_format($qrisTotal, 0, ',', '.') }}
-                    </th>
+                    <th>TOTAL CREDIT CARD</th>
+                    <th class="text-end">Rp {{ number_format($kreditTotal, 2, ',', '.') }}</th>
+                    <th>QTY CREDIT CARD</th>
+                    <th class="text-end">{{ $kreditQty }} Orang</th>
                 </tr>
                 <tr>
-                    <th class="text-center">Transfer</th>
-                    <th colspan="3" class="text-end">
-                        {{ number_format($transferTotal, 0, ',', '.') }}
-                    </th>
+                    <th>TOTAL TRANSFER</th>
+                    <th class="text-end">Rp {{ number_format($transferTotal, 2, ',', '.') }}</th>
+                    <th>QTY TRANSFER</th>
+                    <th class="text-end">{{ $transferQty }} Orang</th>
+                </tr>
+                <tr>
+                    <th>TOTAL PEMBAYARAN LAINNYA</th>
+                    <th class="text-end">Rp {{ number_format($pembayaranLainnyaTotal, 2, ',', '.') }}</th>
+                    <th>QTY PEMBAYARAN LAINNYA</th>
+                    <th class="text-end">{{ $pembayaranLainnyaQty }} Orang</th>
+                </tr>
+                <tr class="table-secondary">
+                    <th>GRANDTOTAL INCOME</th>
+                    <th class="text-end">Rp {{ number_format($grandTotalIncome, 2, ',', '.') }}</th>
+                    <th>GRANDTOTAL QTY ALL</th>
+                    <th class="text-end">{{ $grandTotalQtyAll }} Orang</th>
                 </tr>
                 <tr>
                     <th colspan="4">Total Amount Akhir (Total Penjualan - Diskon) :</th>
@@ -309,9 +383,8 @@ $totalAmountNonTicket += $queryTrxMembership->sum(\DB::raw('bayar - kembali'));
                         <b>{{ number_format($totalAmountSetelahDiskon, 0, ',', '.') }}</b>
                     </th>
                 </tr>
-                {{-- BARIS BARU DITAMBAHKAN DI SINI --}}
                 <tr class="table-primary">
-                    <th colspan="4">Total Amount Akhir (Total Penjualan - Diskon) + PPN:</th>
+                    <th colspan="4">Total Amount Akhir (Total Penjualan - Diskon) + PBJT:</th>
                     <th class="text-end">
                         <b>{{ number_format($totalAmountAkhirPlusPPN, 0, ',', '.') }}</b>
                     </th>
@@ -328,4 +401,72 @@ $totalAmountNonTicket += $queryTrxMembership->sum(\DB::raw('bayar - kembali'));
 <script src="{{ asset('/') }}plugins/datatables.net-responsive/js/dataTables.responsive.min.js"></script>
 <script src="{{ asset('/') }}plugins/datatables.net-responsive-bs4/js/responsive.bootstrap4.min.js"></script>
 <script src="{{ asset('/') }}plugins/sweetalert/dist/sweetalert.min.js"></script>
+<script src="{{ asset('/') }}plugins/moment/min/moment.min.js"></script>
+<script src="{{ asset('/') }}plugins/bootstrap-daterangepicker/daterangepicker.js"></script>
+<script>
+    function syncRekapDateRangeFields() {
+        const rangeValue = $("#daterange").val() || '';
+        if (rangeValue.includes(' - ')) {
+            const parts = rangeValue.split(' - ');
+            const start = moment(parts[0], 'MM/DD/YYYY', true);
+            const end = moment(parts[1], 'MM/DD/YYYY', true);
+            if (start.isValid() && end.isValid()) {
+                $("#from").val(start.format('YYYY-MM-DD'));
+                $("#to").val(end.format('YYYY-MM-DD'));
+                return;
+            }
+        }
+
+        const today = moment().format('YYYY-MM-DD');
+        $("#from").val(today);
+        $("#to").val(today);
+    }
+
+    (function initRekapDateRange() {
+        const today = moment();
+        let start = today.clone();
+        let end = today.clone();
+        const rangeValue = $("#daterange").val();
+
+        if (rangeValue && rangeValue.includes(' - ')) {
+            const parts = rangeValue.split(' - ');
+            const parsedStart = moment(parts[0], 'MM/DD/YYYY', true);
+            const parsedEnd = moment(parts[1], 'MM/DD/YYYY', true);
+            if (parsedStart.isValid() && parsedEnd.isValid()) {
+                start = parsedStart;
+                end = parsedEnd;
+            }
+        } else if ($("#from").val() && $("#to").val()) {
+            const parsedFrom = moment($("#from").val(), 'YYYY-MM-DD', true);
+            const parsedTo = moment($("#to").val(), 'YYYY-MM-DD', true);
+            if (parsedFrom.isValid() && parsedTo.isValid()) {
+                start = parsedFrom;
+                end = parsedTo;
+            }
+        }
+
+        $("#daterange").daterangepicker({
+            opens: "right",
+            autoUpdateInput: true,
+            locale: {
+                format: "MM/DD/YYYY",
+                separator: " - "
+            },
+            startDate: start,
+            endDate: end
+        });
+
+        $("#daterange").val(start.format('MM/DD/YYYY') + ' - ' + end.format('MM/DD/YYYY'));
+        syncRekapDateRangeFields();
+
+        $("#daterange").on('apply.daterangepicker', function() {
+            syncRekapDateRangeFields();
+        });
+    })();
+
+    $("#btn-print-view").on('click', function(e) {
+        e.preventDefault();
+        window.print();
+    });
+</script>
 @endpush

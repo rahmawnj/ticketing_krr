@@ -27,7 +27,7 @@
                     <th class="text-nowrap">Name</th>
                     <th class="text-nowrap">Harga</th>
                     <th class="text-nowrap">Jenis</th>
-                    <th class="text-nowrap">PPN</th>
+                    <th class="text-nowrap">PBJT</th>
                     <th class="text-nowrap">Tripod Id</th>
                     <th class="text-nowrap">Action</th>
                 </tr>

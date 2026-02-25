@@ -34,7 +34,7 @@
             <thead>
                 <tr>
                     <th class="text-nowrap">No</th>
-                    <th class="text-nowrap">Nama Penyewaan</th>
+                    <th class="text-nowrap">Nama Transaksi Lainnya</th>
                     <th class="text-nowrap">Harga</th>
                     <th class="text-nowrap">Qty</th>
                     <th class="text-nowrap">Metode</th>
@@ -53,7 +53,7 @@
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h4 class="modal-title">Form Penyewaan</h4>
+                    <h4 class="modal-title">Form Transaksi Lainnya</h4>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-hidden="true"></button>
                 </div>
                 <form action="" method="post" id="form-penyewaan">
@@ -62,9 +62,9 @@
                     <div class="modal-body row">
                         <div class="col-md-6">
                             <div class="form-group mb-3">
-                                <label for="sewa">Jenis Sewa</label>
+                                <label for="sewa">Jenis Lainnya</label>
                                 <select name="ticket" id="ticket" class="form-control">
-                                    <option disabled selected>-- Select Penyewaan --</option>
+                                    <option disabled selected>-- Select Transaksi Lainnya --</option>
                                     @foreach($tickets as $ticket)
                                     <option value="{{ $ticket->id }}" data-harga="{{ $ticket->harga }}">{{ $ticket->name }}</option>
                                     @endforeach
@@ -85,7 +85,7 @@
                             </div>
 
                             <div class="form-group mb-3">
-                                <label for="harga_ticket">Harga Sewa</label>
+                                <label for="harga_ticket">Harga Lainnya</label>
                                 <input type="text" name="harga_ticket" id="harga_ticket" class="form-control" value="" readonly>
 
                                 @error('harga_ticket')
@@ -109,7 +109,12 @@
                                 <select name="metode" id="metode" class="form-control">
                                     <option disabled selected>-- Pilih Metode --</option>
                                     <option value="cash">Cash</option>
-                                    <option value="tap">Emoney</option>
+                                    <option value="debit">Debit</option>
+                                    <option value="qris">QRIS</option>
+                                    <option value="kredit">Kredit</option>
+                                    <option value="transfer">Transfer</option>
+                                    <option value="tap">Emoney (Tap)</option>
+                                    <option value="lain-lain">Lain-lain</option>
                                 </select>
 
                                 @error('metode')
@@ -276,8 +281,8 @@
         $("#form-delete").attr('action', route)
 
         swal({
-            title: 'Hapus data penyewaan?',
-            text: 'Menghapus penyewaan bersifat permanen.',
+            title: 'Hapus data transaksi lainnya?',
+            text: 'Menghapus transaksi lainnya bersifat permanen.',
             icon: 'error',
             buttons: {
                 cancel: {

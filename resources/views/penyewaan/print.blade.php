@@ -20,6 +20,39 @@ date_default_timezone_set('Asia/Jakarta')
 </head>
 
 <body>
+    @php
+        $qty = max((int) ($penyewaan->qty ?? 0), 1);
+        $lineSubtotal = (float) ($penyewaan->jumlah ?? 0);
+        $lineUnitPrice = $lineSubtotal / $qty;
+        $startTimeRaw = $penyewaan->start_time ? substr((string) $penyewaan->start_time, 0, 5) : null;
+        $endTimeRaw = $penyewaan->end_time ? substr((string) $penyewaan->end_time, 0, 5) : null;
+        $masaSewaLabel = null;
+        if ($startTimeRaw && $endTimeRaw) {
+            try {
+                $startTimeObj = \Carbon\Carbon::createFromFormat('H:i', $startTimeRaw);
+                $endTimeObj = \Carbon\Carbon::createFromFormat('H:i', $endTimeRaw);
+                if ($endTimeObj->lessThanOrEqualTo($startTimeObj)) {
+                    $endTimeObj->addDay();
+                }
+                $diffMinutes = $startTimeObj->diffInMinutes($endTimeObj);
+                $hours = intdiv($diffMinutes, 60);
+                $minutes = $diffMinutes % 60;
+                $durationParts = [];
+                if ($hours > 0) {
+                    $durationParts[] = $hours . ' jam';
+                }
+                if ($minutes > 0) {
+                    $durationParts[] = $minutes . ' menit';
+                }
+                if (empty($durationParts)) {
+                    $durationParts[] = '0 menit';
+                }
+                $masaSewaLabel = implode(' ', $durationParts);
+            } catch (\Throwable $e) {
+                $masaSewaLabel = null;
+            }
+        }
+    @endphp
     <div class="row" style="max-height:150mm !important;">
         <div style="max-width:80mm !important; margin: 0 auto 0 auto; vertical-align: top; border-style: solid;border-width: 1px;">
             <div style="font-size: 10pt; line-height: 18px; margin-top: 10px; margin-bottom: 10px;">
@@ -34,16 +67,30 @@ date_default_timezone_set('Asia/Jakarta')
                 </div>
 
                 <div style="display: flex;font-weight: 900; justify-content: space-between; margin-left: 10px; margin-right: 10px;">
-                    <span>Jumlah Sewa : </span>
-                    <span>{{ $penyewaan->qty . ' X ' . number_format($penyewaan->sewa->harga, 0, ',', '.') }}</span>
+                    <span>Jumlah Jenis : </span>
+                    <span>1</span>
+                </div>
+                <div style="display: flex;font-weight: 900; justify-content: space-between; margin-left: 10px; margin-right: 10px;">
+                    <span>Jumlah Item : </span>
+                    <span>{{ $qty }}</span>
                 </div>
                 <div style="display: flex;font-weight: 900; justify-content: space-between; margin-left: 10px; margin-right: 10px;">
                     <span>No Transaksi : </span>
                     <span>{{ $transaction->ticket_code ?? '-' }}</span>
                 </div>
+                <div style="margin: 6px 10px;">
+                    <div style="font-weight: 900;">Rincian Pembelian:</div>
+                    <div style="margin-top: 2px;">
+                        <div style="font-weight: 700;">{{ $penyewaan->sewa->name ?? '-' }}</div>
+                        <div style="display: flex; justify-content: space-between; font-size: 9pt;">
+                            <span>{{ $qty }} x Rp. {{ number_format($lineUnitPrice, 0, ',', '.') }}</span>
+                            <span>Rp. {{ number_format($lineSubtotal, 0, ',', '.') }}</span>
+                        </div>
+                    </div>
+                </div>
                 <div style="display: flex;font-weight: 900; justify-content: space-between; margin-left: 10px; margin-right: 10px;">
-                    <span>Jumlah : </span>
-                    <span>{{ number_format($penyewaan->jumlah, 0 , ',', '.') }}</span>
+                    <span>Subtotal : </span>
+                    <span>Rp. {{ number_format($lineSubtotal, 0 , ',', '.') }}</span>
                 </div>
                 <div style="display: flex;font-weight: 900; justify-content: space-between; margin-left: 10px; margin-right: 10px;">
                     <span>Total Bayar : </span>
@@ -57,14 +104,20 @@ date_default_timezone_set('Asia/Jakarta')
                 @if(!empty($penyewaan->start_time))
                 <div style="display: flex;font-weight: 900; justify-content: space-between; margin-left: 10px; margin-right: 10px;">
                     <span>Start Time : </span>
-                    <span>{{ $penyewaan->start_time }}</span>
+                    <span>{{ $startTimeRaw }}</span>
                 </div>
                 @endif
 
                 @if(!empty($penyewaan->end_time))
                 <div style="display: flex;font-weight: 900; justify-content: space-between; margin-left: 10px; margin-right: 10px;">
                     <span>End Time : </span>
-                    <span>{{ $penyewaan->end_time }}</span>
+                    <span>{{ $endTimeRaw }}</span>
+                </div>
+                @endif
+                @if($masaSewaLabel)
+                <div style="display: flex;font-weight: 900; justify-content: space-between; margin-left: 10px; margin-right: 10px;">
+                    <span>Masa Sewa : </span>
+                    <span>{{ $masaSewaLabel }}</span>
                 </div>
                 @endif
                 <br>
