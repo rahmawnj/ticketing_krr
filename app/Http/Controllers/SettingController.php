@@ -46,14 +46,20 @@ class SettingController extends Controller
             $setting = Setting::asObject();
             $logo = $request->file('logo');
             $logoUrl = null;
-            $attr['use_logo'] = $request->has('use_logo') ? 1 : 0;
+            $attr['use_logo'] = $request->has('use_logo') ? 1 : (int) ($setting->use_logo ?? 0);
             $attr['whatsapp_enabled'] = $request->has('whatsapp_enabled') ? 1 : 0;
 
             if ($logo) {
-                if (!empty($setting->logo) && Storage::exists($setting->logo)) {
-                    Storage::delete($setting->logo);
+                $disk = Storage::disk('public');
+                if (!empty($setting->logo) && $disk->exists($setting->logo)) {
+                    $disk->delete($setting->logo);
                 }
-                $logoUrl = $logo->storeAs('logo', date('ymdhis') . rand(100, 990) . '.' . $logo->extension());
+                $logoUrl = $logo->storeAs(
+                    'logo',
+                    now('Asia/Jakarta')->format('ymdHis') . rand(100, 990) . '.' . $logo->extension(),
+                    'public'
+                );
+                $attr['use_logo'] = 1;
             } else {
                 $logoUrl = $setting->logo ?? null;
             }
