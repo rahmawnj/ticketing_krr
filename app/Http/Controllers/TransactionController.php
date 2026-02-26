@@ -112,7 +112,7 @@ class TransactionController extends Controller
                     }
 
                     if (in_array($row->transaction_type, ['registration', 'renewal'])) {
-                        $buttons[] = '<a href="' . route('transactions.invoice.pdf', $row->id) . '" class="btn btn-sm btn-secondary" target="_blank" title="Invoice Membership (PDF)"><i class="fas fa-file-invoice"></i></a>';
+                        $buttons[] = '<a href="' . route('transactions.invoice.pdf', ['transaction' => $row->id, 'print' => 1]) . '" class="btn btn-sm btn-secondary" target="_blank" title="Preview & Download Invoice"><i class="fas fa-file-invoice"></i></a>';
                     }
 
                     if (auth()->user()->can('transaction-delete')) {
@@ -760,6 +760,7 @@ class TransactionController extends Controller
         $price = 'Rp. ' . number_format($member->membership->price ?? 0, 0, ',', '.');
         $date = $transaction->created_at?->format('d/m/Y H:i:s') ?? now('Asia/Jakarta')->format('d/m/Y H:i:s');
         $cashierName = $transaction->user?->name ?? '-';
+        $autoPrint = request()->boolean('print');
 
         $setting = Setting::asObject();
         $appName = $setting->name ?? 'Ticketing App';
@@ -787,6 +788,7 @@ class TransactionController extends Controller
             'cashier_name' => $cashierName,
             'ucapan' => $ucapan,
             'deskripsi' => $deskripsi,
+            'auto_print' => $autoPrint,
         ]);
     }
 
