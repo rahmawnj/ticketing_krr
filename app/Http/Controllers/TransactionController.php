@@ -19,7 +19,6 @@ use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
 use Yajra\DataTables\Facades\DataTables;
 use App\Http\Requests\Transaction\CreateTransactionRequest;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Maatwebsite\Excel\Facades\Excel;
 
 class TransactionController extends Controller
@@ -657,11 +656,28 @@ class TransactionController extends Controller
         }
     }
 
-    $logo = !empty($setting->logo) ? asset('/storage/' . $setting->logo) : 'data:image/png;base64,' . base64_encode(file_get_contents(public_path('/images/rio.png')));
+    $logo = null;
+    $use = (int) ($setting->use_logo ?? 0);
+    if ($use === 1) {
+        if (!empty($setting->logo)) {
+            $logoPath = public_path('storage/' . $setting->logo);
+            if (is_file($logoPath)) {
+                $logo = asset('/storage/' . $setting->logo);
+            }
+        }
+
+        if ($logo === null) {
+            $fallbackLogoPath = public_path('/images/rio.png');
+            if (is_file($fallbackLogoPath)) {
+                $logo = 'data:image/png;base64,' . base64_encode(file_get_contents($fallbackLogoPath));
+            } else {
+                $use = 0;
+            }
+        }
+    }
     $name = $setting->name ?? 'Ticketing';
     $ucapan = $setting->ucapan ?? 'Terima Kasih';
     $deskripsi = $setting->deskripsi ?? 'qr code hanya berlaku satu kali';
-    $use = $setting->use_logo ?? false;
     $ppn = $setting->ppn ?? 0;
     $print = 0;
     $ticketPrintOrientation = $setting->ticket_print_orientation ?? 'portrait';
@@ -708,11 +724,32 @@ class TransactionController extends Controller
         }
 
         $member = $transaction->member;
-        if (!$member) {
-            abort(404);
-        }
+        if ($member) {
+            $member->load(['membership', 'childs']);
+        } else {
+            $memberInfoRaw = trim((string) ($transaction->member_info ?? ''));
+            $memberName = '-';
+            $memberPhone = null;
+            if ($memberInfoRaw !== '') {
+                $parts = array_map('trim', explode('-', $memberInfoRaw, 2));
+                $memberName = $parts[0] !== '' ? $parts[0] : '-';
+                $memberPhone = $parts[1] ?? null;
+            }
 
-        $member->load(['membership', 'childs']);
+            $member = (object) [
+                'nama' => $memberName,
+                'no_ktp' => null,
+                'no_hp' => $memberPhone,
+                'tgl_register' => null,
+                'tgl_expired' => null,
+                'membership' => (object) [
+                    'name' => null,
+                    'price' => 0,
+                    'max_access' => null,
+                ],
+                'childs' => collect(),
+            ];
+        }
 
         $baseMembershipPrice = (float) ($member->membership->price ?? 0);
         $adminFee = max(0, ((float) ($transaction->bayar ?? 0)) - $baseMembershipPrice);
@@ -738,7 +775,7 @@ class TransactionController extends Controller
             }
         }
 
-        $pdf = Pdf::loadView('member.invoice-pdf', [
+        return view('member.invoice-pdf', [
             'member' => $member,
             'type' => $type,
             'invoice_code' => $invoiceCode,
@@ -751,8 +788,6 @@ class TransactionController extends Controller
             'ucapan' => $ucapan,
             'deskripsi' => $deskripsi,
         ]);
-
-        return $pdf->download('invoice_membership_' . $member->id . '.pdf');
     }
 
     // Dalam TransactionController.php
