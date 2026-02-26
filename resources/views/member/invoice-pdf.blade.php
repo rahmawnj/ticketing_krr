@@ -6,9 +6,6 @@
     <title>Invoice Membership</title>
     <style>
         body { font-family: Arial, sans-serif; font-size: 12px; color: #111; }
-        .toolbar { max-width: 180mm; margin: 12px auto 8px auto; display: flex; justify-content: flex-end; gap: 8px; }
-        .toolbar button { border: 0; background: #0f2a3c; color: #fff; padding: 7px 12px; font-size: 12px; border-radius: 4px; cursor: pointer; }
-        .toolbar button.secondary { background: #6c757d; }
         .page { max-width: 180mm; margin: 0 auto; border: 1px solid #0f2a3c; padding: 14px; }
         .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
         .brand { display: flex; align-items: center; gap: 10px; }
@@ -27,7 +24,6 @@
         .footer-left { text-align: left; vertical-align: top; }
         .footer-right { text-align: right; vertical-align: top; }
         @media print {
-            .toolbar { display: none !important; }
             body { margin: 0; }
             .page { border: 1px solid #0f2a3c; }
         }
@@ -43,11 +39,6 @@
         $hargaSatuan = $totalBayar / $qtyItem;
         $membershipName = filled($member->membership->name ?? null) ? $member->membership->name : 'Membership';
     @endphp
-    <div class="toolbar">
-        <button type="button" onclick="window.print()">Download / Print</button>
-        <button type="button" class="secondary" onclick="window.close()">Tutup</button>
-    </div>
-
     <div class="page">
         <div class="header">
             <div class="brand">
