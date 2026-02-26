@@ -71,16 +71,18 @@ class MemberController extends Controller
             return DataTables::eloquent($data)
                 ->addIndexColumn()
                 ->addColumn('action', function ($row) {
-                    $actionBtn = '';
+                    $buttons = [];
                     // <a href="#modal-dialog-membership" id="' . $row->id . '" class="btn btn-xs btn-outline-secondary btn-membership" data-route="' . route('members.show', $row->id) . '" data-bs-toggle="modal"><i class="fas fa-user-circle"></i></a>
-                    $actionBtn .= '<a href="#modal-dialog-info" id="' . $row->id . '" class="btn btn-xs btn-outline-info btn-show" data-route="' . route('members.show', $row->id) . '" data-bs-toggle="modal"><i class="fas fa-eye"></i></a> ';
+                    $buttons[] = '<a href="#modal-dialog-info" id="' . $row->id . '" class="btn btn-xs btn-outline-info btn-show" data-route="' . route('members.show', $row->id) . '" data-bs-toggle="modal"><i class="fas fa-eye"></i></a>';
 
                     if ($row->membership_id != 0 || $row->membership != null) {
-                        $actionBtn .= '<a href="' . route('members.invoice', $row->id) . '" target="_blank" id="" class="btn btn-xs btn-outline-secondary btn-invoice"><i class="fas fa-print"></i></a> ';
+                        $buttons[] = '<a href="' . route('members.invoice', $row->id) . '" target="_blank" id="" class="btn btn-xs btn-outline-secondary btn-invoice"><i class="fas fa-print"></i></a>';
                     }
 
-                    $actionBtn .= '<a href="' . route('members.edit', $row->id) . '" id="' . $row->id . '" class="btn btn-xs btn-outline-success"><i class="fas fa-edit"></i></a> <button type="button" data-route="' . route('members.destroy', $row->id) . '" class="delete btn btn-outline-danger btn-delete btn-xs"><i class="fas fa-trash"></i></button>';
-                    return $actionBtn;
+                    $buttons[] = '<a href="' . route('members.edit', $row->id) . '" id="' . $row->id . '" class="btn btn-xs btn-outline-success"><i class="fas fa-edit"></i></a>';
+                    $buttons[] = '<button type="button" data-route="' . route('members.destroy', $row->id) . '" class="delete btn btn-outline-danger btn-delete btn-xs"><i class="fas fa-trash"></i></button>';
+
+                    return '<div class="d-inline-flex flex-nowrap align-items-center gap-1 member-action-buttons">' . implode('', $buttons) . '</div>';
                 })
                 ->editColumn('harga', function ($row) {
                     return 'Rp. ' . number_format($row->harga, 0, ',', '.');

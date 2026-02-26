@@ -2,6 +2,32 @@
 
 @push('style')
 <link href="{{ asset('/') }}plugins/datatables.net-bs4/css/dataTables.bootstrap4.min.css" rel="stylesheet" />
+<style>
+    #modal-member-detail .modal-dialog {
+        max-width: 680px;
+    }
+    #modal-member-detail .modal-body {
+        padding: 1rem 1.25rem;
+    }
+    #modal-member-detail #detail-image {
+        max-height: 170px !important;
+        width: auto;
+    }
+    #modal-member-detail .table th,
+    #modal-member-detail .table td {
+        padding-top: .22rem;
+        padding-bottom: .22rem;
+    }
+    @media (max-width: 767.98px) {
+        #modal-member-detail .modal-dialog {
+            max-width: 92%;
+            margin: 1rem auto;
+        }
+        #modal-member-detail #detail-image {
+            max-height: 140px !important;
+        }
+    }
+</style>
 @endpush
 
 @section('content')
@@ -30,7 +56,7 @@
 </div>
 
 <div class="modal fade" id="modal-member-detail" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Detail Member</h5>
@@ -39,7 +65,7 @@
             <div class="modal-body">
                 <div class="row">
                     <div class="col-md-4 text-center mb-3">
-                        <img id="detail-image" src="{{ asset('img/user/user-10.jpg') }}" alt="Foto Member" class="img-fluid rounded border" style="max-height: 240px;">
+                        <img id="detail-image" src="{{ asset('img/user/user-10.jpg') }}" alt="Foto Member" class="img-fluid rounded border" style="max-height: 170px;">
                     </div>
                     <div class="col-md-8">
                         <table class="table table-sm table-borderless mb-3">
@@ -48,10 +74,10 @@
                             <tr><th>Membership</th><td id="detail-membership">-</td></tr>
                             <tr><th>Tgl. Expired</th><td id="detail-expired">-</td></tr>
                         </table>
-                        <h6 class="mb-2">Sub Member</h6>
-                        <ul id="detail-submembers" class="mb-0 ps-3">
-                            <li>-</li>
-                        </ul>
+                        <div id="detail-submember-wrap" style="display: none;">
+                            <h6 class="mb-2">Sub Member</h6>
+                            <ul id="detail-submembers" class="mb-0 ps-3"></ul>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -176,10 +202,12 @@
             $('#detail-expired').text(member.tgl_expired || '-');
 
             var $subList = $('#detail-submembers');
+            var $subWrap = $('#detail-submember-wrap');
             $subList.empty();
             if (subMembers.length === 0) {
-                $subList.append('<li>-</li>');
+                $subWrap.hide();
             } else {
+                $subWrap.show();
                 subMembers.forEach(function(item) {
                     $subList.append('<li>' + (item.nama || '-') + '</li>');
                 });

@@ -42,6 +42,13 @@
         font-weight: 600;
         color: #111;
     }
+    #datatable td.text-nowrap,
+    #datatable th.text-nowrap {
+        white-space: nowrap;
+    }
+    .member-action-buttons .btn {
+        margin: 0 !important;
+    }
 </style>
 @endpush
 
@@ -230,7 +237,7 @@
             { data: 'masa_berlaku', name: 'masa_berlaku', sortable: false, searchable: false },
             { data: 'sisa_hari', name: 'sisa_hari', sortable: false, searchable: false },
             { data: 'expired', name: 'expired', sortable: false, searchable: false },
-            { data: 'action', name: 'action', sortable: false, searchable: false },
+            { data: 'action', name: 'action', sortable: false, searchable: false, className: 'text-nowrap' },
         ]
     });
 
