@@ -7,15 +7,16 @@
     <title>{{ $member->nama }} | Print QR Member</title>
 
     <style>
-        @page { size: 85.6mm 54mm; margin: 0; }
+        @page { size: 80mm 60mm; margin: 0; }
         * { box-sizing: border-box; }
-        body { margin: 0; font-family: Arial, sans-serif; color: #0f2a3c; }
+        html, body { margin: 0; width: 80mm; height: 60mm; overflow: hidden; }
+        body { font-family: Arial, sans-serif; color: #0f2a3c; }
         .card {
-            width: 85.6mm;
-            height: 54mm;
+            width: 79mm;
+            height: 56mm;
             border: 1px solid #0f2a3c;
-            padding: 3.5mm 6mm 6mm 6mm;
-            position: relative;
+            padding: 2.5mm 3mm 3mm 3mm;
+            margin: 0.5mm auto 0;
         }
         .header {
             display: flex;
@@ -49,29 +50,27 @@
         }
         .content {
             display: grid;
-            grid-template-columns: 1fr 28mm;
-            gap: 4mm;
+            grid-template-columns: 1fr 24mm;
+            gap: 3mm;
             align-items: center;
         }
         .label { font-size: 9px; color: #4b5b66; }
         .value { font-size: 11px; font-weight: 600; margin-bottom: 2mm; }
         .qr {
-            width: 26mm;
-            height: 26mm;
+            width: 24mm;
+            height: 24mm;
             border: 1px solid #c9d6df;
             display: flex;
             align-items: center;
             justify-content: center;
         }
         .footer {
-            position: absolute;
-            left: 6mm;
-            right: 6mm;
-            bottom: 4mm;
             font-size: 8px;
             color: #4b5b66;
             display: flex;
-            justify-content: flex-end;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1.5mm;
         }
         .app-footer {
             font-size: 9px;
@@ -81,14 +80,23 @@
             white-space: nowrap;
         }
         .member-code-big {
-            position: absolute;
-            left: 6mm;
-            bottom: 3.5mm;
             font-size: 13px;
             line-height: 1;
             font-weight: 700;
             color: #0f2a3c;
             letter-spacing: 0.3px;
+        }
+        @media print {
+            html, body {
+                width: 80mm !important;
+                height: 80mm !important;
+                margin: 0 !important;
+                overflow: hidden !important;
+            }
+            .card {
+                break-inside: avoid;
+                page-break-inside: avoid;
+            }
         }
     </style>
 </head>
@@ -132,17 +140,23 @@
         </div>
 
         <div class="footer">
+            <span class="member-code-big">{{ $membershipCode }}</span>
             <span class="app-footer">{{ $setting->name ?? 'ANWA' }}</span>
         </div>
-
-        <div class="member-code-big">{{ $membershipCode }}</div>
     </div>
 
 
     <script>
         setTimeout(function() {
+            window.focus();
             window.print();
-        }, 1000)
+        }, 500);
+
+        window.onafterprint = function() {
+            try {
+                window.close();
+            } catch (e) {}
+        };
     </script>
 </body>
 

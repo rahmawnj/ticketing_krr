@@ -487,15 +487,28 @@
         }
     })
 
+    function openMemberPrintPopup(url) {
+        const popupFeatures = 'width=480,height=720,menubar=no,toolbar=no,location=no,status=no,scrollbars=yes,resizable=yes';
+        const popup = window.open(url, 'member-card-print', popupFeatures);
+        if (popup) {
+            popup.focus();
+        } else {
+            // Fallback jika popup diblokir browser.
+            window.location.href = url;
+        }
+    }
+
     $("#btn-print-qr, #btn-download-card").on('click', function(e) {
+        e.preventDefault();
+
         const memberId = $("#info-member-id").val();
         if (!memberId) {
-            e.preventDefault();
             return false;
         }
 
         const url = `/members/${memberId}/print-qr?t=${Date.now()}`;
         $(this).attr('href', url);
+        openMemberPrintPopup(url);
     });
 
     $("#datatable").on('click', '.btn-membership', function() {

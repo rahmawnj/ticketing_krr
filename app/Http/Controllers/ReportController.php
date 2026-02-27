@@ -23,6 +23,15 @@ use Yajra\DataTables\Facades\DataTables;
 
 class ReportController extends Controller
 {
+    private function resolveAdminFee(Transaction $transaction): float
+    {
+        if (!in_array($transaction->transaction_type, ['registration', 'renewal'], true)) {
+            return 0.0;
+        }
+
+        return (float) ($transaction->admin_fee ?? 0);
+    }
+
     private function buildRingkasanTransaksiData(string $from, string $to, string $kasir = 'all'): array
     {
         $start = Carbon::parse($from, 'Asia/Jakarta')->startOfDay();
@@ -51,6 +60,7 @@ class ReportController extends Controller
                     'total' => 0.0,
                     'dpp' => 0.0,
                     'ppn' => 0.0,
+                    'admin_fee' => 0.0,
                 ];
             }
 
@@ -62,7 +72,8 @@ class ReportController extends Controller
                 $ppn = (float) ($trx->ppn ?? 0);
             }
 
-            $total = $dpp + $ppn;
+            $adminFee = $this->resolveAdminFee($trx);
+            $total = $dpp + $ppn + $adminFee;
 
             if (in_array($trx->transaction_type, ['registration', 'renewal'], true)) {
                 $grouped[$dateKey]['member'] += $total;
@@ -74,6 +85,7 @@ class ReportController extends Controller
 
             $grouped[$dateKey]['dpp'] += $dpp;
             $grouped[$dateKey]['ppn'] += $ppn;
+            $grouped[$dateKey]['admin_fee'] += $adminFee;
             $grouped[$dateKey]['total'] += $total;
         }
 
@@ -87,6 +99,7 @@ class ReportController extends Controller
             'total' => array_sum(array_column($rows, 'total')),
             'dpp' => array_sum(array_column($rows, 'dpp')),
             'ppn' => array_sum(array_column($rows, 'ppn')),
+            'admin_fee' => array_sum(array_column($rows, 'admin_fee')),
         ];
 
         return [$rows, $footer];
@@ -239,10 +252,14 @@ class ReportController extends Controller
             })
             ->addColumn('harga_ticket', function ($row) {
                 $disc = $row->bayar * $row->discount / 100;
-                return 'Rp. ' . number_format($row->bayar - $disc + $row->ppn, 0, ',', '.') ?? 0;
+                $adminFee = $this->resolveAdminFee($row);
+                return 'Rp. ' . number_format($row->bayar - $disc + $row->ppn + $adminFee, 0, ',', '.') ?? 0;
             })
             ->editColumn('ppn', function ($row) {
                 return 'Rp. ' .  number_format($row->ppn, 0, ',', '.') ?? 0;
+            })
+            ->editColumn('admin_fee', function ($row) {
+                return 'Rp. ' . number_format($this->resolveAdminFee($row), 0, ',', '.') ?? 0;
             })
             ->rawColumns(['action'])
             ->make(true);
@@ -300,7 +317,7 @@ class ReportController extends Controller
 
         $transactions = $query->orderBy('created_at')->orderBy('id')->get();
 
-        $lines = ['TANGGAL|KASIR|TRANSACTION_TYPE|TICKET_CODE|KETERANGAN_PRODUK|METODE|AMOUNT|JUMLAH|TOTAL|PBJT|DISCOUNT'];
+        $lines = ['TANGGAL|KASIR|TRANSACTION_TYPE|TICKET_CODE|KETERANGAN_PRODUK|METODE|AMOUNT|JUMLAH|TOTAL|PBJT|ADMIN_FEE|DISCOUNT'];
         foreach ($transactions as $trx) {
             $dateTime = Carbon::parse($trx->created_at)->timezone('Asia/Jakarta')->format('m/d/Y H:i:s');
             $kasirName = $trx->user->name ?? '-';
@@ -312,7 +329,8 @@ class ReportController extends Controller
             $jumlah = (int) round((float) ($trx->bayar ?? 0));
             $discount = (float) ($trx->disc ?? 0);
             $pbjt = (float) ($trx->ppn ?? 0);
-            $total = (int) round(((float) ($trx->bayar ?? 0) - $discount) + $pbjt);
+            $adminFee = $this->resolveAdminFee($trx);
+            $total = (int) round(((float) ($trx->bayar ?? 0) - $discount) + $pbjt + $adminFee);
 
             $lines[] = implode('|', [
                 $dateTime,
@@ -325,6 +343,7 @@ class ReportController extends Controller
                 $jumlah,
                 $total,
                 (int) round($pbjt),
+                (int) round($adminFee),
                 (int) round($discount),
             ]);
         }

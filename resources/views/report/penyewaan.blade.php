@@ -60,7 +60,7 @@
                     <th>Tiket</th>
                     <th class="text-center">Qty</th>
                     <th>Metode</th>
-                    <th class="text-end">PPN</th>
+                    <th class="text-end">PBJT</th>
                     <th class="text-end">Total Bayar</th>
                 </tr>
             </thead>

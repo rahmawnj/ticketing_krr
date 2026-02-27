@@ -4,6 +4,7 @@
         $queryTrxAll->where('user_id', $kasir);
     }
     $idTrxAll = $queryTrxAll->pluck('id');
+    $adminFeeExpr = "(CASE WHEN transaction_type IN ('registration', 'renewal') THEN admin_fee ELSE 0 END)";
 @endphp
 
 <table>
@@ -87,9 +88,9 @@
                         $queryTrxMembership->where('user_id', $kasir);
                     }
                     $qtyMembership = $queryTrxMembership->count();
-                    $totalPerMembership = $queryTrxMembership->sum(\DB::raw('(bayar - kembali) + ppn'));
+                    $totalPerMembership = $queryTrxMembership->sum(\DB::raw('(bayar - kembali) + ppn + admin_fee'));
                     $totalQtyNonTicket += $qtyMembership;
-                    $totalAmountNonTicket += $queryTrxMembership->sum(\DB::raw('bayar - kembali'));
+                    $totalAmountNonTicket += $queryTrxMembership->sum(\DB::raw('(bayar - kembali) + admin_fee'));
                 @endphp
 
                 @if($qtyMembership > 0)
@@ -118,10 +119,10 @@
                 }
 
                 $qtyRental = $queryTrxRental->count();
-                $totalPerRental = $queryTrxRental->sum(\DB::raw('bayar - kembali'));
+                $totalPerRental = $queryTrxRental->sum(\DB::raw('(bayar - kembali) + ppn'));
 
                 $totalQtyNonTicket += $qtyRental;
-                $totalAmountNonTicket += $totalPerRental;
+                $totalAmountNonTicket += $queryTrxRental->sum(\DB::raw('(bayar - kembali)'));
             @endphp
 
             @if($qtyRental > 0)
@@ -150,6 +151,8 @@
             $totalDiscount = $queryTrxAll->sum('disc');
             $totalPPN = App\Models\DetailTransaction::whereIn('transaction_id', $idTrxAll)->sum('ppn') +
                         App\Models\Transaction::whereIn('id', $idTrxAll)->whereIn('transaction_type', ['renewal', 'registration', 'rental'])->sum('ppn');
+            $totalAdminFee = App\Models\Transaction::whereIn('id', $idTrxAll)
+                ->sum(\DB::raw($adminFeeExpr));
 
             $cashid = $queryTrxAll->clone()->where('metode', 'cash')->pluck('id');
             $debitid = $queryTrxAll->clone()->where('metode', 'debit')->pluck('id');
@@ -168,7 +171,7 @@
                 $detailTotal = App\Models\DetailTransaction::whereIn('transaction_id', $trxIds)->sum(\DB::raw('total + ppn'));
                 $trxNonDetailTotal = App\Models\Transaction::whereIn('id', $trxIds)
                     ->whereIn('transaction_type', ['renewal', 'registration', 'rental'])
-                    ->sum(\DB::raw('bayar - kembali'));
+                    ->sum(\DB::raw('(bayar - kembali) + ' . "(CASE WHEN transaction_type IN ('registration', 'renewal') THEN admin_fee ELSE 0 END)"));
                 return $detailTotal + $trxNonDetailTotal;
             };
 
@@ -193,7 +196,7 @@
 
             $totalSalesAmount = $grandTotalIncome;
             $totalAmountSetelahDiskon = $grandTotalIncome - $totalDiscount;
-            $totalAmountAkhirPlusPPN = $totalAmountSetelahDiskon + $totalPPN;
+            $totalAmountAkhirPlusPBJTAdmin = $totalAmountSetelahDiskon + $totalPPN + $totalAdminFee;
         @endphp
 
         <tr>
@@ -210,6 +213,10 @@
         <tr>
             <th colspan="4">Total PBJT :</th>
             <th>{{ number_format($totalPPN, 0, ',', '.') }}</th>
+        </tr>
+        <tr>
+            <th colspan="4">Total Biaya Admin :</th>
+            <th>{{ number_format($totalAdminFee, 0, ',', '.') }}</th>
         </tr>
 
         <tr>
@@ -266,8 +273,8 @@
             <th>{{ number_format($totalAmountSetelahDiskon, 0, ',', '.') }}</th>
         </tr>
         <tr>
-            <th colspan="4">Total Amount Akhir (Total Penjualan - Diskon) + PBJT:</th>
-            <th>{{ number_format($totalAmountAkhirPlusPPN, 0, ',', '.') }}</th>
+            <th colspan="4">Total Amount Akhir (Total Penjualan - Diskon) + PBJT + Biaya Admin:</th>
+            <th>{{ number_format($totalAmountAkhirPlusPBJTAdmin, 0, ',', '.') }}</th>
         </tr>
     </tbody>
 </table>

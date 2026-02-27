@@ -34,11 +34,17 @@ class SewaController extends Controller
             return DataTables::of($data)
                 ->addIndexColumn()
                 ->addColumn('action', function ($row) {
-                    $actionBtn = '<a href="#modal-dialog" id="' . $row->id . '" class="btn btn-sm btn-success btn-edit" data-route="' . route('sewa.update', $row->id) . '" data-bs-toggle="modal" data-use-ppn="' . $row->use_ppn . '" data-ppn-value="' . $row->ppn . '">Edit</a> <button type="button" data-route="' . route('sewa.destroy', $row->id) . '" class="delete btn btn-danger btn-delete btn-sm">Delete</button>';
+                    $actionBtn = '<a href="#modal-dialog" id="' . $row->id . '" class="btn btn-sm btn-success btn-edit" data-route="' . route('sewa.update', $row->id) . '" data-bs-toggle="modal" data-use-ppn="' . $row->use_ppn . '" data-ppn-value="' . $row->ppn . '" data-is-nominal-flexible="' . ((int) ($row->is_nominal_flexible ?? 0)) . '">Edit</a> <button type="button" data-route="' . route('sewa.destroy', $row->id) . '" class="delete btn btn-danger btn-delete btn-sm">Delete</button>';
                     return $actionBtn;
                 })
                 ->editColumn('harga', function ($row) {
                     return 'Rp. ' . number_format($row->harga + $row->ppn, 0, ',', '.');
+                })
+                ->addColumn('dynamic_price_status', function ($row) {
+                    if ((int) ($row->is_nominal_flexible ?? 0) === 1) {
+                        return '<span class="badge bg-success">Aktif (Bisa diubah di Penyewaan)</span>';
+                    }
+                    return '<span class="badge bg-secondary">Nonaktif (Ikuti harga master)</span>';
                 })
                 ->editColumn('ppn_status', function ($row) {
                     if ($row->use_ppn == 1) {
@@ -46,7 +52,7 @@ class SewaController extends Controller
                     }
                     return '<span class="badge bg-danger">Tidak Diterapkan</span>';
                 })
-                ->rawColumns(['action', 'ppn_status']) // Tambahkan 'ppn_status' ke rawColumns
+                ->rawColumns(['action', 'dynamic_price_status', 'ppn_status']) // Tambahkan kolom badge ke rawColumns
                 ->make(true);
         }
     }
@@ -81,6 +87,7 @@ class SewaController extends Controller
             $data['use_ppn'] = $usePpn;
             $data['ppn'] = $calculatedPpn;
             $data['use_time'] = $request->has('use_time') ? 1 : 0;
+            $data['is_nominal_flexible'] = $request->has('is_nominal_flexible') ? 1 : 0;
 
             $sewa = Sewa::create($data);
 
@@ -135,6 +142,7 @@ class SewaController extends Controller
             $data['use_ppn'] = $usePpn;
             $data['ppn'] = $calculatedPpn;
             $data['use_time'] = $request->has('use_time') ? 1 : 0;
+            $data['is_nominal_flexible'] = $request->has('is_nominal_flexible') ? 1 : 0;
 
             $sewa->update($data);
 

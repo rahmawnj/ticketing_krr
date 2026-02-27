@@ -83,7 +83,7 @@ class ReportPenyewaanExport implements FromCollection, WithHeadings, ShouldAutoS
             'Tiket',
             'Qty',
             'Metode',
-            'PPN',
+            'PBJT',
             'Total Bayar',
         ];
     }

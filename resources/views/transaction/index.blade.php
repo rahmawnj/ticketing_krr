@@ -56,7 +56,7 @@
         </div>
         <div class="form-group ms-2">
             <a href="#" id="btn-export-excel" class="btn btn-outline-success mt-3">
-                <i class="fas fa-file-excel"></i> Export Excel
+                <i class="fas fa-file-excel"></i> Download Excel
             </a>
         </div>
     </div>
@@ -593,3 +593,4 @@
     });
 </script>
 @endpush
+

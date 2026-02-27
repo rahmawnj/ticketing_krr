@@ -313,6 +313,7 @@ public function store(CreateMemberRequest $request)
                 'discount' => 0,
                 'transaction_type' => 'registration',
                 'ppn' => $ppnAmount,
+                'admin_fee' => 0,
                 'bayar' => $basePricePerMember,
                 'status' => 'open',
                 'is_active' => 1,
@@ -401,7 +402,8 @@ public function store(CreateMemberRequest $request)
                     'cashier' => $trx->user->name ?? '-',
                     'amount' => 'Rp. ' . number_format((float) ($trx->bayar ?? 0), 0, ',', '.'),
                     'ppn' => 'Rp. ' . number_format((float) ($trx->ppn ?? 0), 0, ',', '.'),
-                    'total' => 'Rp. ' . number_format(((float) ($trx->bayar ?? 0)) + ((float) ($trx->ppn ?? 0)), 0, ',', '.'),
+                    'admin_fee' => 'Rp. ' . number_format((float) ($trx->admin_fee ?? 0), 0, ',', '.'),
+                    'total' => 'Rp. ' . number_format(((float) ($trx->bayar ?? 0)) + ((float) ($trx->ppn ?? 0)) + ((float) ($trx->admin_fee ?? 0)), 0, ',', '.'),
                 ];
             })->values();
 
@@ -496,6 +498,7 @@ public function update(UpdateMemberRequest $request, Member $member)
                         'discount' => 0,
                         'transaction_type' => 'registration',
                         'ppn' => $ppnAmount,
+                        'admin_fee' => 0,
                         'bayar' => $basePricePerMember,
                         'status' => 'open',
                         'is_active' => 1,
@@ -986,7 +989,7 @@ public function processBulkRenew(Request $request)
         }
 
         $adminFee = $isRenewalBaru ? max((int) Setting::valueOf('member_reactivation_admin_fee', 0), 0) : 0;
-        $grandTotal = (float) $member->membership->price + $adminFee;
+        $baseMembershipPrice = (float) ($member->membership->price ?? 0);
 
         $now = Carbon::now('Asia/Jakarta');
         $transactionType = $isRenewalBaru ? 'registration' : 'renewal';
@@ -1005,7 +1008,8 @@ public function processBulkRenew(Request $request)
             'amount' => $successCount,
             'discount' => 0,
             'ppn' => $totalPpnAmount,
-            'bayar' => $grandTotal,
+            'admin_fee' => $adminFee,
+            'bayar' => $baseMembershipPrice,
             'status' => 'open',
             'is_active' => 1,
             'tipe' => $tipeTransaksi,
@@ -1079,8 +1083,7 @@ public function processBulkRenew(Request $request)
         $memberName = trim((string) $member->nama) !== '' ? $member->nama : 'Member';
         $invoiceCode = $transaction->ticket_code ?? ('TRX-' . $transaction->id);
         $date = optional($transaction->created_at)->timezone('Asia/Jakarta')->format('d/m/Y H:i') ?? now('Asia/Jakarta')->format('d/m/Y H:i');
-        $baseMembershipPrice = (float) ($member->membership->price ?? 0);
-        $adminFee = max(0, ((float) ($transaction->bayar ?? 0)) - $baseMembershipPrice);
+        $adminFee = max(0, (float) ($transaction->admin_fee ?? 0));
 
         if ($adminFee > 0) {
             return "Halo {$memberName}, perpanjangan baru membership Anda berhasil diproses pada {$date}. Kode invoice: {$invoiceCode}. Terima kasih.";

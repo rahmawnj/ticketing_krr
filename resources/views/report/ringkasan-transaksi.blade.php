@@ -51,7 +51,8 @@
                     <th class="text-end">Lain-lain</th>
                     <th class="text-end">Total</th>
                     <th class="text-end">DPP</th>
-                    <th class="text-end">PPN</th>
+                    <th class="text-end">PBJT</th>
+                    <th class="text-end">Biaya Admin</th>
                 </tr>
             </thead>
             <tbody>
@@ -64,10 +65,11 @@
                     <td class="text-end">Rp. {{ number_format($row['total'], 0, ',', '.') }}</td>
                     <td class="text-end">Rp. {{ number_format($row['dpp'], 0, ',', '.') }}</td>
                     <td class="text-end">Rp. {{ number_format($row['ppn'], 0, ',', '.') }}</td>
+                    <td class="text-end">Rp. {{ number_format($row['admin_fee'] ?? 0, 0, ',', '.') }}</td>
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="7" class="text-center text-muted">Tidak ada data transaksi pada rentang tanggal ini.</td>
+                    <td colspan="8" class="text-center text-muted">Tidak ada data transaksi pada rentang tanggal ini.</td>
                 </tr>
                 @endforelse
             </tbody>
@@ -80,6 +82,7 @@
                     <th class="text-end">Rp. {{ number_format($footer['total'], 0, ',', '.') }}</th>
                     <th class="text-end">Rp. {{ number_format($footer['dpp'], 0, ',', '.') }}</th>
                     <th class="text-end">Rp. {{ number_format($footer['ppn'], 0, ',', '.') }}</th>
+                    <th class="text-end">Rp. {{ number_format($footer['admin_fee'] ?? 0, 0, ',', '.') }}</th>
                 </tr>
             </tfoot>
         </table>

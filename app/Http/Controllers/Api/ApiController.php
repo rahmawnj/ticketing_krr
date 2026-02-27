@@ -214,13 +214,21 @@ if (empty($request->ticket)) {
                         ], 500);
                     }
 
-                    $maxAccess = (int) ($membership->max_access ?? 0);
-                    $accessUsed = (int) ($member->access_used ?? 0);
+                    $maxAccess = max((int) ($membership->max_access ?? 0), 0);
+                    $accessUsed = max((int) ($member->access_used ?? 0), 0);
+                    $isUnlimitedAccess = $maxAccess === 0;
                     // dd($membership, $member );
-                    if ($maxAccess > 0 && $accessUsed >= $maxAccess) {
+                    if (!$isUnlimitedAccess && $accessUsed >= $maxAccess) {
                         return response()->json([
                             "status" => 'close',
-                            "message" => "Kuota akses habis"
+                            "message" => "Kuota akses habis",
+                            "count" => 0,
+                            "membership_access" => [
+                                "type" => "limited",
+                                "limit" => $maxAccess,
+                                "used" => $accessUsed,
+                                "remaining" => 0,
+                            ]
                         ], 500);
                     }
 
@@ -235,15 +243,32 @@ if (empty($request->ticket)) {
                         ]);
 
                         $member->increment('access_used');
+                        $accessUsed += 1;
+                        $remainingAccess = $isUnlimitedAccess ? null : max($maxAccess - $accessUsed, 0);
 
                         return response()->json([
                             "status" => 'open',
-                            "message" => "Success open gate"
+                            "message" => "Success open gate",
+                            "count" => $remainingAccess,
+                            "membership_access" => [
+                                "type" => $isUnlimitedAccess ? "unlimited" : "limited",
+                                "limit" => $isUnlimitedAccess ? null : $maxAccess,
+                                "used" => $accessUsed,
+                                "remaining" => $remainingAccess,
+                            ]
                         ], 200);
                     } else {
+                        $remainingAccess = $isUnlimitedAccess ? null : max($maxAccess - $accessUsed, 0);
                         return response()->json([
                             "status" => 'close',
-                            "message" => "Cannot access gate"
+                            "message" => "Cannot access gate",
+                            "count" => $remainingAccess,
+                            "membership_access" => [
+                                "type" => $isUnlimitedAccess ? "unlimited" : "limited",
+                                "limit" => $isUnlimitedAccess ? null : $maxAccess,
+                                "used" => $accessUsed,
+                                "remaining" => $remainingAccess,
+                            ]
                         ], 500);
                     }
                 } else {

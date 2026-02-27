@@ -18,10 +18,10 @@
 <body>
     @php
         $qtyItem = max((int) ($transaction->amount ?? 1), 1);
-        $baseMembershipPrice = (float) ($member->membership->price ?? 0);
-        $adminFee = max(0, ((float) ($transaction->bayar ?? 0)) - $baseMembershipPrice);
-        $totalBayar = (float) ($transaction->bayar ?? 0) + (float) ($transaction->ppn ?? 0);
-        $hargaSatuan = $totalBayar / $qtyItem;
+        $adminFee = max(0, (float) ($transaction->admin_fee ?? 0));
+        $subtotal = (float) ($transaction->bayar ?? 0) + (float) ($transaction->ppn ?? 0);
+        $totalBayar = $subtotal + $adminFee;
+        $hargaSatuan = $subtotal / $qtyItem;
         $membershipName = filled($member->membership->name ?? null) ? $member->membership->name : 'Membership';
     @endphp
     <div class="container">
@@ -109,7 +109,7 @@
                 </tr>
                 <tr style="text-align: left;">
                     <td>Subtotal</td>
-                    <td>Rp. {{ number_format($totalBayar, 0, ',', '.') }}</td>
+                    <td>Rp. {{ number_format($subtotal, 0, ',', '.') }}</td>
                 </tr>
                 @if($adminFee > 0)
                 <tr style="text-align: left;">

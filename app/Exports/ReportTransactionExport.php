@@ -50,6 +50,9 @@ class ReportTransactionExport implements FromCollection, WithHeadings, WithMappi
         // Hitung diskon (sesuai logika di Controller kamu)
         $totalDetail = $data->detail()->sum('total');
         $disc = $totalDetail * $data->discount / 100;
+        $adminFee = in_array($data->transaction_type, ['registration', 'renewal'], true)
+            ? (float) ($data->admin_fee ?? 0)
+            : 0.0;
 
         return [
             $this->rowNumber++, // Nomor urut
@@ -61,8 +64,9 @@ class ReportTransactionExport implements FromCollection, WithHeadings, WithMappi
             strtoupper($data->metode ?? '-'),
             $data->amount,
             $data->bayar,
-            $data->bayar - $disc + $data->ppn,
+            $data->bayar - $disc + $data->ppn + $adminFee,
             $data->ppn,
+            $adminFee,
             $disc,
         ];
     }
@@ -80,7 +84,8 @@ class ReportTransactionExport implements FromCollection, WithHeadings, WithMappi
             'Amount',
             'Jumlah',
             'Total',
-            'PPN',
+            'PBJT',
+            'Biaya Admin',
             'Discount',
         ];
     }

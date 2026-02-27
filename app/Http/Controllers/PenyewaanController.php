@@ -114,7 +114,13 @@ public function store(Request $request)
         // Harga per-item dari form (editable). Jika kosong, fallback ke harga default item.
         $hargaTicketInput = (int) str_replace('.', '', (string) $request->harga_ticket);
         $defaultHargaPerItem = (int) $ticketData->harga + ((int) $ticketData->use_ppn === 1 ? (int) $ticketData->ppn : 0);
-        $grossPerItem = $hargaTicketInput > 0 ? $hargaTicketInput : $defaultHargaPerItem;
+        $isNominalFlexible = (int) ($ticketData->is_nominal_flexible ?? 0) === 1;
+
+        // Keamanan: jika dynamic price nonaktif, abaikan input harga dari client.
+        $grossPerItem = $defaultHargaPerItem;
+        if ($isNominalFlexible && $hargaTicketInput > 0) {
+            $grossPerItem = $hargaTicketInput;
+        }
 
         // Simpan struktur lama: bayar(net) + ppn, tapi total tetap mengikuti harga editable.
         $ppnPerItem = ((int) $ticketData->use_ppn === 1) ? (float) $ticketData->ppn : 0;
@@ -186,7 +192,7 @@ public function store(Request $request)
             'bayar' => $basePrice,       // Total dibayar (gross price)
             'status' => 'open',
             'is_active' => 1,
-            'ppn' => $ppnAmount          // simpan ppn untuk laporan
+            'ppn' => $ppnAmount,         // simpan ppn untuk laporan
         ]);
 
             DB::commit();
@@ -226,7 +232,7 @@ public function store(Request $request)
             'bayar' => $basePrice,       // Total dibayar (gross price)
             'status' => 'open',
             'is_active' => 1,
-            'ppn' => $ppnAmount          // simpan ppn untuk laporan
+            'ppn' => $ppnAmount,         // simpan ppn untuk laporan
         ]);
 
             DB::commit();

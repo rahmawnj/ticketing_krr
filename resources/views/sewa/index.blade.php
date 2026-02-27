@@ -26,6 +26,7 @@
                     <th class="text-nowrap">No</th>
                     <th class="text-nowrap">Name</th>
                     <th class="text-nowrap">Harga (Total)</th>
+                    <th class="text-nowrap">Dynamic Price</th>
                     <th class="text-nowrap">Status PBJT</th> {{-- Kolom baru --}}
                     <th class="text-nowrap">Device</th>
                     <th class="text-nowrap">Action</th>
@@ -54,11 +55,16 @@
                         </div>
 
                         <div class="form-group mb-3">
-                            <label for="harga">Harga Pokok (Tanpa PBJT)</label>
+                            <label for="harga">Harga Pokok Default (Tanpa PBJT)</label>
                             <input type="number" name="harga" id="harga" class="form-control" value="">
                             @error('harga')
                             <small class="text-danger">{{ $message }}</small>
                             @enderror
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="is_nominal_flexible" name="is_nominal_flexible" value="1">
+                            <label class="form-check-label" for="is_nominal_flexible">Aktifkan Dynamic Price (harga bisa diubah saat transaksi penyewaan)</label>
                         </div>
 
                         {{-- PBJT Checkbox --}}
@@ -137,6 +143,7 @@
             { data: 'DT_RowIndex', name: 'DT_RowIndex' },
             { data: 'name', name: 'name' },
             { data: 'harga', name: 'harga' },
+            { data: 'dynamic_price_status', name: 'dynamic_price_status' },
             { data: 'ppn_status', name: 'ppn_status' }, // Tambahkan kolom PBJT Status
             { data: 'device', name: 'device' },
             { data: 'action', name: 'action' },
@@ -154,6 +161,7 @@
         $("#form-sewa input[name='_method']").remove();
         $("#jumlah_ppn").val(0); // Pastikan PBJT di-reset
         $('#use_time').prop('checked', false);
+        $('#is_nominal_flexible').prop('checked', false);
 
         let route = $(this).attr('data-route');
         $("#form-sewa").attr('action', route);
@@ -192,6 +200,7 @@
                 $("#harga").val(sewa.harga);
                 $("#device").val(sewa.device);
                 $('#use_time').prop('checked', sewa.use_time == 1);
+                $('#is_nominal_flexible').prop('checked', sewa.is_nominal_flexible == 1);
                 $("#route-target").val($("#form-sewa").attr('action'));
 
                 // Set PBJT checkbox dan nilai PBJT

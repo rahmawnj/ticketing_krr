@@ -19,7 +19,7 @@
                              <a href="" class="btn btn-sm btn-outline-primary" id="btn-print-qr" target="_blank"><i class="fas fa-print me-1"></i> Print QR Member</a>
                          </div>
                          <div class="d-block mt-2 text-center">
-                             <a href="" class="btn btn-sm btn-outline-success" id="btn-download-card" target="_blank" download><i class="fas fa-download me-1"></i> Download Card</a>
+                             <a href="" class="btn btn-sm btn-outline-success" id="btn-download-card" target="_blank"><i class="fas fa-id-card me-1"></i> Print Card</a>
                          </div>
                      </div>
 

@@ -83,6 +83,7 @@
                     <th class="text-nowrap">Jumlah</th>
                     <th class="text-nowrap">Total</th>
                     <th class="text-nowrap">PBJT</th>
+                    <th class="text-nowrap">Biaya Admin</th>
                     <th class="text-nowrap">Discount</th>
                 </tr>
             </thead>
@@ -251,6 +252,10 @@
             {
                 data: 'ppn',
                 name: 'ppn'
+            },
+            {
+                data: 'admin_fee',
+                name: 'admin_fee'
             },
             {
                 data: 'discount',

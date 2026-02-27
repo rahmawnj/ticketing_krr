@@ -31,6 +31,7 @@
                                 data-harga="{{ $ticket->harga }}"
                                 data-use-ppn="{{ $ticket->use_ppn }}"
                                 data-ppn-rate="{{ $ticket->ppn }}"
+                                data-is-nominal-flexible="{{ (int) ($ticket->is_nominal_flexible ?? 0) }}"
                                 data-use-time="{{ $ticket->use_time ?? 0 }}">
                                 {{ $ticket->name }}
                             </option>
@@ -44,10 +45,11 @@
                     <div class="form-group mb-3">
                         <label for="harga_ticket">Harga Lainnya (Per Item, sudah termasuk PBJT)</label>
                         <div class="input-group">
-                            <input type="text" name="harga_ticket" id="harga_ticket" class="form-control" value="0">
+                            <input type="text" name="harga_ticket" id="harga_ticket" class="form-control bg-light" value="0" readonly>
                             <span class="input-group-text">Qty</span>
                             <input type="number" name="qty" id="qty" class="form-control" value="1" min="1" style="max-width: 110px;">
                         </div>
+                        <small class="text-muted d-block mt-1" id="dynamic-price-note">Pilih jenis transaksi lainnya terlebih dahulu.</small>
                         @error('harga_ticket')
                         <small class="text-danger d-block">{{ $message }}</small>
                         @enderror
@@ -209,6 +211,26 @@
             $("#harga_ticket").val(formatRupiah(hargaPerItem.toString()));
         }
 
+        function toggleHargaTicketEditability() {
+            let selectedOption = $("#ticket").find('option:selected');
+            let isFlexible = selectedOption.attr("data-is-nominal-flexible") == '1';
+            let hasSelectedTicket = !!selectedOption.val();
+
+            if (!hasSelectedTicket) {
+                $("#harga_ticket").prop('readonly', true).addClass('bg-light');
+                $("#dynamic-price-note").text('Pilih jenis transaksi lainnya terlebih dahulu.');
+                return;
+            }
+
+            if (isFlexible) {
+                $("#harga_ticket").prop('readonly', false).removeClass('bg-light');
+                $("#dynamic-price-note").text('Dynamic Price aktif: harga per item bisa diubah.');
+            } else {
+                $("#harga_ticket").prop('readonly', true).addClass('bg-light');
+                $("#dynamic-price-note").text('Dynamic Price nonaktif: harga mengikuti master data sewa.');
+            }
+        }
+
         // Kalkulasi total dari harga per item (editable) x qty
         function calculatePrice() {
             let hargaPerItem = cleanRupiah($("#harga_ticket").val() || '0');
@@ -269,6 +291,7 @@
 
         $("#ticket").on('change', function() {
             setDefaultHargaPerItem();
+            toggleHargaTicketEditability();
             calculatePrice();
             toggleTimeFields();
         });
@@ -384,6 +407,7 @@
 
         // Inisialisasi awal
         setDefaultHargaPerItem();
+        toggleHargaTicketEditability();
         calculatePrice();
         togglePaymentFields();
     })

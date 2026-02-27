@@ -751,8 +751,7 @@ class TransactionController extends Controller
             ];
         }
 
-        $baseMembershipPrice = (float) ($member->membership->price ?? 0);
-        $adminFee = max(0, ((float) ($transaction->bayar ?? 0)) - $baseMembershipPrice);
+        $adminFee = max(0, (float) ($transaction->admin_fee ?? 0));
         $type = $adminFee > 0
             ? 'Perpanjangan Baru'
             : ($transaction->transaction_type === 'renewal' ? 'Perpanjangan' : 'Registrasi');
