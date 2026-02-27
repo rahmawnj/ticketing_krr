@@ -7,10 +7,33 @@
     <title>{{ $member->nama }} | Print Invoice Member</title>
 
     <style>
+        body {
+            margin: 0;
+            padding: 8px 0;
+            font-family: "Times New Roman", serif;
+        }
         .container {
-            max-width: 80mm !important;
+            width: 96%;
+            max-width: 96mm !important;
             border: 1px solid black;
             text-align: center;
+            margin: 0 auto;
+        }
+        .invoice-title {
+            margin: 0;
+            font-size: 11px;
+            letter-spacing: 0.3px;
+        }
+        .invoice-table-wrap {
+            display: flex;
+            justify-content: center;
+            font-size: 9px;
+            padding: 8px 10px;
+        }
+        .invoice-meta {
+            text-align: center;
+            font-size: 9px;
+            text-transform: uppercase;
         }
     </style>
 </head>
@@ -26,10 +49,10 @@
     @endphp
     <div class="container">
         <div style="margin-bottom: 10px; text-transform: uppercase; font-weight: bold;">
-            <h4 style="margin: 0;">Invoice Membership</h4>
+            <h4 class="invoice-title">Invoice Membership</h4>
         </div>
 
-        <div style="display: flex; justify-content: center; font-size: 13px; padding: 10px 12px;">
+        <div class="invoice-table-wrap">
             <table style="width: 100%; border-collapse: collapse;">
                 <tr style="text-align: left;">
                     <td width="40%">Jenis</td>
@@ -104,10 +127,6 @@
                     <td>{{ $membershipName }}</td>
                 </tr>
                 <tr style="text-align: left;">
-                    <td>Qty x Satuan</td>
-                    <td>{{ $qtyItem }} x Rp. {{ number_format($hargaSatuan, 0, ',', '.') }}</td>
-                </tr>
-                <tr style="text-align: left;">
                     <td>Subtotal</td>
                     <td>Rp. {{ number_format($subtotal, 0, ',', '.') }}</td>
                 </tr>
@@ -127,16 +146,16 @@
                 </tr>
             </table>
         </div>
+        <div style="border-top: 1px dashed #000; margin: 4px 12px 0;"></div>
+        <div class="invoice-meta" style="margin: 6px 12px 0;">
+            {!! nl2br(e($ucapan ?? 'Terima Kasih')) !!}
+        </div>
+        @if(!empty($deskripsi))
+        <div class="invoice-meta" style="margin: 2px 12px 10px;">
+            {!! nl2br(e($deskripsi)) !!}
+        </div>
+        @endif
     </div>
-
-    <div style="text-align: center; margin-top: 8px; font-size: 11px; text-transform: uppercase;">
-        {!! nl2br(e($ucapan ?? 'Terima Kasih')) !!}
-    </div>
-    @if(!empty($deskripsi))
-    <div style="text-align: center; margin-top: 4px; font-size: 11px; text-transform: uppercase;">
-        {!! nl2br(e($deskripsi)) !!}
-    </div>
-    @endif
 
 
     <script>

@@ -733,35 +733,121 @@ public function update(UpdateMemberRequest $request, Member $member)
     function print_qr(Member $member)
     {
         $setting = Setting::asObject();
-        return view('member.print-qr', compact('member', 'setting'));
+        $logoData = null;
+        if ((int) ($setting->use_logo ?? 0) === 1 && !empty($setting->logo ?? null)) {
+            $logoPath = public_path('storage/' . $setting->logo);
+            if (is_file($logoPath)) {
+                $logoBase64 = base64_encode(file_get_contents($logoPath));
+                $logoExt = strtolower((string) pathinfo($logoPath, PATHINFO_EXTENSION));
+                $logoMime = in_array($logoExt, ['jpg', 'jpeg'], true) ? 'image/jpeg' : 'image/png';
+                $logoData = 'data:' . $logoMime . ';base64,' . $logoBase64;
+            }
+        }
+
+        return view('member.print-qr', compact('member', 'setting', 'logoData'));
     }
 
     function invoice(Member $member)
     {
-        $transaction = Transaction::where('member_id', $member->id)
+        $ownerMemberId = (int) $member->parent_id !== 0 ? (int) $member->parent_id : (int) $member->id;
+        $ownerMember = Member::with(['membership', 'childs'])->find($ownerMemberId) ?? $member->load(['membership', 'childs']);
+
+        $transaction = Transaction::where('member_id', $ownerMemberId)
             ->whereIn('transaction_type', ['registration', 'renewal'])
             ->latest()
             ->first();
 
         if (!$transaction) {
-            abort(404);
+            $qtyItem = 1 + (int) ($ownerMember->childs->count() ?? 0);
+            $transaction = new Transaction([
+                'ticket_code' => 'INV/' . now('Asia/Jakarta')->format('Ymd') . '/' . str_pad((string) $ownerMember->id, 4, '0', STR_PAD_LEFT),
+                'transaction_type' => 'registration',
+                'amount' => $qtyItem,
+                'ppn' => (float) ((($ownerMember->membership->use_ppn ?? 0) ? ($ownerMember->membership->ppn ?? 0) : 0)),
+                'admin_fee' => 0,
+                'bayar' => (float) ($ownerMember->membership->price ?? 0),
+                'metode' => '-',
+            ]);
+            $transaction->created_at = now('Asia/Jakarta');
         }
 
-        return redirect()->route('transactions.invoice', $transaction->id);
+        $cashierName = $transaction->user?->name ?? (auth()->user()->name ?? '-');
+        $setting = Setting::asObject();
+        $ucapan = $setting->ucapan ?? 'Terima Kasih';
+        $deskripsi = $setting->deskripsi ?? '';
+
+        return view('member.invoice', [
+            'member' => $ownerMember,
+            'transaction' => $transaction,
+            'cashierName' => $cashierName,
+            'ucapan' => $ucapan,
+            'deskripsi' => $deskripsi,
+        ]);
     }
 
     public function invoicePdf(Member $member)
     {
-        $transaction = Transaction::where('member_id', $member->id)
+        $ownerMemberId = (int) $member->parent_id !== 0 ? (int) $member->parent_id : (int) $member->id;
+        $ownerMember = Member::with(['membership', 'childs'])->find($ownerMemberId) ?? $member->load(['membership', 'childs']);
+
+        $transaction = Transaction::where('member_id', $ownerMemberId)
             ->whereIn('transaction_type', ['registration', 'renewal'])
             ->latest()
             ->first();
 
         if (!$transaction) {
-            abort(404);
+            $qtyItem = 1 + (int) ($ownerMember->childs->count() ?? 0);
+            $transaction = new Transaction([
+                'ticket_code' => 'INV/' . now('Asia/Jakarta')->format('Ymd') . '/' . str_pad((string) $ownerMember->id, 4, '0', STR_PAD_LEFT),
+                'transaction_type' => 'registration',
+                'amount' => $qtyItem,
+                'ppn' => (float) ((($ownerMember->membership->use_ppn ?? 0) ? ($ownerMember->membership->ppn ?? 0) : 0)),
+                'admin_fee' => 0,
+                'bayar' => (float) ($ownerMember->membership->price ?? 0),
+                'metode' => '-',
+            ]);
+            $transaction->created_at = now('Asia/Jakarta');
         }
 
-        return redirect()->route('transactions.invoice.pdf', $transaction->id);
+        $adminFee = max(0, (float) ($transaction->admin_fee ?? 0));
+        $type = $adminFee > 0
+            ? 'Perpanjangan Baru'
+            : (($transaction->transaction_type ?? 'registration') === 'renewal' ? 'Perpanjangan' : 'Registrasi');
+        $invoiceCode = $transaction->ticket_code ?? ('INV/' . now('Asia/Jakarta')->format('YmdHis'));
+        $price = 'Rp. ' . number_format($ownerMember->membership->price ?? 0, 0, ',', '.');
+        $date = optional($transaction->created_at)->format('d/m/Y H:i:s') ?? now('Asia/Jakarta')->format('d/m/Y H:i:s');
+        $cashierName = $transaction->user?->name ?? (auth()->user()->name ?? '-');
+        $autoPrint = request()->boolean('print');
+
+        $setting = Setting::asObject();
+        $appName = $setting->name ?? 'Ticketing App';
+        $ucapan = $setting->ucapan ?? 'Terima Kasih';
+        $deskripsi = $setting->deskripsi ?? '';
+        $logoData = null;
+        if ($setting && (int) ($setting->use_logo ?? 0) === 1 && !empty($setting->logo ?? null)) {
+            $logoPath = public_path('storage/' . $setting->logo);
+            if (is_file($logoPath)) {
+                $logoBase64 = base64_encode(file_get_contents($logoPath));
+                $logoExt = strtolower((string) pathinfo($logoPath, PATHINFO_EXTENSION));
+                $logoMime = in_array($logoExt, ['jpg', 'jpeg'], true) ? 'image/jpeg' : 'image/png';
+                $logoData = 'data:' . $logoMime . ';base64,' . $logoBase64;
+            }
+        }
+
+        return view('member.invoice-pdf', [
+            'member' => $ownerMember,
+            'type' => $type,
+            'invoice_code' => $invoiceCode,
+            'date' => $date,
+            'price' => $price,
+            'transaction' => $transaction,
+            'app_name' => $appName,
+            'logo_data' => $logoData,
+            'cashier_name' => $cashierName,
+            'ucapan' => $ucapan,
+            'deskripsi' => $deskripsi,
+            'auto_print' => $autoPrint,
+        ]);
     }
 
     public function bulkRenewIndex(Request $request)

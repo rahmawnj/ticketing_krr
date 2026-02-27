@@ -117,10 +117,6 @@
                 <td class="value">{{ $membershipName }}</td>
             </tr>
             <tr>
-                <td class="label">Qty x Satuan</td>
-                <td class="value">{{ $qtyItem }} x Rp. {{ number_format($hargaSatuan, 0, ',', '.') }}</td>
-            </tr>
-            <tr>
                 <td class="label">Subtotal</td>
                 <td class="value">Rp. {{ number_format($subtotal, 0, ',', '.') }}</td>
             </tr>
