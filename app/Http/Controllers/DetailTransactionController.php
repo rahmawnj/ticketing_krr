@@ -6,12 +6,14 @@ use App\Models\DetailTransaction;
 use App\Models\Setting;
 use App\Models\Ticket;
 use App\Models\Transaction;
+use App\Support\PaymentMethod;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\View;
+use Illuminate\Validation\Rule;
 use Yajra\DataTables\Facades\DataTables;
 use Mike42\Escpos\Printer;
 use Mike42\Escpos\PrintConnectors\WindowsPrintConnector;
@@ -202,23 +204,40 @@ class DetailTransactionController extends Controller
                 }
             }
 
-            $ticketPpnId = Transaction::join('detail_transactions', 'transactions.id', '=', 'detail_transactions.transaction_id')
-                ->join('tickets', 'detail_transactions.ticket_id', '=', 'tickets.id')
-                ->where('transactions.id', $transaction->id)
-                ->where('tickets.use_ppn', 1)
-                ->pluck('detail_transactions.ticket_id')
-                ->toArray();
-
-            $ticketPpn = Ticket::whereIn('id', $ticketPpnId)->where('use_ppn', 1)->get();
-            $totalPpn = $ticketPpn->sum('ppn') * count($ticketPpnId);
-            $bayar = intval(str_replace('.', '', $request->bayar)) - intval($totalPpn);
-            $metode = strtolower(trim((string) $request->metode));
-            $metode = match ($metode) {
-                'qr' => 'qris',
-                'credit', 'credit card', 'kartu kredit' => 'kredit',
-                default => $metode,
-            };
+            $validatedPayment = $request->validate([
+                'metode' => ['required', Rule::in(PaymentMethod::coreValidationValues())],
+            ]);
+            $metode = PaymentMethod::normalize($validatedPayment['metode']);
             $isCardMethod = in_array($metode, ['debit', 'kredit'], true);
+
+            $normalizeMoney = static function ($value): int {
+                $digitsOnly = preg_replace('/[^\d]/', '', (string) $value);
+                return $digitsOnly === '' ? 0 : (int) $digitsOnly;
+            };
+
+            // Ambil total PBJT dari detail transaksi agar selalu sesuai qty aktual.
+            $totalPpn = (float) $transaction->detail()->sum('ppn');
+            $subtotalGross = (float) $transaction->detail()->sum('total') + $totalPpn;
+            $subtotalAfterDiscount = max(0, $subtotalGross - (float) $disc);
+
+            $bayarInput = $normalizeMoney($request->bayar);
+            $totalPriceInput = $normalizeMoney($request->totalPrice);
+            $kembaliInput = $normalizeMoney($request->kembali);
+
+            $isCashMethod = $metode === 'cash';
+            $bayarGross = $isCashMethod
+                ? $bayarInput
+                : ($totalPriceInput > 0 ? $totalPriceInput : (int) round($subtotalAfterDiscount));
+
+            if ($bayarGross <= 0) {
+                $bayarGross = (int) round($subtotalAfterDiscount);
+            }
+
+            if (!$isCashMethod) {
+                $kembaliInput = 0;
+            }
+
+            $bayar = max(0, $bayarGross - (int) round($totalPpn));
 
             // $ppn = $request->ppn ?? 0;
             $print = $request->hide_print ?? 0;
@@ -232,15 +251,28 @@ class DetailTransactionController extends Controller
                 ]);
             }
 
+            $shouldAssignInvoiceNumber = ((int) ($transaction->no_trx ?? 0) <= 0) || ((int) ($transaction->is_active ?? 0) === 0);
+            $transactionDate = $transaction->created_at
+                ? Carbon::parse($transaction->created_at)->timezone('Asia/Jakarta')
+                : Carbon::now('Asia/Jakarta');
+            $assignedNoTrx = $shouldAssignInvoiceNumber
+                ? Transaction::nextNoTrxByType('ticket', $transactionDate)
+                : (int) $transaction->no_trx;
+            $assignedTicketCode = $shouldAssignInvoiceNumber
+                ? Transaction::buildTicketCodeByType('ticket', $transactionDate, $assignedNoTrx)
+                : (string) $transaction->ticket_code;
+
             $transaction->update([
                 'ticket_id' => 0,
+                'no_trx' => $assignedNoTrx,
+                'ticket_code' => $assignedTicketCode,
                 'amount' => $firstTrx,
                 'is_active' => 1,
                 'discount' => $discount,
                 'disc' => $disc,
                 'bayar' => $bayar,
                 'transaction_type' => 'ticket',
-                'kembali' => str_replace('.', '', $request->kembali),
+                'kembali' => $kembaliInput,
                 'metode' => $metode,
                 'nama_kartu' => $isCardMethod ? $request->nama_kartu : null,
                 'no_kartu' => $isCardMethod ? $request->no_kartu : null,
@@ -318,7 +350,8 @@ class DetailTransactionController extends Controller
                 'ppn' => $detail->ticket->ppn * $request->qty,
             ]);
 
-            $totalPrice = DetailTransaction::where('transaction_id', $detail->transaction_id)->sum('total');
+            $totalPrice = DetailTransaction::where('transaction_id', $detail->transaction_id)
+                ->sum(\DB::raw('total + ppn'));
 
             DB::commit();
 

@@ -91,6 +91,9 @@
     <input type="hidden" name="member_ids[]" id="member-id-input">
     <input type="hidden" name="metode" id="renew-metode-input">
     <input type="hidden" name="renewal_mode" id="renewal-mode-input">
+    <input type="hidden" name="nama_kartu" id="renew-nama-kartu-input">
+    <input type="hidden" name="no_kartu" id="renew-no-kartu-input">
+    <input type="hidden" name="bank" id="renew-bank-input">
 </form>
 
 @endsection
@@ -119,7 +122,7 @@
             { data: 'tgl_expired', name: 'tgl_expired' },
             { data: 'renewal_status', name: 'renewal_status', orderable: false, searchable: false },
             { data: 'action', name: 'action', orderable: false, searchable: false },
-        ]
+        ],
     });
 
     // --- Logika Perpanjangan Individual ---
@@ -136,23 +139,70 @@
         var isRenewalBaru = renewalMode === 'renewal_baru';
         var confirmTitle = isRenewalBaru ? "Konfirmasi Perpanjangan Baru" : "Konfirmasi Perpanjangan";
         var confirmButton = isRenewalBaru ? "Ya, Perpanjangan Baru!" : "Ya, Perpanjang!";
+        var paymentWrapper = document.createElement('div');
+        paymentWrapper.style.display = 'grid';
+        paymentWrapper.style.gap = '8px';
+
+        var metodeLabel = document.createElement('label');
+        metodeLabel.setAttribute('for', 'renew-metode-swal');
+        metodeLabel.textContent = 'Metode Pembayaran';
+        paymentWrapper.appendChild(metodeLabel);
+
         var metodeSelect = document.createElement('select');
         metodeSelect.id = 'renew-metode-swal';
         metodeSelect.className = 'swal-content__input';
+        paymentWrapper.appendChild(metodeSelect);
 
-        [
-            { value: 'qris', label: 'QRIS' },
-            { value: 'debit', label: 'Debit' },
-            { value: 'kredit', label: 'Kredit' },
-            { value: 'transfer', label: 'Transfer' },
-            { value: 'lain-lain', label: 'Lain-lain' },
-            { value: 'cash', label: 'Cash' }
-        ].forEach(function(item) {
+        var namaKartuInput = document.createElement('input');
+        namaKartuInput.type = 'text';
+        namaKartuInput.id = 'renew-nama-kartu-swal';
+        namaKartuInput.className = 'swal-content__input renew-card-field';
+        namaKartuInput.placeholder = 'Nama Rekening / Pemilik Kartu';
+        namaKartuInput.style.display = 'none';
+        paymentWrapper.appendChild(namaKartuInput);
+
+        var noKartuInput = document.createElement('input');
+        noKartuInput.type = 'text';
+        noKartuInput.id = 'renew-no-kartu-swal';
+        noKartuInput.className = 'swal-content__input renew-card-field';
+        noKartuInput.placeholder = 'No Kartu / No Rekening';
+        noKartuInput.style.display = 'none';
+        paymentWrapper.appendChild(noKartuInput);
+
+        var bankInput = document.createElement('input');
+        bankInput.type = 'text';
+        bankInput.id = 'renew-bank-swal';
+        bankInput.className = 'swal-content__input renew-card-field';
+        bankInput.placeholder = 'Bank';
+        bankInput.style.display = 'none';
+        paymentWrapper.appendChild(bankInput);
+
+        var paymentMethodOptions = @json(\App\Support\PaymentMethod::options());
+
+        Object.entries(paymentMethodOptions).forEach(function(item) {
             var option = document.createElement('option');
-            option.value = item.value;
-            option.textContent = item.label;
+            option.value = item[0];
+            option.textContent = item[1];
             metodeSelect.appendChild(option);
         });
+
+        function toggleRenewCardFields() {
+            var isCardMethod = metodeSelect.value === 'debit' || metodeSelect.value === 'kredit';
+            var displayMode = isCardMethod ? 'block' : 'none';
+
+            namaKartuInput.style.display = displayMode;
+            noKartuInput.style.display = displayMode;
+            bankInput.style.display = displayMode;
+
+            if (!isCardMethod) {
+                namaKartuInput.value = '';
+                noKartuInput.value = '';
+                bankInput.value = '';
+            }
+        }
+
+        metodeSelect.addEventListener('change', toggleRenewCardFields);
+        toggleRenewCardFields();
 
         swal({
             title: confirmTitle,
@@ -161,17 +211,31 @@
                   "\nPBJT: Rp " + memberPpnPrice +
                   "\nBiaya Admin: Rp " + memberAdminPrice +
                   "\nTotal: Rp " + memberPrice,
-            content: metodeSelect,
+            content: paymentWrapper,
             icon: "warning",
             buttons: ["Batal", confirmButton],
             dangerMode: true,
         })
         .then((willRenew) => {
             if (willRenew) {
+                var selectedMetode = (metodeSelect.value || '').trim();
+                var isCardMethod = selectedMetode === 'debit' || selectedMetode === 'kredit';
+                var namaKartu = (namaKartuInput.value || '').trim();
+                var noKartu = (noKartuInput.value || '').trim();
+                var bank = (bankInput.value || '').trim();
+
+                if (isCardMethod && (!namaKartu || !noKartu || !bank)) {
+                    swal("Data pembayaran belum lengkap", "Untuk metode debit/kredit, isi nama rekening, nomor kartu/rekening, dan bank.", "warning");
+                    return;
+                }
+
                 // Set ID member ke form tersembunyi
                 $('#member-id-input').val(memberId);
-                $('#renew-metode-input').val($('#renew-metode-swal').val() || '');
+                $('#renew-metode-input').val(selectedMetode);
                 $('#renewal-mode-input').val(renewalMode);
+                $('#renew-nama-kartu-input').val(isCardMethod ? namaKartu : '');
+                $('#renew-no-kartu-input').val(isCardMethod ? noKartu : '');
+                $('#renew-bank-input').val(isCardMethod ? bank : '');
 
                 // Submit form
                 $('#form-single-renew').submit();

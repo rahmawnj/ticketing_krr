@@ -89,6 +89,10 @@ Route::middleware('auth')->group(function () {
     Route::get('members/bulk-renew', [MemberController::class, 'bulkRenewIndex'])->name('members.bulk_renew');
     Route::post('members/bulk-renew', [MemberController::class, 'processBulkRenew'])->name('members.process_bulk_renew');
     Route::get('members/renewable-list', [MemberController::class, 'getRenewableMembers'])->name('members.get_renewable');
+    Route::get('members/{member:id}/renewal-notice/{format}', [MemberController::class, 'downloadSingleRenewalNotice'])
+        ->where('format', 'preview|pdf')
+        ->name('members.download_renewal_notice_member');
+    Route::post('members/renewal-notice/download', [MemberController::class, 'downloadRenewalNotice'])->name('members.download_renewal_notice');
     Route::resource('members', MemberController::class);
 
     Route::get('memberships/get', [MembershipController::class, 'get'])->name('memberships.list');

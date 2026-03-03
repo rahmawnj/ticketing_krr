@@ -87,7 +87,7 @@
             <table class="table table-bordered table-hover">
                 <thead>
                     <tr>
-                        <th colspan="5">Report Transaction Ticket Tanggal {{ Carbon\Carbon::parse($from)->format('d/m/Y') }} - {{ request('to') ? Carbon\Carbon::parse($to)->subDay(1)->format('d/m/Y') : Carbon\Carbon::parse($from)->format('d/m/Y') }}</th>
+                        <th colspan="10">Report Transaction Ticket Tanggal {{ Carbon\Carbon::parse($from)->format('d/m/Y') }} - {{ request('to') ? Carbon\Carbon::parse($to)->subDay(1)->format('d/m/Y') : Carbon\Carbon::parse($from)->format('d/m/Y') }}</th>
                     </tr>
                     <tr>
                         <th>Jenis Ticket</th>
@@ -95,11 +95,15 @@
                         <th class="text-center">Harga Ticket</th>
                         <th class="text-center">PBJT</th>
                         <th class="text-end">Total Harga Ticket</th>
+                        <th class="text-end">QRIS</th>
+                        <th class="text-end">Debit</th>
+                        <th class="text-end">Kredit</th>
+                        <th class="text-end">Transfer</th>
+                        <th class="text-end">Lain-lain</th>
                     </tr>
                 </thead>
                 <tbody>
                     @php
-    // ... kode PHP perhitungan sebelum loop tetap sama
     $queryTrxTicket = App\Models\Transaction::where(['is_active' => 1, 'transaction_type' => 'ticket'])->whereBetween('created_at', [$from, $to]);
     if (request('kasir') != 'all' && request('kasir')) {
         $queryTrxTicket->where('user_id', request('kasir'));
@@ -107,16 +111,85 @@
     $idTrxTicket = $queryTrxTicket->pluck('id');
     $totalQtyTicket = 0;
     $totalAmountTicket = 0;
+    $methodOrder = [
+        'qris' => 'QRIS',
+        'debit' => 'Debit',
+        'kredit' => 'Kredit',
+        'transfer' => 'Transfer',
+        'lain_lain' => 'Lain-lain',
+    ];
+    $knownMethodValues = [
+        'qris',
+        'qr',
+        'debit',
+        'kredit',
+        'credit',
+        'credit card',
+        'kartu kredit',
+        'transfer',
+        'lain-lain',
+        'tap',
+        'cash',
+    ];
+    $methodKeys = array_keys($methodOrder);
+    $totalTicketByMethod = array_fill_keys($methodKeys, 0);
+
+    $applyMethodFilter = function ($query, $methodKey) use ($knownMethodValues) {
+        if ($methodKey === 'qris') {
+            $query->whereIn('metode', ['qris', 'qr']);
+        } elseif ($methodKey === 'debit') {
+            $query->where('metode', 'debit');
+        } elseif ($methodKey === 'kredit') {
+            $query->whereIn('metode', ['kredit', 'credit', 'credit card', 'kartu kredit']);
+        } elseif ($methodKey === 'transfer') {
+            $query->where('metode', 'transfer');
+        } elseif ($methodKey === 'lain_lain') {
+            $query->where(function ($q) use ($knownMethodValues) {
+                $q->whereIn('metode', ['lain-lain', 'tap', 'cash'])
+                    ->orWhereNull('metode')
+                    ->orWhere('metode', '')
+                    ->orWhereNotIn('metode', $knownMethodValues);
+            });
+        }
+
+        return $query;
+    };
+
+    $sumTrxByMethod = function ($baseQuery, $methodKey, $sumExpression) use ($applyMethodFilter) {
+        $query = clone $baseQuery;
+        $query = $applyMethodFilter($query, $methodKey);
+        return (float) $query->sum(\DB::raw($sumExpression));
+    };
+
+    $sumTicketByMethod = function ($ticketId, $trxBaseQuery, $methodKey) use ($applyMethodFilter) {
+        $trxQuery = clone $trxBaseQuery;
+        $trxQuery = $applyMethodFilter($trxQuery, $methodKey);
+        $trxIds = $trxQuery->pluck('id');
+        if ($trxIds->isEmpty()) {
+            return 0;
+        }
+
+        return (float) App\Models\DetailTransaction::whereIn('transaction_id', $trxIds)
+            ->where('ticket_id', $ticketId)
+            ->sum(\DB::raw('total + ppn'));
+    };
 @endphp
 
 @foreach($tickets as $ticket)
     @php
         $qty = App\Models\DetailTransaction::whereIn('transaction_id', $idTrxTicket)->where('ticket_id', $ticket->id)->sum('qty');
         $totalPerTicket = App\Models\DetailTransaction::whereIn('transaction_id', $idTrxTicket)->where('ticket_id', $ticket->id)->sum(\DB::raw('total + ppn'));
+        $ticketByMethod = [];
+        foreach ($methodKeys as $methodKey) {
+            $ticketByMethod[$methodKey] = $sumTicketByMethod((int) $ticket->id, $queryTrxTicket, $methodKey);
+        }
 
         if ($qty > 0) {
             $totalQtyTicket += $qty;
             $totalAmountTicket += $totalPerTicket;
+            foreach ($methodKeys as $methodKey) {
+                $totalTicketByMethod[$methodKey] += $ticketByMethod[$methodKey];
+            }
         }
     @endphp
 
@@ -131,6 +204,9 @@
             <td class="text-end">
                 {{ number_format($totalPerTicket, 0, ',', '.') }}
             </td>
+            @foreach($methodKeys as $methodKey)
+                <td class="text-end">{{ number_format($ticketByMethod[$methodKey], 0, ',', '.') }}</td>
+            @endforeach
         </tr>
     @endif
 @endforeach
@@ -139,6 +215,9 @@
                         <th class="text-center"><b>{{ $totalQtyTicket }}</b></th>
                         <th colspan="2"></th>
                         <th class="text-end"><b>{{ number_format($totalAmountTicket, 0, ',', '.') }}</b></th>
+                        @foreach($methodKeys as $methodKey)
+                            <th class="text-end"><b>{{ number_format($totalTicketByMethod[$methodKey], 0, ',', '.') }}</b></th>
+                        @endforeach
                     </tr>
                 </tbody>
             </table>
@@ -150,7 +229,7 @@
             <table class="table table-bordered table-hover">
                 <thead>
                     <tr>
-                        <th colspan="5">Report Transaction Non-Ticket Tanggal {{ Carbon\Carbon::parse($from)->format('d/m/Y') }} - {{ request('to') ? Carbon\Carbon::parse($to)->subDay(1)->format('d/m/Y') : Carbon\Carbon::parse($from)->format('d/m/Y') }}</th>
+                        <th colspan="10">Report Transaction Renewal Tanggal {{ Carbon\Carbon::parse($from)->format('d/m/Y') }} - {{ request('to') ? Carbon\Carbon::parse($to)->subDay(1)->format('d/m/Y') : Carbon\Carbon::parse($from)->format('d/m/Y') }}</th>
                     </tr>
                     <tr>
                         <th>Jenis Transaksi</th>
@@ -158,52 +237,131 @@
                         <th class="text-center">Harga</th>
                         <th class="text-center">PBJT</th>
                         <th class="text-end">Total Harga</th>
+                        <th class="text-end">QRIS</th>
+                        <th class="text-end">Debit</th>
+                        <th class="text-end">Kredit</th>
+                        <th class="text-end">Transfer</th>
+                        <th class="text-end">Lain-lain</th>
                     </tr>
                 </thead>
                 <tbody>
                     @php
-                        $totalQtyNonTicket = 0;
-                        $totalAmountNonTicket = 0;
                         $orderedMemberships = $memberships->sortBy('name');
-                        $membershipTrxTypes = ['registration', 'renewal'];
                         $adminFeeExpr = "(CASE WHEN transaction_type IN ('registration', 'renewal') THEN admin_fee ELSE 0 END)";
+                        $totalQtyRenewal = 0;
+                        $totalAmountRenewal = 0;
+                        $totalQtyRegistration = 0;
+                        $totalAmountRegistration = 0;
+                        $totalQtyLainLain = 0;
+                        $totalAmountLainLain = 0;
+                        $totalRenewalByMethod = array_fill_keys($methodKeys, 0);
+                        $totalRegistrationByMethod = array_fill_keys($methodKeys, 0);
+                        $totalLainLainByMethod = array_fill_keys($methodKeys, 0);
                     @endphp
 
-                    @foreach($membershipTrxTypes as $type)
-                        @foreach($orderedMemberships as $membership)
-                            @php
-                                $queryTrxMembership = App\Models\Transaction::where(['is_active' => 1, 'transaction_type' => $type, 'ticket_id' => $membership->id])->whereBetween('created_at', [$from, $to]);
-                                if (request('kasir') != 'all' && request('kasir')) {
-                                    $queryTrxMembership->where('user_id', request('kasir'));
-                                }
-                                $qtyMembership = $queryTrxMembership->count();
-                                $totalPerMembership = $queryTrxMembership->sum(\DB::raw('(bayar - kembali) + ppn + admin_fee'));
-                                $totalQtyNonTicket += $qtyMembership;
-                                $totalAmountNonTicket += $queryTrxMembership->sum(\DB::raw('(bayar - kembali) + admin_fee'));
-                            @endphp
-                            @if($qtyMembership > 0)
-                            <tr>
-                                <td>{{ ucfirst($type) }} ({{ $membership->name }})</td>
-                                <td class="text-center">{{ $qtyMembership }}</td>
-                                <td class="text-center">{{ number_format($membership->price, 0, ',', '.') }}</td>
-                                <td class="text-center">
-                                    <input type="checkbox" class="form-check-input" {{ $membership->use_ppn == 1 ? 'checked' : '' }} disabled>
-                                </td>
-                                <td class="text-end">
-                                    {{ number_format($totalPerMembership, 0, ',', '.') }}
-                                </td>
-                            </tr>
-                            @endif
-                        @endforeach
+                    @foreach($orderedMemberships as $membership)
+                        @php
+                            $queryTrxRenewal = App\Models\Transaction::where(['is_active' => 1, 'transaction_type' => 'renewal', 'ticket_id' => $membership->id])->whereBetween('created_at', [$from, $to]);
+                            if (request('kasir') != 'all' && request('kasir')) {
+                                $queryTrxRenewal->where('user_id', request('kasir'));
+                            }
+                            $qtyRenewal = $queryTrxRenewal->count();
+                            $totalPerRenewal = $queryTrxRenewal->sum(\DB::raw('(bayar - kembali) + ppn + admin_fee'));
+                            $renewalByMethod = [];
+                            foreach ($methodKeys as $methodKey) {
+                                $renewalByMethod[$methodKey] = $sumTrxByMethod($queryTrxRenewal, $methodKey, '(bayar - kembali) + ppn + admin_fee');
+                            }
+
+                            $totalQtyRenewal += $qtyRenewal;
+                            $totalAmountRenewal += $queryTrxRenewal->sum(\DB::raw('(bayar - kembali) + ppn + admin_fee'));
+                            foreach ($methodKeys as $methodKey) {
+                                $totalRenewalByMethod[$methodKey] += $renewalByMethod[$methodKey];
+                            }
+                        @endphp
+                        @if($qtyRenewal > 0)
+                        <tr>
+                            <td>Renewal ({{ $membership->name }})</td>
+                            <td class="text-center">{{ $qtyRenewal }}</td>
+                            <td class="text-center">{{ number_format($membership->price, 0, ',', '.') }}</td>
+                            <td class="text-center">
+                                <input type="checkbox" class="form-check-input" {{ $membership->use_ppn == 1 ? 'checked' : '' }} disabled>
+                            </td>
+                            <td class="text-end">
+                                {{ number_format($totalPerRenewal, 0, ',', '.') }}
+                            </td>
+                            @foreach($methodKeys as $methodKey)
+                                <td class="text-end">{{ number_format($renewalByMethod[$methodKey], 0, ',', '.') }}</td>
+                            @endforeach
+                        </tr>
+                        @endif
                     @endforeach
+                    <tr>
+                        <th>Total Penjualan Renewal :</th>
+                        <th class="text-center"><b>{{ $totalQtyRenewal }}</b></th>
+                        <th colspan="2"></th>
+                        <th class="text-end"><b>{{ number_format($totalAmountRenewal, 0, ',', '.') }}</b></th>
+                        @foreach($methodKeys as $methodKey)
+                            <th class="text-end"><b>{{ number_format($totalRenewalByMethod[$methodKey], 0, ',', '.') }}</b></th>
+                        @endforeach
+                    </tr>
 
-                   @php
-                        $typeRental = 'rental';
-                    @endphp
+                    <tr>
+                        <th colspan="10">Report Transaction Registration Tanggal {{ Carbon\Carbon::parse($from)->format('d/m/Y') }} - {{ request('to') ? Carbon\Carbon::parse($to)->subDay(1)->format('d/m/Y') : Carbon\Carbon::parse($from)->format('d/m/Y') }}</th>
+                    </tr>
+                    @foreach($orderedMemberships as $membership)
+                        @php
+                            $queryTrxRegistration = App\Models\Transaction::where(['is_active' => 1, 'transaction_type' => 'registration', 'ticket_id' => $membership->id])->whereBetween('created_at', [$from, $to]);
+                            if (request('kasir') != 'all' && request('kasir')) {
+                                $queryTrxRegistration->where('user_id', request('kasir'));
+                            }
+                            $qtyRegistration = $queryTrxRegistration->count();
+                            $totalPerRegistration = $queryTrxRegistration->sum(\DB::raw('(bayar - kembali) + ppn + admin_fee'));
+                            $registrationByMethod = [];
+                            foreach ($methodKeys as $methodKey) {
+                                $registrationByMethod[$methodKey] = $sumTrxByMethod($queryTrxRegistration, $methodKey, '(bayar - kembali) + ppn + admin_fee');
+                            }
+
+                            $totalQtyRegistration += $qtyRegistration;
+                            $totalAmountRegistration += $queryTrxRegistration->sum(\DB::raw('(bayar - kembali) + ppn + admin_fee'));
+                            foreach ($methodKeys as $methodKey) {
+                                $totalRegistrationByMethod[$methodKey] += $registrationByMethod[$methodKey];
+                            }
+                        @endphp
+                        @if($qtyRegistration > 0)
+                        <tr>
+                            <td>Registration ({{ $membership->name }})</td>
+                            <td class="text-center">{{ $qtyRegistration }}</td>
+                            <td class="text-center">{{ number_format($membership->price, 0, ',', '.') }}</td>
+                            <td class="text-center">
+                                <input type="checkbox" class="form-check-input" {{ $membership->use_ppn == 1 ? 'checked' : '' }} disabled>
+                            </td>
+                            <td class="text-end">
+                                {{ number_format($totalPerRegistration, 0, ',', '.') }}
+                            </td>
+                            @foreach($methodKeys as $methodKey)
+                                <td class="text-end">{{ number_format($registrationByMethod[$methodKey], 0, ',', '.') }}</td>
+                            @endforeach
+                        </tr>
+                        @endif
+                    @endforeach
+                    <tr>
+                        <th>Total Penjualan Registration :</th>
+                        <th class="text-center"><b>{{ $totalQtyRegistration }}</b></th>
+                        <th colspan="2"></th>
+                        <th class="text-end"><b>{{ number_format($totalAmountRegistration, 0, ',', '.') }}</b></th>
+                        @foreach($methodKeys as $methodKey)
+                            <th class="text-end"><b>{{ number_format($totalRegistrationByMethod[$methodKey], 0, ',', '.') }}</b></th>
+                        @endforeach
+                    </tr>
+
+                    <tr>
+                        <th colspan="10">Report Transaction Lain-lain Tanggal {{ Carbon\Carbon::parse($from)->format('d/m/Y') }} - {{ request('to') ? Carbon\Carbon::parse($to)->subDay(1)->format('d/m/Y') : Carbon\Carbon::parse($from)->format('d/m/Y') }}</th>
+                    </tr>
+
                     @foreach($sewa as $sewaItem)
                         @php
                             $rentalPenyewaanIds = App\Models\Penyewaan::where('sewa_id', $sewaItem->id)->pluck('id');
-                            $queryTrxRental = App\Models\Transaction::where(['is_active' => 1, 'transaction_type' => $typeRental])
+                            $queryTrxRental = App\Models\Transaction::where(['is_active' => 1, 'transaction_type' => 'rental'])
                                 ->whereIn('ticket_id', $rentalPenyewaanIds)
                                 ->whereBetween('created_at', [$from, $to]);
                             if (request('kasir') != 'all' && request('kasir')) {
@@ -212,9 +370,16 @@
 
                             $qtyRental = $queryTrxRental->count();
                             $totalPerRental = $queryTrxRental->sum(\DB::raw('(bayar - kembali) + ppn'));
+                            $rentalByMethod = [];
+                            foreach ($methodKeys as $methodKey) {
+                                $rentalByMethod[$methodKey] = $sumTrxByMethod($queryTrxRental, $methodKey, '(bayar - kembali) + ppn');
+                            }
 
-                            $totalQtyNonTicket += $qtyRental;
-                            $totalAmountNonTicket += $queryTrxRental->sum(\DB::raw('(bayar - kembali)'));
+                            $totalQtyLainLain += $qtyRental;
+                            $totalAmountLainLain += $queryTrxRental->sum(\DB::raw('(bayar - kembali) + ppn'));
+                            foreach ($methodKeys as $methodKey) {
+                                $totalLainLainByMethod[$methodKey] += $rentalByMethod[$methodKey];
+                            }
                         @endphp
                         @if($qtyRental > 0)
                         <tr>
@@ -227,15 +392,76 @@
                             <td class="text-end">
                                 {{ number_format($totalPerRental, 0, ',', '.') }}
                             </td>
+                            @foreach($methodKeys as $methodKey)
+                                <td class="text-end">{{ number_format($rentalByMethod[$methodKey], 0, ',', '.') }}</td>
+                            @endforeach
                         </tr>
                         @endif
                     @endforeach
+
+                    @php
+                        $queryOtherTypes = App\Models\Transaction::where('is_active', 1)
+                            ->whereBetween('created_at', [$from, $to])
+                            ->whereNotIn('transaction_type', ['ticket', 'renewal', 'registration', 'rental']);
+                        if (request('kasir') != 'all' && request('kasir')) {
+                            $queryOtherTypes->where('user_id', request('kasir'));
+                        }
+                        $otherTypeRows = $queryOtherTypes
+                            ->select(
+                                'transaction_type',
+                                \DB::raw('COUNT(*) as qty'),
+                                \DB::raw('SUM((bayar - kembali) + ppn) as total_with_ppn'),
+                                \DB::raw('SUM(bayar - kembali) as total_without_ppn'),
+                                \DB::raw("SUM(CASE WHEN metode IN ('qris', 'qr') THEN ((bayar - kembali) + ppn) ELSE 0 END) as total_qris"),
+                                \DB::raw("SUM(CASE WHEN metode = 'debit' THEN ((bayar - kembali) + ppn) ELSE 0 END) as total_debit"),
+                                \DB::raw("SUM(CASE WHEN metode IN ('kredit', 'credit', 'credit card', 'kartu kredit') THEN ((bayar - kembali) + ppn) ELSE 0 END) as total_kredit"),
+                                \DB::raw("SUM(CASE WHEN metode = 'transfer' THEN ((bayar - kembali) + ppn) ELSE 0 END) as total_transfer"),
+                                \DB::raw("SUM(CASE WHEN (metode IN ('lain-lain', 'tap', 'cash') OR metode IS NULL OR metode = '' OR metode NOT IN ('qris', 'qr', 'debit', 'kredit', 'credit', 'credit card', 'kartu kredit', 'transfer', 'lain-lain', 'tap', 'cash')) THEN ((bayar - kembali) + ppn) ELSE 0 END) as total_lain_lain")
+                            )
+                            ->groupBy('transaction_type')
+                            ->get();
+                    @endphp
+                    @foreach($otherTypeRows as $otherRow)
+                        @php
+                            $totalQtyLainLain += (int) $otherRow->qty;
+                            $totalAmountLainLain += (float) $otherRow->total_with_ppn;
+                            $otherByMethod = [
+                                'qris' => (float) ($otherRow->total_qris ?? 0),
+                                'debit' => (float) ($otherRow->total_debit ?? 0),
+                                'kredit' => (float) ($otherRow->total_kredit ?? 0),
+                                'transfer' => (float) ($otherRow->total_transfer ?? 0),
+                                'lain_lain' => (float) ($otherRow->total_lain_lain ?? 0),
+                            ];
+                            foreach ($methodKeys as $methodKey) {
+                                $totalLainLainByMethod[$methodKey] += $otherByMethod[$methodKey];
+                            }
+                        @endphp
+                        <tr>
+                            <td>{{ ucwords(str_replace('_', ' ', (string) $otherRow->transaction_type)) }}</td>
+                            <td class="text-center">{{ (int) $otherRow->qty }}</td>
+                            <td class="text-center">-</td>
+                            <td class="text-center">-</td>
+                            <td class="text-end">
+                                {{ number_format((float) $otherRow->total_with_ppn, 0, ',', '.') }}
+                            </td>
+                            @foreach($methodKeys as $methodKey)
+                                <td class="text-end">{{ number_format($otherByMethod[$methodKey], 0, ',', '.') }}</td>
+                            @endforeach
+                        </tr>
+                    @endforeach
                     <tr>
-                        <th>Total Penjualan Non-Ticket :</th>
-                        <th class="text-center"><b>{{ $totalQtyNonTicket }}</b></th>
+                        <th>Total Penjualan Lain-lain :</th>
+                        <th class="text-center"><b>{{ $totalQtyLainLain }}</b></th>
                         <th colspan="2"></th>
-                        <th class="text-end"><b>{{ number_format($totalAmountNonTicket, 0, ',', '.') }}</b></th>
+                        <th class="text-end"><b>{{ number_format($totalAmountLainLain, 0, ',', '.') }}</b></th>
+                        @foreach($methodKeys as $methodKey)
+                            <th class="text-end"><b>{{ number_format($totalLainLainByMethod[$methodKey], 0, ',', '.') }}</b></th>
+                        @endforeach
                     </tr>
+                    @php
+                        $totalQtyNonTicket = $totalQtyRenewal + $totalQtyRegistration + $totalQtyLainLain;
+                        $totalAmountNonTicket = $totalAmountRenewal + $totalAmountRegistration + $totalAmountLainLain;
+                    @endphp
                 </tbody>
             </table>
         </div>
@@ -255,26 +481,36 @@
             $totalPPN = App\Models\DetailTransaction::whereIn('transaction_id', $idTrxAll)->sum('ppn') +
                                 App\Models\Transaction::whereIn('id', $idTrxAll)->whereIn('transaction_type', ['renewal', 'registration', 'rental'])->sum('ppn');
             $totalAdminFee = App\Models\Transaction::whereIn('id', $idTrxAll)->sum(\DB::raw($adminFeeExpr));
-            $cashid = $queryTrxAll->clone()
-                ->where('metode', 'cash')
+            $qrisid = $queryTrxAll->clone()
+                ->whereIn('metode', ['qris', 'qr'])
                 ->pluck('id');
             $debitid = $queryTrxAll->clone()
                 ->where('metode', 'debit')
                 ->pluck('id');
             $kreditid = $queryTrxAll->clone()
-                ->whereIn('metode', ['kredit', 'credit', 'credit card'])
-                ->pluck('id');
-            $qrisid = $queryTrxAll->clone()
-                ->whereIn('metode', ['qris', 'qr'])
+                ->whereIn('metode', ['kredit', 'credit', 'credit card', 'kartu kredit'])
                 ->pluck('id');
             $transferid = $queryTrxAll->clone()
                 ->where('metode', 'transfer')
                 ->pluck('id');
             $lainnyaid = $queryTrxAll->clone()
                 ->where(function ($q) {
-                    $q->whereIn('metode', ['tap', 'lain-lain'])
+                    $q->whereIn('metode', ['lain-lain', 'tap', 'cash'])
                         ->orWhereNull('metode')
-                        ->orWhere('metode', '');
+                        ->orWhere('metode', '')
+                        ->orWhereNotIn('metode', [
+                            'qris',
+                            'qr',
+                            'debit',
+                            'kredit',
+                            'credit',
+                            'credit card',
+                            'kartu kredit',
+                            'transfer',
+                            'lain-lain',
+                            'tap',
+                            'cash',
+                        ]);
                 })
                 ->pluck('id');
 
@@ -282,34 +518,33 @@
                 $detailTotal = App\Models\DetailTransaction::whereIn('transaction_id', $trxIds)->sum(\DB::raw('total + ppn'));
                 $trxNonDetailTotal = App\Models\Transaction::whereIn('id', $trxIds)
                     ->whereIn('transaction_type', ['renewal', 'registration', 'rental'])
-                    ->sum(\DB::raw('(bayar - kembali) + ' . "(CASE WHEN transaction_type IN ('registration', 'renewal') THEN admin_fee ELSE 0 END)"));
+                    ->sum(\DB::raw('(bayar - kembali) + ppn + ' . "(CASE WHEN transaction_type IN ('registration', 'renewal') THEN admin_fee ELSE 0 END)"));
                 return $detailTotal + $trxNonDetailTotal;
             };
 
-            $cashTotal = $calculateTotalPerMethod($cashid);
+            $qrisTotal = $calculateTotalPerMethod($qrisid);
             $debitTotal = $calculateTotalPerMethod($debitid);
             $kreditTotal = $calculateTotalPerMethod($kreditid);
-            $qrisTotal = $calculateTotalPerMethod($qrisid);
             $transferTotal = $calculateTotalPerMethod($transferid);
             $lainnyaTotal = $calculateTotalPerMethod($lainnyaid);
 
-            $cashQty = $cashid->count();
+            $qrisQty = $qrisid->count();
             $debitQty = $debitid->count();
             $kreditQty = $kreditid->count();
-            $qrisQty = $qrisid->count();
             $transferQty = $transferid->count();
             $lainnyaQty = $lainnyaid->count();
 
             $pembayaranLainnyaTotal = $lainnyaTotal;
             $pembayaranLainnyaQty = $lainnyaQty;
-            $grandTotalIncome = $cashTotal + $debitTotal + $qrisTotal + $kreditTotal + $transferTotal + $pembayaranLainnyaTotal;
-            $grandTotalQtyAll = $cashQty + $debitQty + $qrisQty + $kreditQty + $transferQty + $pembayaranLainnyaQty;
+            $grandTotalIncome = $qrisTotal + $debitTotal + $kreditTotal + $transferTotal + $pembayaranLainnyaTotal;
+            $grandTotalQtyAll = $qrisQty + $debitQty + $kreditQty + $transferQty + $pembayaranLainnyaQty;
 
             // Samakan basis hitung total akhir dengan ringkasan metode pembayaran
             // agar tidak terjadi selisih antar bagian report.
             $totalSalesAmount = $grandTotalIncome;
             $totalAmountSetelahDiskon = $grandTotalIncome - $totalDiscount;
-            $totalAmountAkhirPlusPBJTAdmin = $totalAmountSetelahDiskon + $totalPPN + $totalAdminFee;
+            // Nilai ini sudah include PBJT + admin dari basis grand total.
+            $totalAmountAkhirPlusPBJTAdmin = $totalAmountSetelahDiskon;
         @endphp
 
 
@@ -345,47 +580,41 @@
                     </th>
                 </tr>
                 <tr>
-                    <th rowspan="7"></th>
-                    <th>TOTAL TUNAI</th>
-                    <th class="text-end">Rp {{ number_format($cashTotal, 2, ',', '.') }}</th>
-                    <th>QTY TUNAI</th>
-                    <th class="text-end">{{ $cashQty }} Orang</th>
+                    <th rowspan="6"></th>
+                    <th>TOTAL QRIS</th>
+                    <th class="text-end">Rp {{ number_format($qrisTotal, 2, ',', '.') }}</th>
+                    <th>TOTAL TRANSAKSI QRIS</th>
+                    <th class="text-end">{{ $qrisQty }} Transaksi</th>
                 </tr>
                 <tr>
                     <th>TOTAL DEBIT</th>
                     <th class="text-end">Rp {{ number_format($debitTotal, 2, ',', '.') }}</th>
-                    <th>QTY DEBIT</th>
-                    <th class="text-end">{{ $debitQty }} Orang</th>
+                    <th>TOTAL TRANSAKSI DEBIT</th>
+                    <th class="text-end">{{ $debitQty }} Transaksi</th>
                 </tr>
                 <tr>
-                    <th>TOTAL QRIS</th>
-                    <th class="text-end">Rp {{ number_format($qrisTotal, 2, ',', '.') }}</th>
-                    <th>QTY QRIS</th>
-                    <th class="text-end">{{ $qrisQty }} Orang</th>
-                </tr>
-                <tr>
-                    <th>TOTAL CREDIT CARD</th>
+                    <th>TOTAL KREDIT</th>
                     <th class="text-end">Rp {{ number_format($kreditTotal, 2, ',', '.') }}</th>
-                    <th>QTY CREDIT CARD</th>
-                    <th class="text-end">{{ $kreditQty }} Orang</th>
+                    <th>TOTAL TRANSAKSI KREDIT</th>
+                    <th class="text-end">{{ $kreditQty }} Transaksi</th>
                 </tr>
                 <tr>
                     <th>TOTAL TRANSFER</th>
                     <th class="text-end">Rp {{ number_format($transferTotal, 2, ',', '.') }}</th>
-                    <th>QTY TRANSFER</th>
-                    <th class="text-end">{{ $transferQty }} Orang</th>
+                    <th>TOTAL TRANSAKSI TRANSFER</th>
+                    <th class="text-end">{{ $transferQty }} Transaksi</th>
                 </tr>
                 <tr>
                     <th>TOTAL PEMBAYARAN LAINNYA</th>
                     <th class="text-end">Rp {{ number_format($pembayaranLainnyaTotal, 2, ',', '.') }}</th>
-                    <th>QTY PEMBAYARAN LAINNYA</th>
-                    <th class="text-end">{{ $pembayaranLainnyaQty }} Orang</th>
+                    <th>TOTAL TRANSAKSI PEMBAYARAN LAINNYA</th>
+                    <th class="text-end">{{ $pembayaranLainnyaQty }} Transaksi</th>
                 </tr>
                 <tr class="table-secondary">
                     <th>GRANDTOTAL INCOME</th>
                     <th class="text-end">Rp {{ number_format($grandTotalIncome, 2, ',', '.') }}</th>
-                    <th>GRANDTOTAL QTY ALL</th>
-                    <th class="text-end">{{ $grandTotalQtyAll }} Orang</th>
+                    <th>GRANDTOTAL TRANSAKSI</th>
+                    <th class="text-end">{{ $grandTotalQtyAll }} Transaksi</th>
                 </tr>
                 <tr>
                     <th colspan="4">Total Amount Akhir (Total Penjualan - Diskon) :</th>

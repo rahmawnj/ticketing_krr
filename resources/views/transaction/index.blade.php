@@ -3,6 +3,7 @@
 @push('style')
 <link href="{{ asset('/') }}plugins/datatables.net-bs4/css/dataTables.bootstrap4.min.css" rel="stylesheet" />
 <link href="{{ asset('/') }}plugins/datatables.net-responsive-bs4/css/responsive.bootstrap4.min.css" rel="stylesheet" />
+<link href="{{ asset('/') }}plugins/select2/dist/css/select2.min.css" rel="stylesheet" />
 <link href="{{ asset('/') }}plugins/bootstrap-daterangepicker/daterangepicker.css" rel="stylesheet" />
 <style>
     #datatable tbody img {
@@ -12,6 +13,9 @@
     #datatable tbody img:hover {
         transform: scale(1.03);
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    }
+    .trx-color-legend .badge {
+        margin-right: 6px;
     }
 </style>
 @endpush
@@ -29,62 +33,93 @@
     </div>
 
     <div class="panel-body">
-    <form action="" class="row mb-3">
-    {{-- Kolom Kiri: Input Tanggal + Submit --}}
-    <div class="col-md-6 d-flex align-items-end">
-        <div class="form-group me-3">
-            <label for="daterange">Tanggal</label>
-            <input type="text" name="daterange" id="daterange" class="form-control"
-                   value="{{ request('daterange') ?: now('Asia/Jakarta')->format('m/d/Y') . ' - ' . now('Asia/Jakarta')->format('m/d/Y') }}">
+    <form action="" class="mb-3">
+        {{-- Baris 1: Tombol aksi kanan dipindah ke atas --}}
+        <div class="row">
+            <div class="col-12 d-flex justify-content-end flex-wrap gap-2 mb-2">
+                <a href="{{ route('members.create') }}" class="btn btn-success">
+                    <i class="fas fa-user-plus"></i> Registrasi Member
+                </a>
+                <a href="{{ route('penyewaan.create') }}" class="btn btn-secondary">
+                    <i class="fas fa-shopping-cart"></i> Input Transaksi Lainnya
+                </a>
+                <a href="{{ route('transactions.create') }}" class="btn btn-primary">
+                    <i class="fas fa-ticket-alt"></i> Input Ticket
+                </a>
+                <a href="{{ route('members.bulk_renew') }}" class="btn btn-warning">
+                    <i class="fas fa-history"></i> Renewal
+                    <span class="badge bg-dark ms-1">{{ $renewalCount ?? 0 }}</span>
+                </a>
+            </div>
         </div>
-        <div class="form-group me-3">
-            <label for="transaction_type">Transaction Type</label>
-            <select name="transaction_type" id="transaction_type" class="form-control">
-                <option value="">All</option>
-                @php
-                    $types = ['renewal', 'ticket', 'registration', 'rental'];
-                @endphp
-                @foreach($types as $type)
-                    <option value="{{ $type }}" {{ request('transaction_type') == $type ? 'selected' : '' }}>
-                        {{ ucfirst($type) }}
-                    </option>
-                @endforeach
-            </select>
+
+        {{-- Baris 2: Filter data --}}
+        <div class="row">
+            <div class="col-12 d-flex align-items-end flex-wrap">
+                <div class="form-group me-3 mb-2">
+                    <label for="daterange">Tanggal</label>
+                    <input type="text" name="daterange" id="daterange" class="form-control"
+                           value="{{ request('daterange') ?: now('Asia/Jakarta')->format('m/d/Y') . ' - ' . now('Asia/Jakarta')->format('m/d/Y') }}">
+                </div>
+                <div class="form-group me-3 mb-2">
+                    <label for="transaction_type">Jenis Transaksi</label>
+                    <select name="transaction_type" id="transaction_type" class="form-control">
+                        <option value="">Semua</option>
+                        @php
+                            $types = ['membership', 'renewal', 'ticket', 'registration', 'rental'];
+                        @endphp
+                        @foreach($types as $type)
+                            <option value="{{ $type }}" {{ request('transaction_type') == $type ? 'selected' : '' }}>
+                                {{ $type === 'membership' ? 'Membership' : ucfirst($type) }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="form-group me-3 mb-2">
+                    <label for="detail_master_id">Nama Detail</label>
+                    <select name="detail_master_id" id="detail_master_id" class="form-control">
+                        <option value="">Semua Nama Detail</option>
+                        <optgroup label="Data Ticket">
+                            @foreach(($detailFilterOptions['ticket'] ?? []) as $option)
+                            <option value="{{ $option['value'] }}" {{ request('detail_master_id') == $option['value'] ? 'selected' : '' }}>
+                                {{ $option['text'] }}
+                            </option>
+                            @endforeach
+                        </optgroup>
+                        <optgroup label="Data Lain-lain">
+                            @foreach(($detailFilterOptions['rental'] ?? []) as $option)
+                            <option value="{{ $option['value'] }}" {{ request('detail_master_id') == $option['value'] ? 'selected' : '' }}>
+                                {{ $option['text'] }}
+                            </option>
+                            @endforeach
+                        </optgroup>
+                        <optgroup label="Data Membership">
+                            @foreach(($detailFilterOptions['membership'] ?? []) as $option)
+                            <option value="{{ $option['value'] }}" {{ request('detail_master_id') == $option['value'] ? 'selected' : '' }}>
+                                {{ $option['text'] }}
+                            </option>
+                            @endforeach
+                        </optgroup>
+                    </select>
+                </div>
+                <div class="form-group mb-2">
+                    <button type="submit" class="btn btn-success mt-3">Submit</button>
+                </div>
+                <div class="form-group ms-2 mb-2">
+                    <a href="#" id="btn-export-excel" class="btn btn-outline-success mt-3">
+                        <i class="fas fa-file-excel"></i> Download Excel
+                    </a>
+                </div>
+            </div>
         </div>
-        <div class="form-group">
-            <button type="submit" class="btn btn-success mt-3">Submit</button>
+    </form>
+        <div class="trx-color-legend small text-muted mb-2">
+            Warna Type:
+            <span class="badge bg-primary">Ticket</span>
+            <span class="badge bg-warning text-dark">Penyewaan</span>
+            <span class="badge bg-success">Membership</span>
+            <span class="badge bg-info text-dark">Renewal</span>
         </div>
-        <div class="form-group ms-2">
-            <a href="#" id="btn-export-excel" class="btn btn-outline-success mt-3">
-                <i class="fas fa-file-excel"></i> Download Excel
-            </a>
-        </div>
-    </div>
-
-    {{-- Kolom Kanan: Tiga Tombol Link Aksi --}}
-  <div class="col-md-6 d-flex justify-content-end align-items-end">
-    {{-- 1. Registrasi Member (Warna: Success / Hijau, Ikon: User Plus) --}}
-    <a href="{{ route('members.create') }}" class="btn btn-success mt-3 ms-2">
-        <i class="fas fa-user-plus"></i> Registrasi Member
-    </a>
-
-    {{-- 2. Input Transaksi Lainnya (Warna: Secondary / Abu-abu, Ikon: Shopping Cart) --}}
-    <a href="{{ route('penyewaan.create') }}" class="btn btn-secondary mt-3 ms-2">
-        <i class="fas fa-shopping-cart"></i> Input Transaksi Lainnya
-    </a>
-
-    {{-- 3. Input Ticket (Warna: Primary / Biru, Ikon: Ticket Alt) --}}
-    <a href="{{ route('transactions.create') }}" class="btn btn-primary mt-3 ms-2">
-        <i class="fas fa-ticket-alt"></i> Input Ticket
-    </a>
-
-    {{-- 4. Renewal (Warna: Warning / Kuning, Ikon: History) --}}
-    <a href="{{ route('members.bulk_renew') }}" class="btn btn-warning mt-3 ms-2">
-        <i class="fas fa-history"></i> Renewal
-        <span class="badge bg-dark ms-1">{{ $renewalCount ?? 0 }}</span>
-    </a>
-</div>
-</form>
 
         <table id="datatable" class="table table-striped table-bordered align-middle">
             <thead>
@@ -97,7 +132,8 @@
                     <th class="text-nowrap">Data Member</th>
                     <!-- <th class="text-nowrap">Ticket</th> -->
                     <!-- <th class="text-nowrap">Harga</th> -->
-<th class="text-nowrap">Transaction Type</th>
+                    <th class="text-nowrap">Jenis Transaksi</th>
+                    <th class="text-nowrap">Detail Transaksi</th>
                     <th class="text-nowrap">Scanned</th>
                     <th class="text-nowrap">Bayar</th>
                     <th class="text-nowrap">PBJT</th>
@@ -196,12 +232,9 @@
                             <div class="form-group mb-3">
                                 <label for="metode">Metode</label>
                                 <select name="metode" id="metode" class="form-control">
-                                    <option value="cash">Cash</option>
-                                    <option value="debit">Debit</option>
-                                    <option value="qris">QRIS</option>
-                                    <option value="kredit">Kredit</option>
-                                    <option value="transfer">Transfer</option>
-                                    <option value="lain-lain">Lain-lain</option>
+                                    @foreach(\App\Support\PaymentMethod::options() as $methodValue => $methodLabel)
+                                    <option value="{{ $methodValue }}">{{ $methodLabel }}</option>
+                                    @endforeach
                                 </select>
 
                                 @error('metode')
@@ -299,13 +332,11 @@
 <script src="{{ asset('/') }}plugins/datatables.net-responsive/js/dataTables.responsive.min.js"></script>
 <script src="{{ asset('/') }}plugins/datatables.net-responsive-bs4/js/responsive.bootstrap4.min.js"></script>
 <script src="{{ asset('/') }}plugins/sweetalert/dist/sweetalert.min.js"></script>
+<script src="{{ asset('/') }}plugins/select2/dist/js/select2.min.js"></script>
 <script src="{{ asset('/') }}plugins/moment/min/moment.min.js"></script>
 <script src="{{ asset('/') }}plugins/bootstrap-daterangepicker/daterangepicker.js"></script>
 
 <script>
-    let daterange = $("#daterange").val();
-    let transactionType = $("#transaction_type").val();
-
     var table = $('#datatable').DataTable({
         processing: true,
         serverSide: true,
@@ -313,9 +344,10 @@
         ajax: {
             url: "{{ route('transactions.list') }}",
             type: "GET",
-            data: {
-                "daterange": daterange,
-                "transaction_type": transactionType,
+            data: function(d) {
+                d.daterange = $("#daterange").val() || "";
+                d.transaction_type = $("#transaction_type").val() || "";
+                d.detail_master_id = $("#detail_master_id").val() || "";
             }
         },
         deferRender: true,
@@ -342,12 +374,15 @@
                 data: 'member_info',
                 name: 'member_info'
             },
-           {
-                data: 'transaction_type',
+            {
+                data: 'transaction_type_badge',
                 name: 'transaction_type',
-                render: function(data, type, row) {
-                    return data.charAt(0).toUpperCase() + data.slice(1);
-                }
+            },
+            {
+                data: 'detail_description',
+                name: 'detail_description',
+                sortable: false,
+                searchable: false
             },
             {
                 data: 'scanned',
@@ -404,10 +439,22 @@
             autoUpdateInput: true,
             locale: {
                 format: "MM/DD/YYYY",
-                separator: " - "
+                separator: " - ",
+                applyLabel: "Terapkan",
+                cancelLabel: "Batal",
+                customRangeLabel: "Pilih Manual"
             },
             startDate: start,
-            endDate: end
+            endDate: end,
+            ranges: {
+                "Hari Ini": [moment(), moment()],
+                "Kemarin": [moment().subtract(1, "days"), moment().subtract(1, "days")],
+                "Minggu Ini": [moment().startOf("isoWeek"), moment().endOf("isoWeek")],
+                "7 Hari Terakhir": [moment().subtract(6, "days"), moment()],
+                "30 Hari Terakhir": [moment().subtract(29, "days"), moment()],
+                "Bulan Ini": [moment().startOf("month"), moment().endOf("month")],
+                "Tahun Ini": [moment().startOf("year"), moment().endOf("year")],
+            }
         });
 
         $("#daterange").val(start.format('MM/DD/YYYY') + ' - ' + end.format('MM/DD/YYYY'));
@@ -453,7 +500,7 @@
             icon: 'error',
             buttons: {
                 cancel: {
-                    text: 'Cancel',
+                    text: 'Batal',
                     value: null,
                     visible: true,
                     className: 'btn btn-default',
@@ -479,6 +526,37 @@
 
 <script>
     $(document).ready(function() {
+        $("#transaction_type, #detail_master_id").select2({
+            width: '100%'
+        });
+
+        function syncTransactionTypeByDetail(shouldReload = true) {
+            const selectedDetail = ($("#detail_master_id").val() || "").toLowerCase();
+            const currentType = ($("#transaction_type").val() || "").toLowerCase();
+            let expectedType = '';
+
+            if (selectedDetail.startsWith('ticket:')) {
+                expectedType = 'ticket';
+            } else if (selectedDetail.startsWith('rental:')) {
+                expectedType = 'rental';
+            } else if (selectedDetail.startsWith('membership:')) {
+                expectedType = 'membership';
+            }
+
+            if (expectedType !== currentType) {
+                $("#transaction_type").val(expectedType).trigger('change');
+                if (shouldReload && typeof table !== 'undefined') {
+                    table.ajax.reload();
+                }
+            }
+        }
+
+        syncTransactionTypeByDetail(false);
+
+        $("#detail_master_id").on('change', function() {
+            syncTransactionTypeByDetail();
+        });
+
         $("#btn-add").on('click', function() {
             $.ajax({
                 url: '/api/transactions/no-trx',
@@ -559,6 +637,8 @@
                 $("#cash").removeAttr('readonly')
             }
         })
+
+        $("#metode").trigger('change')
     })
 
     $("#datatable").on('click', '.btn-full-scan', function(e) {
@@ -587,7 +667,8 @@
         e.preventDefault();
         const params = new URLSearchParams({
             daterange: $("#daterange").val() || "",
-            transaction_type: $("#transaction_type").val() || ""
+            transaction_type: $("#transaction_type").val() || "",
+            detail_master_id: $("#detail_master_id").val() || ""
         });
         window.location.href = "{{ route('transactions.export.daily') }}" + "?" + params.toString();
     });

@@ -108,13 +108,9 @@
                                 <label for="metode">Metode</label>
                                 <select name="metode" id="metode" class="form-control">
                                     <option disabled selected>-- Pilih Metode --</option>
-                                    <option value="cash">Cash</option>
-                                    <option value="debit">Debit</option>
-                                    <option value="qris">QRIS</option>
-                                    <option value="kredit">Kredit</option>
-                                    <option value="transfer">Transfer</option>
-                                    <option value="tap">Emoney (Tap)</option>
-                                    <option value="lain-lain">Lain-lain</option>
+                                    @foreach(\App\Support\PaymentMethod::options() as $methodValue => $methodLabel)
+                                    <option value="{{ $methodValue }}">{{ $methodLabel }}</option>
+                                    @endforeach
                                 </select>
 
                                 @error('metode')

@@ -317,34 +317,33 @@ class ReportController extends Controller
 
         $transactions = $query->orderBy('created_at')->orderBy('id')->get();
 
-        $lines = ['TANGGAL|KASIR|TRANSACTION_TYPE|TICKET_CODE|KETERANGAN_PRODUK|METODE|AMOUNT|JUMLAH|TOTAL|PBJT|ADMIN_FEE|DISCOUNT'];
+        $lines = ['TANGGAL|KODE_TRANSAKSI|KETERANGAN_PRODUK|HARGA_SEBELUM_PBJT|PBJT|TOTAL_INCLUDE_PBJT'];
         foreach ($transactions as $trx) {
             $dateTime = Carbon::parse($trx->created_at)->timezone('Asia/Jakarta')->format('m/d/Y H:i:s');
-            $kasirName = $trx->user->name ?? '-';
-            $trxType = ucfirst($trx->transaction_type ?? '-');
             $ticketCode = trim((string) ($trx->ticket_code ?? ('TRX/' . $trx->id)));
-            $productDesc = $this->resolveProductDescription($trx);
-            $metode = strtoupper((string) ($trx->metode ?? '-'));
-            $amount = (int) ($trx->amount ?? 0);
-            $jumlah = (int) round((float) ($trx->bayar ?? 0));
-            $discount = (float) ($trx->disc ?? 0);
-            $pbjt = (float) ($trx->ppn ?? 0);
-            $adminFee = $this->resolveAdminFee($trx);
-            $total = (int) round(((float) ($trx->bayar ?? 0) - $discount) + $pbjt + $adminFee);
+            $productDesc = str_replace(
+                ["\r", "\n", "|"],
+                [' ', ' ', '/'],
+                (string) $this->resolveProductDescription($trx)
+            );
+
+            if (($trx->transaction_type ?? '') === 'ticket') {
+                $hargaSebelumPbjt = (float) $trx->detail->sum('total');
+                $pbjt = (float) $trx->detail->sum('ppn');
+            } else {
+                $hargaSebelumPbjt = max(0.0, ((float) ($trx->bayar ?? 0)) - ((float) ($trx->kembali ?? 0)));
+                $pbjt = (float) ($trx->ppn ?? 0);
+            }
+
+            $totalIncludePbjt = $hargaSebelumPbjt + $pbjt;
 
             $lines[] = implode('|', [
                 $dateTime,
-                $kasirName,
-                $trxType,
                 $ticketCode,
                 $productDesc,
-                $metode,
-                $amount,
-                $jumlah,
-                $total,
+                (int) round($hargaSebelumPbjt),
                 (int) round($pbjt),
-                (int) round($adminFee),
-                (int) round($discount),
+                (int) round($totalIncludePbjt),
             ]);
         }
 
@@ -381,66 +380,7 @@ class ReportController extends Controller
 
         $from = $from ?: $now->format('Y-m-d');
         $to = $to ?: $now->format('Y-m-d');
-        $toExclusive = Carbon::parse($to)->addDay()->format('Y-m-d');
-
-        $baseQuery = Penyewaan::query()
-            ->with(['sewa:id,name,harga', 'user:id,name'])
-            ->whereBetween('created_at', [$from, $toExclusive]);
-        if ($kasir !== 'all' && $kasir !== null && $kasir !== '') {
-            $baseQuery->where('user_id', $kasir);
-        }
-
-        $rows = (clone $baseQuery)
-            ->orderBy('sewa_id')
-            ->orderBy('created_at')
-            ->get()
-            ->values();
-
-        $transactionMap = Transaction::query()
-            ->where('transaction_type', 'rental')
-            ->whereIn('ticket_id', $rows->pluck('id')->all())
-            ->select('ticket_id', 'ticket_code', 'no_trx', 'bayar', 'ppn')
-            ->get()
-            ->keyBy('ticket_id');
-
-        $groupedRows = $rows
-            ->groupBy('sewa_id')
-            ->map(function ($items) use ($transactionMap) {
-                $detailRows = $items->values()->map(function ($item, $index) use ($transactionMap) {
-                    $trx = $transactionMap->get($item->id);
-                    $dpp = $trx ? (float) ($trx->bayar ?? 0) : (float) ($item->jumlah ?? 0);
-                    $ppn = (float) ($trx->ppn ?? 0);
-                    $totalBayar = $trx ? ($dpp + $ppn) : (float) ($item->jumlah ?? 0);
-
-                    return [
-                        'no' => $index + 1,
-                        'no_bukti' => $trx->no_trx ?? ('RENT-' . $item->id),
-                        'tanggal' => Carbon::parse($item->created_at)->format('d/m/Y H:i:s'),
-                        'kasir' => $item->user->name ?? '-',
-                        'kode_trx' => $trx->ticket_code ?? '-',
-                        'metode' => strtoupper((string) ($item->metode ?? '-')),
-                        'qty' => (int) ($item->qty ?? 0),
-                        'harga' => (float) ($item->sewa->harga ?? 0),
-                        'dpp' => $dpp,
-                        'ppn' => $ppn,
-                        'total_bayar' => $totalBayar,
-                    ];
-                });
-
-                return [
-                    'sewa_name' => $items->first()->sewa->name ?? '-',
-                    'sewa_id' => $items->first()->sewa_id,
-                    'details' => $detailRows,
-                    'subtotal_qty' => (int) $items->sum('qty'),
-                    'subtotal_ppn' => (float) $detailRows->sum('ppn'),
-                    'subtotal_total' => (float) $detailRows->sum('total_bayar'),
-                ];
-            })
-            ->values();
-
-        $grandQty = (int) $groupedRows->sum('subtotal_qty');
-        $grandPpn = (float) $groupedRows->sum('subtotal_ppn');
-        $grandTotal = (float) $groupedRows->sum('subtotal_total');
+        [$groupedRows, $grandQty, $grandPpn, $grandTotal] = $this->buildTransaksiLainnyaGroupedRows($from, $to, $kasir);
         $date = Carbon::parse($from)->format('d/m/Y') . ' s.d ' . Carbon::parse($to)->format('d/m/Y');
 
         $title = 'Report Transaksi Lainnya ' . $date;
@@ -508,70 +448,150 @@ class ReportController extends Controller
         $from = $request->input('from') ?: $now->format('Y-m-d');
         $to = $request->input('to') ?: $now->format('Y-m-d');
         $kasir = $request->input('kasir', 'all');
+        [$groupedRows, $grandQty, $grandPpn, $grandTotal] = $this->buildTransaksiLainnyaGroupedRows($from, $to, $kasir);
+
+        return Excel::download(
+            new ReportPenyewaanExport($groupedRows->all(), $grandQty, $grandPpn, $grandTotal),
+            "Laporan Transaksi Lainnya.xlsx"
+        );
+    }
+
+    private function buildTransaksiLainnyaGroupedRows(string $from, string $to, string $kasir = 'all'): array
+    {
         $toExclusive = Carbon::parse($to)->addDay()->format('Y-m-d');
 
-        $baseQuery = Penyewaan::query()
-            ->with(['sewa:id,name,harga', 'user:id,name'])
+        $transactionQuery = Transaction::query()
+            ->with(['user:id,name', 'detail.ticket:id,name'])
+            ->where('is_active', 1)
+            ->whereIn('transaction_type', ['ticket', 'rental', 'registration', 'renewal'])
             ->whereBetween('created_at', [$from, $toExclusive]);
 
-        if ($kasir !== 'all' && $kasir !== null && $kasir !== '') {
-            $baseQuery->where('user_id', $kasir);
+        if ($kasir !== 'all' && $kasir !== '') {
+            $transactionQuery->where('user_id', $kasir);
         }
 
-        $rows = (clone $baseQuery)
-            ->orderBy('sewa_id')
+        $transactions = $transactionQuery
             ->orderBy('created_at')
+            ->orderBy('id')
+            ->get();
+
+        $membershipMap = Membership::query()
+            ->whereIn('id', $transactions->whereIn('transaction_type', ['registration', 'renewal'])->pluck('ticket_id')->filter()->unique()->values())
+            ->pluck('name', 'id');
+
+        $penyewaanMap = Penyewaan::query()
+            ->with('sewa:id,name')
+            ->whereIn('id', $transactions->where('transaction_type', 'rental')->pluck('ticket_id')->filter()->unique()->values())
             ->get()
-            ->values();
+            ->keyBy('id');
 
-        $transactionMap = Transaction::query()
-            ->where('transaction_type', 'rental')
-            ->whereIn('ticket_id', $rows->pluck('id')->all())
-            ->select('ticket_id', 'ticket_code', 'no_trx', 'bayar', 'ppn')
-            ->get()
-            ->keyBy('ticket_id');
+        $detailRows = collect();
 
-        $groupedRows = $rows
-            ->groupBy('sewa_id')
-            ->map(function ($items) use ($transactionMap) {
-                $detailRows = $items->values()->map(function ($item, $index) use ($transactionMap) {
-                    $trx = $transactionMap->get($item->id);
-                    $dpp = $trx ? (float) ($trx->bayar ?? 0) : (float) ($item->jumlah ?? 0);
-                    $ppn = (float) ($trx->ppn ?? 0);
-                    $totalBayar = $trx ? ($dpp + $ppn) : (float) ($item->jumlah ?? 0);
+        foreach ($transactions as $trx) {
+            $kasirName = $trx->user->name ?? '-';
+            $tanggal = Carbon::parse($trx->created_at)->format('d/m/Y H:i:s');
+            $kodeTrx = (string) ($trx->ticket_code ?? ('TRX/' . $trx->id));
+            $metode = strtoupper((string) ($trx->metode ?? '-'));
+            $noBukti = (string) ((int) ($trx->no_trx ?? 0) > 0 ? $trx->no_trx : $trx->id);
 
-                    return [
-                        'no' => $index + 1,
-                        'no_bukti' => $trx->no_trx ?? ('RENT-' . $item->id),
-                        'tanggal' => Carbon::parse($item->created_at)->format('d/m/Y H:i:s'),
-                        'kasir' => $item->user->name ?? '-',
-                        'kode_trx' => $trx->ticket_code ?? '-',
-                        'metode' => strtoupper((string) ($item->metode ?? '-')),
-                        'qty' => (int) ($item->qty ?? 0),
+            if (($trx->transaction_type ?? '') === 'ticket') {
+                foreach ($trx->detail as $detail) {
+                    $qty = max((int) ($detail->qty ?? 1), 1);
+                    $ppn = (float) ($detail->ppn ?? 0);
+                    $totalBayar = (float) ($detail->total ?? 0) + $ppn;
+                    $ticketId = (int) ($detail->ticket_id ?? 0);
+                    $itemName = (string) ($detail->ticket->name ?? 'Ticket');
+
+                    $detailRows->push([
+                        'group_key' => 'ticket:' . $ticketId,
+                        'transaction_type_label' => 'Ticket',
+                        'item_name' => $itemName,
+                        'no_bukti' => $noBukti,
+                        'tanggal' => $tanggal,
+                        'kasir' => $kasirName,
+                        'kode_trx' => $kodeTrx,
+                        'qty' => $qty,
+                        'metode' => $metode,
                         'ppn' => $ppn,
                         'total_bayar' => $totalBayar,
-                    ];
+                    ]);
+                }
+                continue;
+            }
+
+            if (in_array($trx->transaction_type, ['registration', 'renewal'], true)) {
+                $membershipId = (int) ($trx->ticket_id ?? 0);
+                $itemName = (string) ($membershipMap[$membershipId] ?? 'Membership');
+                $qty = max((int) ($trx->amount ?? 1), 1);
+                $ppn = (float) ($trx->ppn ?? 0);
+                $adminFee = $this->resolveAdminFee($trx);
+                $totalBayar = max(0.0, ((float) ($trx->bayar ?? 0)) - ((float) ($trx->kembali ?? 0))) + $ppn + $adminFee;
+
+                $detailRows->push([
+                    'group_key' => 'membership:' . $membershipId,
+                    'transaction_type_label' => 'Membership',
+                    'item_name' => $itemName,
+                    'no_bukti' => $noBukti,
+                    'tanggal' => $tanggal,
+                    'kasir' => $kasirName,
+                    'kode_trx' => $kodeTrx,
+                    'qty' => $qty,
+                    'metode' => $metode,
+                    'ppn' => $ppn,
+                    'total_bayar' => $totalBayar,
+                ]);
+                continue;
+            }
+
+            if (($trx->transaction_type ?? '') === 'rental') {
+                $penyewaanId = (int) ($trx->ticket_id ?? 0);
+                $penyewaan = $penyewaanMap->get($penyewaanId);
+                $sewaId = (int) ($penyewaan->sewa_id ?? $penyewaanId);
+                $itemName = (string) ($penyewaan?->sewa?->name ?? 'Penyewaan');
+                $qty = max((int) ($trx->amount ?? ($penyewaan->qty ?? 1)), 1);
+                $ppn = (float) ($trx->ppn ?? 0);
+                $totalBayar = max(0.0, ((float) ($trx->bayar ?? 0)) - ((float) ($trx->kembali ?? 0))) + $ppn;
+
+                $detailRows->push([
+                    'group_key' => 'rental:' . $sewaId,
+                    'transaction_type_label' => 'Penyewaan',
+                    'item_name' => $itemName,
+                    'no_bukti' => $noBukti,
+                    'tanggal' => $tanggal,
+                    'kasir' => $kasirName,
+                    'kode_trx' => $kodeTrx,
+                    'qty' => $qty,
+                    'metode' => $metode,
+                    'ppn' => $ppn,
+                    'total_bayar' => $totalBayar,
+                ]);
+            }
+        }
+
+        $groupedRows = $detailRows
+            ->groupBy('group_key')
+            ->map(function ($items) {
+                $details = $items->values()->map(function ($item, $index) {
+                    $item['no'] = $index + 1;
+                    return $item;
                 });
 
                 return [
-                    'sewa_name' => $items->first()->sewa->name ?? '-',
-                    'details' => $detailRows,
-                    'subtotal_qty' => (int) $items->sum('qty'),
-                    'subtotal_ppn' => (float) $detailRows->sum('ppn'),
-                    'subtotal_total' => (float) $detailRows->sum('total_bayar'),
+                    'transaction_type_label' => (string) ($items->first()['transaction_type_label'] ?? '-'),
+                    'item_name' => (string) ($items->first()['item_name'] ?? '-'),
+                    'details' => $details,
+                    'subtotal_qty' => (int) $details->sum('qty'),
+                    'subtotal_ppn' => (float) $details->sum('ppn'),
+                    'subtotal_total' => (float) $details->sum('total_bayar'),
                 ];
             })
-            ->values()
-            ->all();
+            ->values();
 
-        $grandQty = (int) collect($groupedRows)->sum('subtotal_qty');
-        $grandPpn = (float) collect($groupedRows)->sum('subtotal_ppn');
-        $grandTotal = (float) collect($groupedRows)->sum('subtotal_total');
+        $grandQty = (int) $groupedRows->sum('subtotal_qty');
+        $grandPpn = (float) $groupedRows->sum('subtotal_ppn');
+        $grandTotal = (float) $groupedRows->sum('subtotal_total');
 
-        return Excel::download(
-            new ReportPenyewaanExport($groupedRows, $grandQty, $grandPpn, $grandTotal),
-            "Laporan Transaksi Lainnya.xlsx"
-        );
+        return [$groupedRows, $grandQty, $grandPpn, $grandTotal];
     }
 
     public function rekapTransaction(Request $request)

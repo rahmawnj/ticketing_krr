@@ -16,7 +16,6 @@ class Transaction extends Model
         $date = $date ?: now('Asia/Jakarta');
 
         $lastNo = self::query()
-            ->where('transaction_type', $transactionType)
             ->whereDate('created_at', $date->toDateString())
             ->max('no_trx');
 

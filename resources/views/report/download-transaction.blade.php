@@ -99,7 +99,7 @@
     <table class="table" border="1" style="margin-bottom: 10px;">
         <thead>
             <tr>
-                <th colspan="3">Report Transaction Non-Ticket</th>
+                <th colspan="3">Report Transaction Renewal</th>
             </tr>
             <tr>
                 <th>Jenis</th>
@@ -109,37 +109,94 @@
         </thead>
         <tbody>
             @php
-                $totalQtyNonTicket = 0;
-                $totalAmountNonTicket = 0;
-                $membershipTrxTypes = ['renewal', 'registration'];
+                $totalQtyRenewal = 0;
+                $totalAmountRenewal = 0;
+                $totalQtyRegistration = 0;
+                $totalAmountRegistration = 0;
+                $totalQtyLainLain = 0;
+                $totalAmountLainLain = 0;
+                $orderedMemberships = $memberships->sortBy('name');
             @endphp
 
-            @foreach($memberships as $membership)
-                @foreach($membershipTrxTypes as $type)
-                    @php
-                        $queryM = (clone $baseQuery)->where(['transaction_type' => $type, 'ticket_id' => $membership->id]);
-                        $qtyM = $queryM->count();
-                        $totalM = $queryM->sum(\DB::raw('(bayar - kembali) + ppn + admin_fee'));
-                    @endphp
-                    @if($qtyM > 0)
-                    @php $totalQtyNonTicket += $qtyM; $totalAmountNonTicket += $totalM; @endphp
-                    <tr>
-                        <td>{{ ucfirst($type) }} {{ $membership->name }}</td>
-                        <td class="text-center">{{ $qtyM }}</td>
-                        <td class="text-end">{{ number_format($totalM, 0, ',', '.') }}</td>
-                    </tr>
-                    @endif
-                @endforeach
+            @foreach($orderedMemberships as $membership)
+                @php
+                    $queryRenewal = (clone $baseQuery)->where(['transaction_type' => 'renewal', 'ticket_id' => $membership->id]);
+                    $qtyRenewal = $queryRenewal->count();
+                    $totalRenewal = $queryRenewal->sum(\DB::raw('(bayar - kembali) + ppn + admin_fee'));
+                @endphp
+                @if($qtyRenewal > 0)
+                @php $totalQtyRenewal += $qtyRenewal; $totalAmountRenewal += $totalRenewal; @endphp
+                <tr>
+                    <td>Renewal {{ $membership->name }}</td>
+                    <td class="text-center">{{ $qtyRenewal }}</td>
+                    <td class="text-end">{{ number_format($totalRenewal, 0, ',', '.') }}</td>
+                </tr>
+                @endif
             @endforeach
+            <tr>
+                <th>Subtotal Renewal</th>
+                <th class="text-center">{{ $totalQtyRenewal }}</th>
+                <th class="text-end">{{ number_format($totalAmountRenewal, 0, ',', '.') }}</th>
+            </tr>
+        </tbody>
+    </table>
 
+    <table class="table" border="1" style="margin-bottom: 10px;">
+        <thead>
+            <tr>
+                <th colspan="3">Report Transaction Registration</th>
+            </tr>
+            <tr>
+                <th>Jenis</th>
+                <th class="text-center">Qty</th>
+                <th class="text-end">Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach($orderedMemberships as $membership)
+                @php
+                    $queryRegistration = (clone $baseQuery)->where(['transaction_type' => 'registration', 'ticket_id' => $membership->id]);
+                    $qtyRegistration = $queryRegistration->count();
+                    $totalRegistration = $queryRegistration->sum(\DB::raw('(bayar - kembali) + ppn + admin_fee'));
+                @endphp
+                @if($qtyRegistration > 0)
+                @php $totalQtyRegistration += $qtyRegistration; $totalAmountRegistration += $totalRegistration; @endphp
+                <tr>
+                    <td>Registration {{ $membership->name }}</td>
+                    <td class="text-center">{{ $qtyRegistration }}</td>
+                    <td class="text-end">{{ number_format($totalRegistration, 0, ',', '.') }}</td>
+                </tr>
+                @endif
+            @endforeach
+            <tr>
+                <th>Subtotal Registration</th>
+                <th class="text-center">{{ $totalQtyRegistration }}</th>
+                <th class="text-end">{{ number_format($totalAmountRegistration, 0, ',', '.') }}</th>
+            </tr>
+        </tbody>
+    </table>
+
+    <table class="table" border="1" style="margin-bottom: 10px;">
+        <thead>
+            <tr>
+                <th colspan="3">Report Transaction Lain-lain</th>
+            </tr>
+            <tr>
+                <th>Jenis</th>
+                <th class="text-center">Qty</th>
+                <th class="text-end">Total</th>
+            </tr>
+        </thead>
+        <tbody>
             @foreach($sewa as $sewaItem)
                 @php
-                    $queryR = (clone $baseQuery)->where(['transaction_type' => 'rental', 'ticket_id' => $sewaItem->id]);
+                    $rentalPenyewaanIds = App\Models\Penyewaan::where('sewa_id', $sewaItem->id)->pluck('id');
+                    $queryR = (clone $baseQuery)->where('transaction_type', 'rental')->whereIn('ticket_id', $rentalPenyewaanIds);
                     $qtyR = $queryR->count();
                     $totalR = $queryR->sum(\DB::raw('(bayar - kembali) + ppn'));
                 @endphp
                 @if($qtyR > 0)
-                @php $totalQtyNonTicket += $qtyR; $totalAmountNonTicket += $totalR; @endphp
+                @php $totalQtyLainLain += $qtyR; $totalAmountLainLain += $totalR; @endphp
                 <tr>
                     <td>Rental {{ $sewaItem->name }}</td>
                     <td class="text-center">{{ $qtyR }}</td>
@@ -147,16 +204,38 @@
                 </tr>
                 @endif
             @endforeach
+
+            @php
+                $otherTypeRows = (clone $baseQuery)
+                    ->whereNotIn('transaction_type', ['ticket', 'renewal', 'registration', 'rental'])
+                    ->select('transaction_type', \DB::raw('COUNT(*) as qty'), \DB::raw('SUM((bayar - kembali) + ppn) as total_with_ppn'))
+                    ->groupBy('transaction_type')
+                    ->get();
+            @endphp
+            @foreach($otherTypeRows as $otherRow)
+                @php
+                    $totalQtyLainLain += (int) $otherRow->qty;
+                    $totalAmountLainLain += (float) $otherRow->total_with_ppn;
+                @endphp
+                <tr>
+                    <td>{{ ucwords(str_replace('_', ' ', (string) $otherRow->transaction_type)) }}</td>
+                    <td class="text-center">{{ (int) $otherRow->qty }}</td>
+                    <td class="text-end">{{ number_format((float) $otherRow->total_with_ppn, 0, ',', '.') }}</td>
+                </tr>
+            @endforeach
+
             <tr>
-                <th>Subtotal Non-Ticket</th>
-                <th class="text-center">{{ $totalQtyNonTicket }}</th>
-                <th class="text-end">{{ number_format($totalAmountNonTicket, 0, ',', '.') }}</th>
+                <th>Subtotal Lain-lain</th>
+                <th class="text-center">{{ $totalQtyLainLain }}</th>
+                <th class="text-end">{{ number_format($totalAmountLainLain, 0, ',', '.') }}</th>
             </tr>
         </tbody>
     </table>
 
     <table class="table" border="1">
         @php
+            $totalQtyNonTicket = $totalQtyRenewal + $totalQtyRegistration + $totalQtyLainLain;
+            $totalAmountNonTicket = $totalAmountRenewal + $totalAmountRegistration + $totalAmountLainLain;
             $totalSalesAmount = $totalAmountTicket + $totalAmountNonTicket;
             $totalDiscount = (clone $baseQuery)->sum('disc');
             $totalPPN = App\Models\DetailTransaction::whereIn('transaction_id', $idTrxAll)->sum('ppn') +
@@ -170,15 +249,26 @@
                 $d = App\Models\DetailTransaction::whereIn('transaction_id', $ids)->sum(\DB::raw('total + ppn'));
                 $n = App\Models\Transaction::whereIn('id', $ids)
                     ->whereIn('transaction_type', ['renewal', 'registration', 'rental'])
-                    ->sum(\DB::raw('(bayar - kembali) + ' . "(CASE WHEN transaction_type IN ('registration', 'renewal') THEN admin_fee ELSE 0 END)"));
+                    ->sum(\DB::raw('(bayar - kembali) + ppn + ' . "(CASE WHEN transaction_type IN ('registration', 'renewal') THEN admin_fee ELSE 0 END)"));
                 return $d + $n;
             };
 
-            $cashTotal = $calculateMethod('cash', $idTrxAll);
-            $debitTotal = $calculateMethod('debit', $idTrxAll);
-            $kreditTotal = $calculateMethod(['kredit', 'credit', 'credit card'], $idTrxAll);
             $qrisTotal = $calculateMethod(['qris', 'qr'], $idTrxAll);
+            $debitTotal = $calculateMethod('debit', $idTrxAll);
+            $kreditTotal = $calculateMethod(['kredit', 'credit', 'credit card', 'kartu kredit'], $idTrxAll);
             $transferTotal = $calculateMethod('transfer', $idTrxAll);
+            $lainnyaIds = App\Models\Transaction::whereIn('id', $idTrxAll)
+                ->where(function ($q) {
+                    $q->whereIn('metode', ['lain-lain', 'tap', 'cash'])
+                        ->orWhereNull('metode')
+                        ->orWhere('metode', '')
+                        ->orWhereNotIn('metode', ['qris', 'qr', 'debit', 'kredit', 'credit', 'credit card', 'kartu kredit', 'transfer', 'lain-lain', 'tap', 'cash']);
+                })
+                ->pluck('id');
+            $lainnyaTotal = App\Models\DetailTransaction::whereIn('transaction_id', $lainnyaIds)->sum(\DB::raw('total + ppn'))
+                + App\Models\Transaction::whereIn('id', $lainnyaIds)
+                    ->whereIn('transaction_type', ['renewal', 'registration', 'rental'])
+                    ->sum(\DB::raw('(bayar - kembali) + (CASE WHEN transaction_type IN (\'registration\', \'renewal\') THEN admin_fee ELSE 0 END)'));
 
             $finalTotalAmount = $totalSalesAmount - $totalDiscount;
         @endphp
@@ -208,8 +298,8 @@
                 <th colspan="3" class="text-center">Metode Pembayaran</th>
             </tr>
             <tr>
-                <td colspan="2">Cash</td>
-                <td class="text-end">{{ number_format($cashTotal, 0, ',', '.') }}</td>
+                <td colspan="2">QRIS</td>
+                <td class="text-end">{{ number_format($qrisTotal, 0, ',', '.') }}</td>
             </tr>
             <tr>
                 <td colspan="2">Debit</td>
@@ -220,12 +310,12 @@
                 <td class="text-end">{{ number_format($kreditTotal, 0, ',', '.') }}</td>
             </tr>
             <tr>
-                <td colspan="2">QRIS</td>
-                <td class="text-end">{{ number_format($qrisTotal, 0, ',', '.') }}</td>
-            </tr>
-            <tr>
                 <td colspan="2">Transfer</td>
                 <td class="text-end">{{ number_format($transferTotal, 0, ',', '.') }}</td>
+            </tr>
+            <tr>
+                <td colspan="2">Lain-lain</td>
+                <td class="text-end">{{ number_format($lainnyaTotal, 0, ',', '.') }}</td>
             </tr>
         </tbody>
     </table>

@@ -7,14 +7,18 @@
     <title>{{ $member->nama }} | Print Invoice Member</title>
 
     <style>
+        @page {
+            size: 80mm auto;
+            margin: 0;
+        }
         body {
             margin: 0;
-            padding: 8px 0;
+            padding: 6px 0;
             font-family: "Times New Roman", serif;
         }
         .container {
-            width: 96%;
-            max-width: 96mm !important;
+            width: 100%;
+            max-width: 80mm !important;
             border: 1px solid black;
             text-align: center;
             margin: 0 auto;

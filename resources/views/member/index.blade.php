@@ -84,6 +84,11 @@
                         <option value="{{ $membership->id }}">{{ $membership->name }}</option>
                     @endforeach
                 </select>
+                <select id="filter-status" class="form-control">
+                    <option value="all" selected>Semua Status</option>
+                    <option value="active">Active</option>
+                    <option value="expired">Expired</option>
+                </select>
                 <div class="btn-group" role="group" aria-label="Filter Member">
                     <button type="button" class="btn btn-default btn-filter active" data-filter="member">Member</button>
                     <button type="button" class="btn btn-default btn-filter" data-filter="submember">Submember</button>
@@ -204,6 +209,7 @@
     // Menyimpan nilai filter saat ini
     var currentFilter = 'member';
     var currentMembershipId = 0;
+    var currentStatusFilter = 'all';
 
     var table = $('#datatable').DataTable({
         processing: true,
@@ -215,6 +221,7 @@
             data: function (d) {
                 d.filter = currentFilter;
                 d.membership_id = currentMembershipId;
+                d.status_filter = currentStatusFilter;
             }
         },
         deferRender: true,
@@ -244,7 +251,8 @@
     function updateExportUrl() {
         var params = $.param({
             filter: currentFilter,
-            membership_id: currentMembershipId
+            membership_id: currentMembershipId,
+            status_filter: currentStatusFilter
         });
         $('#btn-export-member').attr('href', "{{ route('members.export') }}" + '?' + params);
     }
@@ -259,6 +267,12 @@
 
     $('#filter-membership').on('change', function() {
         currentMembershipId = parseInt($(this).val() || '0', 10);
+        updateExportUrl();
+        table.ajax.reload();
+    });
+
+    $('#filter-status').on('change', function() {
+        currentStatusFilter = $(this).val() || 'all';
         updateExportUrl();
         table.ajax.reload();
     });

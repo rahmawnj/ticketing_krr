@@ -43,7 +43,7 @@
                     </div>
 
                     <div class="form-group mb-3">
-                        <label for="harga_ticket">Harga Lainnya (Per Item, sudah termasuk PBJT)</label>
+                        <label for="harga_ticket">Harga Lainnya / DPP (Per Item, sebelum PBJT)</label>
                         <div class="input-group">
                             <input type="text" name="harga_ticket" id="harga_ticket" class="form-control bg-light" value="0" readonly>
                             <span class="input-group-text">Qty</span>
@@ -74,15 +74,35 @@
                         <label for="metode">Metode</label>
                         <select name="metode" id="metode" class="form-control">
                             <option disabled selected>-- Pilih Metode --</option>
-                            <option value="cash">Cash</option>
-                            <option value="debit">Debit</option>
-                            <option value="qris">QRIS</option>
-                            <option value="kredit">Kredit</option>
-                            <option value="transfer">Transfer</option>
-                            <option value="tap">Emoney (Tap)</option>
-                            <option value="lain-lain">Lain-lain</option>
+                            @foreach(\App\Support\PaymentMethod::options() as $methodValue => $methodLabel)
+                            <option value="{{ $methodValue }}">{{ $methodLabel }}</option>
+                            @endforeach
                         </select>
                         @error('metode')
+                        <small class="text-danger">{{ $message }}</small>
+                        @enderror
+                    </div>
+
+                    <div class="form-group mb-3 card-fields d-none">
+                        <label for="nama_kartu"><sup class="text-danger">*</sup>Nama Rekening / Pemilik Kartu</label>
+                        <input type="text" name="nama_kartu" id="nama_kartu" class="form-control" value="{{ old('nama_kartu') }}" placeholder="Nama pemilik rekening">
+                        @error('nama_kartu')
+                        <small class="text-danger">{{ $message }}</small>
+                        @enderror
+                    </div>
+
+                    <div class="form-group mb-3 card-fields d-none">
+                        <label for="no_kartu"><sup class="text-danger">*</sup>No Kartu / No Rekening</label>
+                        <input type="text" name="no_kartu" id="no_kartu" class="form-control" value="{{ old('no_kartu') }}" placeholder="No kartu atau rekening">
+                        @error('no_kartu')
+                        <small class="text-danger">{{ $message }}</small>
+                        @enderror
+                    </div>
+
+                    <div class="form-group mb-3 card-fields d-none">
+                        <label for="bank"><sup class="text-danger">*</sup>Bank</label>
+                        <input type="text" name="bank" id="bank" class="form-control" value="{{ old('bank') }}" placeholder="Contoh: BCA">
+                        @error('bank')
                         <small class="text-danger">{{ $message }}</small>
                         @enderror
                     </div>
@@ -109,6 +129,11 @@
                         @error('jumlah')
                         <small class="text-danger">{{ $message }}</small>
                         @enderror
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="pbjt_total">PBJT Otomatis</label>
+                        <input type="text" id="pbjt_total" class="form-control" value="0" readonly>
                     </div>
 
                     {{-- Input Kembali (hanya untuk cash) --}}
@@ -195,18 +220,24 @@
             return parseInt(cleaned) || 0; // Pastikan hasilnya integer atau 0 jika gagal
         }
 
-        // Set default harga per item dari master (+PBJT jika aktif)
-        function setDefaultHargaPerItem() {
+        function getSelectedPpnRate() {
             let selectedOption = $("#ticket").find('option:selected');
             let masterHarga = parseInt(selectedOption.attr("data-harga")) || 0;
             let usePpn = selectedOption.attr("data-use-ppn") == '1' || selectedOption.attr("data-use-ppn") == 'true';
-            let ppnRate = parseFloat(selectedOption.attr("data-ppn-rate")) || 0;
-            let hargaPerItem = masterHarga;
+            let masterPpnNominal = parseFloat(selectedOption.attr("data-ppn-rate")) || 0;
 
-            if (usePpn && ppnRate > 0) {
-                let ppnAmountPerItem = ppnRate ;
-                hargaPerItem = Math.round(masterHarga + ppnAmountPerItem);
+            if (!usePpn || masterHarga <= 0 || masterPpnNominal <= 0) {
+                return 0;
             }
+
+            return masterPpnNominal / masterHarga;
+        }
+
+        // Set default harga per item dari master (DPP)
+        function setDefaultHargaPerItem() {
+            let selectedOption = $("#ticket").find('option:selected');
+            let masterHarga = parseInt(selectedOption.attr("data-harga")) || 0;
+            let hargaPerItem = masterHarga;
 
             $("#harga_ticket").val(formatRupiah(hargaPerItem.toString()));
         }
@@ -224,19 +255,23 @@
 
             if (isFlexible) {
                 $("#harga_ticket").prop('readonly', false).removeClass('bg-light');
-                $("#dynamic-price-note").text('Dynamic Price aktif: harga per item bisa diubah.');
+                $("#dynamic-price-note").text('Dynamic Price aktif: isi DPP per item, PBJT dihitung otomatis.');
             } else {
                 $("#harga_ticket").prop('readonly', true).addClass('bg-light');
-                $("#dynamic-price-note").text('Dynamic Price nonaktif: harga mengikuti master data sewa.');
+                $("#dynamic-price-note").text('Dynamic Price nonaktif: DPP mengikuti master data sewa, PBJT dihitung otomatis.');
             }
         }
 
-        // Kalkulasi total dari harga per item (editable) x qty
+        // Kalkulasi total: (DPP x qty) + PBJT otomatis.
         function calculatePrice() {
-            let hargaPerItem = cleanRupiah($("#harga_ticket").val() || '0');
+            let basePerItem = cleanRupiah($("#harga_ticket").val() || '0');
             let qty = parseInt($("#qty").val()) || 1;
-            let jumlahTotal = hargaPerItem * qty;
+            let ppnRate = getSelectedPpnRate();
+            let ppnPerItem = Math.round(basePerItem * ppnRate);
+            let pbjtTotal = ppnPerItem * qty;
+            let jumlahTotal = (basePerItem * qty) + pbjtTotal;
 
+            $("#pbjt_total").val(formatRupiah(pbjtTotal.toString()));
             $("#jumlah").val(formatRupiah(jumlahTotal.toString()));
 
             let metode = $("#metode").val();
@@ -305,6 +340,16 @@
 
         function togglePaymentFields() {
             let metode = $("#metode").val();
+            let isCardMethod = metode === 'debit' || metode === 'kredit';
+
+            if (isCardMethod) {
+                $(".card-fields").removeClass('d-none');
+                $("#nama_kartu, #no_kartu, #bank").attr('required', 'required');
+            } else {
+                $(".card-fields").addClass('d-none');
+                $("#nama_kartu, #no_kartu, #bank").removeAttr('required').val('');
+            }
+
             if (metode == 'tap') {
                 $(".rfid-fields").removeClass('d-none');
                 $("#name").removeAttr('readonly').val('');

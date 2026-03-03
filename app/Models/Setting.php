@@ -26,6 +26,23 @@ class Setting extends Model
         'dashboard_metric_mode' => 'amount',
         'whatsapp_enabled' => 0,
         'use_logo' => 0,
+        'renewal_notice_club_name' => 'Sport Club Anwa Puri',
+        'renewal_notice_bank_account' => 'TRANSFER BANK: BCA 0289011155 A/N PT KARTUNINDO PERKASA ABADI',
+        'renewal_notice_admin_phone' => '0821 2222 9358',
+        'renewal_notice_body_template' => "Yth. Bapak/Ibu :member_name,\n\nKami informasikan bahwa masa aktif membership Anda akan berakhir pada :expired_date.\n\nAgar tetap dapat menikmati seluruh fasilitas, mohon melakukan perpanjangan dengan rincian:\n\nTipe Member: :membership_name\nBiaya: :total_price\nJatuh tempo: :due_date\n:note_block\nSilakan melakukan pembayaran sebelum jatuh tempo agar membership tetap aktif.\n\n:bank_account\n\nJika sudah melakukan pembayaran, harap informasi dan kirim bukti pembayaran ke nomor Admin.\nTerima kasih.\n\nAdmin\n:club_name\nNo.Hp: :admin_phone",
+        'renewal_notice_greeting_template' => 'Yth. Bapak/Ibu :member_name,',
+        'renewal_notice_intro_template' => 'Kami informasikan bahwa masa aktif membership Anda akan berakhir pada :expired_date.',
+        'renewal_notice_detail_intro_template' => 'Agar tetap dapat menikmati seluruh fasilitas, mohon melakukan perpanjangan dengan rincian:',
+        'renewal_notice_member_type_label' => 'Tipe Member',
+        'renewal_notice_fee_label' => 'Biaya',
+        'renewal_notice_due_date_label' => 'Jatuh tempo',
+        'renewal_notice_note_label' => 'Catatan',
+        'renewal_notice_note_template' => 'Perpanjangan baru (termasuk biaya admin :admin_fee)',
+        'renewal_notice_payment_reminder_template' => 'Silakan melakukan pembayaran sebelum jatuh tempo agar membership tetap aktif.',
+        'renewal_notice_proof_payment_template' => 'Jika sudah melakukan pembayaran, harap informasi dan kirim bukti pembayaran ke nomor Admin.',
+        'renewal_notice_closing_template' => 'Terima kasih.',
+        'renewal_notice_admin_label' => 'Admin',
+        'renewal_notice_admin_phone_label' => 'No.Hp',
     ];
 
     public static function asObject(): object

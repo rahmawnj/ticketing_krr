@@ -29,7 +29,7 @@ date_default_timezone_set('Asia/Jakarta')
         }
 
         .ticket-card.ticket-portrait {
-            max-width: 77mm !important;
+            max-width: 80mm !important;
         }
 
         @media print {
@@ -53,34 +53,6 @@ date_default_timezone_set('Asia/Jakarta')
         $qty = max((int) ($penyewaan->qty ?? 0), 1);
         $lineSubtotal = (float) ($penyewaan->jumlah ?? 0);
         $lineUnitPrice = $lineSubtotal / $qty;
-        $startTimeRaw = $penyewaan->start_time ? substr((string) $penyewaan->start_time, 0, 5) : null;
-        $endTimeRaw = $penyewaan->end_time ? substr((string) $penyewaan->end_time, 0, 5) : null;
-        $masaSewaLabel = null;
-        if ($startTimeRaw && $endTimeRaw) {
-            try {
-                $startTimeObj = \Carbon\Carbon::createFromFormat('H:i', $startTimeRaw);
-                $endTimeObj = \Carbon\Carbon::createFromFormat('H:i', $endTimeRaw);
-                if ($endTimeObj->lessThanOrEqualTo($startTimeObj)) {
-                    $endTimeObj->addDay();
-                }
-                $diffMinutes = $startTimeObj->diffInMinutes($endTimeObj);
-                $hours = intdiv($diffMinutes, 60);
-                $minutes = $diffMinutes % 60;
-                $durationParts = [];
-                if ($hours > 0) {
-                    $durationParts[] = $hours . ' jam';
-                }
-                if ($minutes > 0) {
-                    $durationParts[] = $minutes . ' menit';
-                }
-                if (empty($durationParts)) {
-                    $durationParts[] = '0 menit';
-                }
-                $masaSewaLabel = implode(' ', $durationParts);
-            } catch (\Throwable $e) {
-                $masaSewaLabel = null;
-            }
-        }
     @endphp
     <div class="ticket-row" style="margin-top: 10px;">
         <div class="qr-code ticket-card ticket-portrait" style="margin: 0 auto 0 auto;">
@@ -129,26 +101,6 @@ date_default_timezone_set('Asia/Jakarta')
                     <span>Metode : </span>
                     <span>{{ strtoupper($penyewaan->metode ?? '-') }}</span>
                 </div>
-
-                @if(!empty($penyewaan->start_time))
-                <div style="display: flex;font-weight: 900; justify-content: space-between; margin-left: 10px; margin-right: 10px;">
-                    <span>Start Time : </span>
-                    <span>{{ $startTimeRaw }}</span>
-                </div>
-                @endif
-
-                @if(!empty($penyewaan->end_time))
-                <div style="display: flex;font-weight: 900; justify-content: space-between; margin-left: 10px; margin-right: 10px;">
-                    <span>End Time : </span>
-                    <span>{{ $endTimeRaw }}</span>
-                </div>
-                @endif
-                @if($masaSewaLabel)
-                <div style="display: flex;font-weight: 900; justify-content: space-between; margin-left: 10px; margin-right: 10px;">
-                    <span>Masa Sewa : </span>
-                    <span>{{ $masaSewaLabel }}</span>
-                </div>
-                @endif
                 <br>
                 @if(!empty($penyewaan->keterangan))
                 <p style="font-size:9.2pt;margin-left:10px;margin-top:5px;margin-bottom:0px; font-weight: bold;">Keterangan</p>

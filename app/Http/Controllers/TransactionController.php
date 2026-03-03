@@ -14,9 +14,12 @@ use Illuminate\Http\Request;
 use App\Exports\ReportExport;
 use App\Exports\TransactionDailyReceiptExport;
 use App\Models\DetailTransaction;
+use App\Support\PaymentMethod;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
+use Illuminate\Validation\Rule;
 use Yajra\DataTables\Facades\DataTables;
 use App\Http\Requests\Transaction\CreateTransactionRequest;
 use Maatwebsite\Excel\Facades\Excel;
@@ -32,7 +35,9 @@ class TransactionController extends Controller
     {
         $title = 'Data Transaction';
         $breadcrumbs = ['Master', 'Data Transaction'];
-        $tickets = Ticket::get();
+        $tickets = Ticket::query()->orderBy('name')->get();
+        $rentals = Sewa::query()->orderBy('name')->get();
+        $memberships = Membership::query()->orderBy('name')->get();
         $setting = Setting::asObject();
         $reminderDays = (int) ($setting->member_suspend_before_days ?? 7);
         $limitDate = Carbon::now('Asia/Jakarta')->addDays($reminderDays)->toDateString();
@@ -41,7 +46,22 @@ class TransactionController extends Controller
             ->where('parent_id', 0)
             ->count();
 
-        return view('transaction.index', compact('title', 'breadcrumbs', 'tickets', 'renewalCount'));
+        $detailFilterOptions = [
+            'ticket' => $tickets->map(fn ($ticket) => [
+                'value' => 'ticket:' . (int) $ticket->id,
+                'text' => (string) $ticket->name,
+            ])->values(),
+            'rental' => $rentals->map(fn ($rental) => [
+                'value' => 'rental:' . (int) $rental->id,
+                'text' => (string) $rental->name,
+            ])->values(),
+            'membership' => $memberships->map(fn ($membership) => [
+                'value' => 'membership:' . (int) $membership->id,
+                'text' => (string) $membership->name,
+            ])->values(),
+        ];
+
+        return view('transaction.index', compact('title', 'breadcrumbs', 'tickets', 'renewalCount', 'detailFilterOptions'));
     }
 
     public function get(Request $request)
@@ -50,21 +70,24 @@ class TransactionController extends Controller
             [$startDate, $endDate] = $this->resolveDateRange($request);
 
             $transactionType = $request->transaction_type;
+            $detailMasterValue = $request->input('detail_master_id');
 
             // --- Query Building Logic ---
             if (auth()->user()->roles()->first()->id == 1) {
-                $data = Transaction::where('is_active', 1)
+                $data = Transaction::with(['detail.ticket', 'user', 'member'])
+                    ->where('is_active', 1)
                     ->whereBetween('created_at', [$startDate, $endDate])
                     ->orderBy('created_at', 'DESC');
             } else {
-                $data = Transaction::where(['is_active' => 1, 'user_id' => auth()->user()->id])
+                $data = Transaction::with(['detail.ticket', 'user', 'member'])
+                    ->where(['is_active' => 1, 'user_id' => auth()->user()->id])
                     ->whereBetween('created_at', [$startDate, $endDate])
                     ->orderBy('created_at', 'DESC');
             }
 
-            if (!empty($transactionType)) {
-                $data->where('transaction_type', $transactionType);
-            }
+            $this->applyTransactionTypeFilter($data, $transactionType);
+
+            $this->applyDetailMasterFilter($data, $detailMasterValue);
 
             return DataTables::eloquent($data)
                 ->addIndexColumn()
@@ -72,8 +95,11 @@ class TransactionController extends Controller
                     return optional($row->created_at)->timezone('Asia/Jakarta')->format('d/m/Y H:i:s');
                 })
 
-                ->addColumn('transaction_type', function ($row) {
-                    return ucfirst($row->transaction_type);
+                ->addColumn('transaction_type_badge', function ($row) {
+                    return $this->resolveTransactionTypeBadge($row->transaction_type);
+                })
+                ->addColumn('detail_description', function ($row) {
+                    return $this->resolveTransactionDetail($row);
                 })
                 ->addColumn('member_info', function ($row) {
                     if (!in_array($row->transaction_type, ['renewal', 'registration'])) {
@@ -97,8 +123,8 @@ class TransactionController extends Controller
                         $buttons[] = '<a href="' . route("transactions.print", $row->id) . '" class="btn btn-sm btn-primary"><i class="fas fa-print"></i></a>';
                     }
 
-                    $totalQty = $row->detail()->sum('qty');
-                    $totalScanned = $row->detail()->sum('scanned');
+                    $totalQty = (int) $row->detail->sum('qty');
+                    $totalScanned = (int) $row->detail->sum('scanned');
 
                     if ($row->transaction_type == 'ticket' && $totalScanned < $totalQty) {
                         $routeFullScan = route('transactions.set_full_scan', $row->id);
@@ -125,7 +151,7 @@ class TransactionController extends Controller
                     return $row->discount . '%';
                 })
                 ->editColumn('discount', function ($row) {
-                    return 'Rp. ' . number_format($row->detail()->sum('total') * $row->discount / 100, 0, ',', '.');
+                    return 'Rp. ' . number_format($row->detail->sum('total') * $row->discount / 100, 0, ',', '.');
                 })
                 ->editColumn('scanned', function ($row) {
                     $hideForTypes = ['rental', 'renewal', 'registration'];
@@ -134,7 +160,7 @@ class TransactionController extends Controller
                         return '-';
                     }
 
-                    return '<span class="fw-bold fs-14px">' . $row->detail()->sum('scanned') . '</span>' . ' / ' . $row->detail()->sum('qty');
+                    return '<span class="fw-bold fs-14px">' . $row->detail->sum('scanned') . '</span>' . ' / ' . $row->detail->sum('qty');
                 })
 ->addColumn('user_name', function ($row) {
         return $row->user ? $row->user->name : 'N/A';
@@ -144,7 +170,7 @@ class TransactionController extends Controller
                 })
 
                 ->editColumn('sisa', function ($row) {
-                    return $row->detail()->sum('qty') - $row->detail()->sum('scanned');
+                    return $row->detail->sum('qty') - $row->detail->sum('scanned');
                 })
 
                 ->editColumn('bayar', function ($row) {
@@ -167,7 +193,7 @@ class TransactionController extends Controller
                         : '<span class="badge bg-danger">' . ucfirst($row->status) . '</span>';
                 })
 
-                ->rawColumns(['action', 'status_ticket', 'scanned'])
+                ->rawColumns(['action', 'status_ticket', 'scanned', 'transaction_type_badge'])
                 ->make(true);
         }
     }
@@ -176,6 +202,7 @@ class TransactionController extends Controller
     {
         [$startDate, $endDate] = $this->resolveDateRange($request);
         $transactionType = $request->input('transaction_type');
+        $detailMasterValue = $request->input('detail_master_id');
 
         $query = Transaction::with(['detail.ticket', 'user', 'member'])
             ->where('is_active', 1)
@@ -185,9 +212,9 @@ class TransactionController extends Controller
             $query->where('user_id', auth()->id());
         }
 
-        if (!empty($transactionType)) {
-            $query->where('transaction_type', $transactionType);
-        }
+        $this->applyTransactionTypeFilter($query, $transactionType);
+
+        $this->applyDetailMasterFilter($query, $detailMasterValue);
 
         $transactions = $query->orderBy('created_at')->orderBy('id')->get();
         $exportRows = $this->buildDataTransactionExportRows($transactions);
@@ -264,7 +291,7 @@ class TransactionController extends Controller
         $transfer = 0.0;
         $pembayaranLainnya = 0.0;
 
-        $metode = $this->normalizePaymentMethod($caraBayar);
+        $metode = PaymentMethod::normalize($caraBayar);
         if ($metode === 'cash') {
             $tunai = $totalBayar;
         } elseif ($metode === 'debit') {
@@ -325,6 +352,135 @@ class TransactionController extends Controller
         }
 
         return [$startDate, $endDate];
+    }
+
+    private function applyTransactionTypeFilter(Builder $query, ?string $transactionType): void
+    {
+        $transactionType = strtolower(trim((string) $transactionType));
+        if ($transactionType === '') {
+            return;
+        }
+
+        if ($transactionType === 'membership') {
+            $query->whereIn('transaction_type', ['registration', 'renewal']);
+            return;
+        }
+
+        $query->where('transaction_type', $transactionType);
+    }
+
+    private function applyDetailMasterFilter(Builder $query, $detailMasterValue): void
+    {
+        $selection = strtolower(trim((string) $detailMasterValue));
+        if ($selection === '') {
+            return;
+        }
+
+        if (!preg_match('/^(ticket|rental|membership):(\d+)$/', $selection, $matches)) {
+            return;
+        }
+
+        $detailType = $matches[1];
+        $masterId = (int) $matches[2];
+        if ($masterId <= 0) {
+            return;
+        }
+
+        if ($detailType === 'ticket') {
+            $query->where('transaction_type', 'ticket')
+                ->whereHas('detail', function (Builder $detailQuery) use ($masterId) {
+                    $detailQuery->where('ticket_id', $masterId);
+                });
+            return;
+        }
+
+        if ($detailType === 'rental') {
+            $query->where('transaction_type', 'rental')
+                ->whereIn('ticket_id', Penyewaan::query()
+                    ->where('sewa_id', $masterId)
+                    ->select('id'));
+            return;
+        }
+
+        if ($detailType === 'membership') {
+            $query->whereIn('transaction_type', ['registration', 'renewal'])
+                ->where('ticket_id', $masterId);
+        }
+    }
+
+    private function resolveTransactionTypeBadge(?string $transactionType): string
+    {
+        $type = strtolower((string) $transactionType);
+
+        return match ($type) {
+            'ticket' => '<span class="badge bg-primary">Ticket</span>',
+            'rental' => '<span class="badge bg-warning text-dark">Penyewaan</span>',
+            'registration' => '<span class="badge bg-success">Membership</span>',
+            'renewal' => '<span class="badge bg-info text-dark">Renewal</span>',
+            default => '<span class="badge bg-secondary">' . e(ucfirst($type ?: '-')) . '</span>',
+        };
+    }
+
+    private function resolveTransactionDetail(Transaction $transaction): string
+    {
+        if ($transaction->transaction_type === 'ticket') {
+            $details = $transaction->relationLoaded('detail')
+                ? $transaction->detail
+                : $transaction->detail()->with('ticket')->get();
+
+            $lines = $details
+                ->map(function ($detail) {
+                    $name = trim((string) ($detail->ticket->name ?? 'Ticket'));
+                    $qty = max((int) ($detail->qty ?? 1), 1);
+
+                    return $qty > 1 ? ($name . ' x' . $qty) : $name;
+                })
+                ->filter()
+                ->values();
+
+            return $lines->isNotEmpty() ? $lines->implode(', ') : '-';
+        }
+
+        if (in_array($transaction->transaction_type, ['registration', 'renewal'], true)) {
+            static $membershipCache = [];
+            $membershipId = (int) ($transaction->ticket_id ?? 0);
+
+            if ($membershipId <= 0) {
+                return '-';
+            }
+
+            if (!array_key_exists($membershipId, $membershipCache)) {
+                $membershipCache[$membershipId] = (string) (Membership::query()->whereKey($membershipId)->value('name') ?? '-');
+            }
+
+            $name = $membershipCache[$membershipId] ?: '-';
+            $qty = max((int) ($transaction->amount ?? 1), 1);
+
+            return $qty > 1 ? ($name . ' x' . $qty) : $name;
+        }
+
+        if ($transaction->transaction_type === 'rental') {
+            static $rentalCache = [];
+            $rentalId = (int) ($transaction->ticket_id ?? 0);
+
+            if ($rentalId <= 0) {
+                return '-';
+            }
+
+            if (!array_key_exists($rentalId, $rentalCache)) {
+                $rentalCache[$rentalId] = (string) (Penyewaan::query()
+                    ->with('sewa:id,name')
+                    ->whereKey($rentalId)
+                    ->first()?->sewa?->name ?? '-');
+            }
+
+            $name = $rentalCache[$rentalId] ?: '-';
+            $qty = max((int) ($transaction->amount ?? 1), 1);
+
+            return $qty > 1 ? ($name . ' x' . $qty) : $name;
+        }
+
+        return '-';
     }
 
     private function buildDailyReceiptGroups($transactions): array
@@ -467,18 +623,23 @@ class TransactionController extends Controller
         }
 
         $now = Carbon::now('Asia/Jakarta');
-        $notrx = Transaction::nextNoTrxByType('ticket', $now);
 
         $active = Transaction::whereDate('created_at', $now)->where(['is_active' => 0, 'user_id' => auth()->user()->id])->latest()->first();
 
         if ($active) {
+            if ((int) ($active->no_trx ?? 0) > 0) {
+                $active->update([
+                    'no_trx' => 0,
+                    'ticket_code' => 'DRAFT/' . $active->id,
+                ]);
+            }
             $transaction = $active;
         } else {
             $transaction = Transaction::create([
                 'ticket_id' => 0,
                 'user_id' => auth()->user()->id,
-                'no_trx' => $notrx,
-                'ticket_code' => Transaction::buildTicketCodeByType('ticket', $now, $notrx),
+                'no_trx' => 0,
+                'ticket_code' => 'DRAFT/' . now('Asia/Jakarta')->format('YmdHis') . '/' . auth()->user()->id,
                 'transaction_type' => 'ticket',
             ]);
         }
@@ -496,6 +657,10 @@ class TransactionController extends Controller
     {
 
         try {
+            $request->validate([
+                'metode' => ['required', Rule::in(PaymentMethod::coreValidationValues())],
+            ]);
+
             DB::beginTransaction();
 
             $transactions = [];
@@ -509,7 +674,7 @@ class TransactionController extends Controller
             $attr['ticket_id'] = $request->ticket;
             $attr['tipe'] = $tipe;
             $attr['nama_customer'] = $request->name;
-            $attr['metode'] = $this->normalizePaymentMethod($request->metode);
+            $attr['metode'] = PaymentMethod::normalize($request->metode);
             $attr['cash'] = $request->cash;
             $attr['amount'] = 1;
             $attr['harga_ticket'] = $request->harga_ticket;
@@ -834,15 +999,4 @@ public function setFullScan(Transaction $transaction)
         return back()->with('error', $th->getMessage());
     }
 }
-
-    private function normalizePaymentMethod(?string $method): string
-    {
-        $normalized = strtolower(trim((string) $method));
-
-        return match ($normalized) {
-            'qr' => 'qris',
-            'credit', 'credit card', 'kartu kredit' => 'kredit',
-            default => $normalized,
-        };
-    }
 }

@@ -3,7 +3,6 @@
 namespace App\Exports;
 
 use App\Models\Member;
-use App\Models\Setting;
 use Carbon\Carbon;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
@@ -14,13 +13,13 @@ class MemberExport implements FromCollection, WithHeadings, WithMapping, ShouldA
 {
     private string $filter;
     private int $membershipId;
-    private int $suspendDays;
+    private string $statusFilter;
 
-    public function __construct(string $filter = 'all', int $membershipId = 0)
+    public function __construct(string $filter = 'all', int $membershipId = 0, string $statusFilter = 'all')
     {
         $this->filter = $filter;
         $this->membershipId = $membershipId;
-        $this->suspendDays = max((int) Setting::valueOf('member_suspend_after_days', 0), 0);
+        $this->statusFilter = in_array($statusFilter, ['all', 'active', 'expired'], true) ? $statusFilter : 'all';
     }
 
     public function collection()
@@ -35,6 +34,19 @@ class MemberExport implements FromCollection, WithHeadings, WithMapping, ShouldA
 
         if ($this->membershipId > 0) {
             $query->where('membership_id', $this->membershipId);
+        }
+
+        $today = Carbon::now('Asia/Jakarta')->startOfDay();
+        if ($this->statusFilter === 'active') {
+            $query
+                ->whereDate('tgl_expired', '>=', $today->toDateString())
+                ->where('is_active', 1);
+        } elseif ($this->statusFilter === 'expired') {
+            $query->where(function ($builder) use ($today) {
+                $builder
+                    ->where('is_active', '!=', 1)
+                    ->orWhereDate('tgl_expired', '<', $today->toDateString());
+            });
         }
 
         return $query->get();
@@ -68,28 +80,16 @@ class MemberExport implements FromCollection, WithHeadings, WithMapping, ShouldA
             optional($row->membership)->name ?? '-',
             $row->tgl_register ? Carbon::parse($row->tgl_register)->format('d/m/Y') : '-',
             $row->tgl_expired ? Carbon::parse($row->tgl_expired)->format('d/m/Y') : '-',
-            $this->toStatusLabel((string) $row->lifecycle_status),
+            $this->toStatusLabel($row),
         ];
     }
 
-    private function toStatusLabel(string $lifecycleStatus): string
+    private function toStatusLabel(Member $row): string
     {
-        if ($lifecycleStatus === 'active') {
-            return 'Active';
-        }
+        $today = Carbon::now('Asia/Jakarta')->startOfDay();
+        $expiredAt = Carbon::parse($row->tgl_expired)->startOfDay();
+        $isActive = ((int) $row->is_active === 1) && $expiredAt->greaterThanOrEqualTo($today);
 
-        if ($lifecycleStatus === 'inactive') {
-            return 'Inactive';
-        }
-
-        if ($lifecycleStatus === 'suspend') {
-            return 'Suspend';
-        }
-
-        if ($lifecycleStatus === 'expired') {
-            return 'Expired > ' . $this->suspendDays . ' Hari';
-        }
-
-        return '-';
+        return $isActive ? 'Active' : 'Expired';
     }
 }

@@ -86,12 +86,9 @@
                     <label for="metode" class="form-label"><sup class="text-danger">*</sup>Metode Pembayaran</label>
                     <select name="metode" id="metode" class="form-control">
                         <option value="">-- Pilih Metode --</option>
-                        <option value="qris" {{ old('metode') == 'qris' ? 'selected' : '' }}>QRIS</option>
-                        <option value="debit" {{ old('metode') == 'debit' ? 'selected' : '' }}>Debit</option>
-                        <option value="kredit" {{ old('metode') == 'kredit' ? 'selected' : '' }}>Kredit</option>
-                        <option value="transfer" {{ old('metode') == 'transfer' ? 'selected' : '' }}>Transfer</option>
-                        <option value="lain-lain" {{ old('metode') == 'lain-lain' ? 'selected' : '' }}>Lain-lain</option>
-                        <option value="cash" {{ old('metode') == 'cash' ? 'selected' : '' }}>Cash</option>
+                        @foreach(\App\Support\PaymentMethod::options() as $methodValue => $methodLabel)
+                        <option value="{{ $methodValue }}" {{ old('metode') == $methodValue ? 'selected' : '' }}>{{ $methodLabel }}</option>
+                        @endforeach
                     </select>
                     @error('metode')
                     <small class="text-danger">{{ $message }}</small>
@@ -104,6 +101,30 @@
                 <div class="col-md-4">
                     <label for="price_ppn" class="form-label">PBJT (Rp.)</label>
                     <input type="text" id="price_ppn" class="form-control" disabled value="">
+                </div>
+            </div>
+
+            <div class="form-group row mb-3">
+                <div class="col-md-4 payment-card-fields d-none">
+                    <label for="nama_kartu" class="form-label"><sup class="text-danger">*</sup>Nama Rekening / Pemilik Kartu</label>
+                    <input type="text" name="nama_kartu" id="nama_kartu" class="form-control" value="{{ old('nama_kartu') }}" placeholder="Nama pemilik rekening">
+                    @error('nama_kartu')
+                    <small class="text-danger">{{ $message }}</small>
+                    @enderror
+                </div>
+                <div class="col-md-4 payment-card-fields d-none">
+                    <label for="no_kartu" class="form-label"><sup class="text-danger">*</sup>No Kartu / No Rekening</label>
+                    <input type="text" name="no_kartu" id="no_kartu" class="form-control" value="{{ old('no_kartu') }}" placeholder="No kartu atau rekening">
+                    @error('no_kartu')
+                    <small class="text-danger">{{ $message }}</small>
+                    @enderror
+                </div>
+                <div class="col-md-4 payment-card-fields d-none">
+                    <label for="bank" class="form-label"><sup class="text-danger">*</sup>Bank</label>
+                    <input type="text" name="bank" id="bank" class="form-control" value="{{ old('bank') }}" placeholder="Contoh: BCA">
+                    @error('bank')
+                    <small class="text-danger">{{ $message }}</small>
+                    @enderror
                 </div>
             </div>
 
@@ -371,6 +392,25 @@
         $('#membership').on('change', function() {
             calculateAndDisplayPrice();
         });
+
+        function togglePaymentCardFields() {
+            var metode = $('#metode').val();
+            var isCardMethod = metode === 'debit' || metode === 'kredit';
+
+            if (isCardMethod) {
+                $('.payment-card-fields').removeClass('d-none');
+                $('#nama_kartu, #no_kartu, #bank').attr('required', 'required');
+                return;
+            }
+
+            $('.payment-card-fields').addClass('d-none');
+            $('#nama_kartu, #no_kartu, #bank').removeAttr('required').val('');
+        }
+
+        if ($('#metode').length) {
+            $('#metode').on('change', togglePaymentCardFields);
+            togglePaymentCardFields();
+        }
 
         // ========================================================
         // LOGIC PREVIEW GAMBAR (BERJALAN DI CREATE & EDIT)

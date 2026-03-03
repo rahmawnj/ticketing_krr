@@ -15,6 +15,7 @@ use App\Imports\MemberImport;
 use App\Models\DetailTransaction;
 use App\Models\HistoryMembership;
 use App\Models\WhatsappNotificationLog;
+use App\Support\PaymentMethod;
 use App\Exports\MemberExport;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -22,6 +23,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\File;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\Response;
+use Illuminate\Validation\Rule;
 use Yajra\DataTables\Facades\DataTables;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -50,6 +52,11 @@ class MemberController extends Controller
         if ($request->ajax()) {
            $filter = $request->get('filter', 'all');
            $membershipId = (int) $request->get('membership_id', 0);
+           $statusFilter = (string) $request->get('status_filter', 'all');
+           $allowedStatusFilters = ['all', 'active', 'expired'];
+           if (!in_array($statusFilter, $allowedStatusFilters, true)) {
+               $statusFilter = 'all';
+           }
 
             // 2. Tentukan basis query
             $data = Member::with('membership')->orderBy('nama', 'asc');
@@ -66,7 +73,19 @@ class MemberController extends Controller
             if ($membershipId > 0) {
                 $data->where('membership_id', $membershipId);
             }
-            $suspendDays = max((int) Setting::valueOf('member_suspend_after_days', 0), 0);
+            $today = Carbon::now('Asia/Jakarta')->startOfDay();
+
+            if ($statusFilter === 'active') {
+                $data
+                    ->whereDate('tgl_expired', '>=', $today->toDateString())
+                    ->where('is_active', 1);
+            } elseif ($statusFilter === 'expired') {
+                $data->where(function ($query) use ($today) {
+                    $query
+                        ->where('is_active', '!=', 1)
+                        ->orWhereDate('tgl_expired', '<', $today->toDateString());
+                });
+            }
 
             return DataTables::eloquent($data)
                 ->addIndexColumn()
@@ -97,35 +116,25 @@ class MemberController extends Controller
                ->addColumn('member_code', function ($row) {
                     return $row->display_member_code ?? '-';
                 })
-               ->editColumn('expired', function ($row) use ($suspendDays) {
-                    if ($row->lifecycle_status === 'expired') {
-                        return '<span class="badge bg-danger fs-12px">Expired &gt; ' . $suspendDays . ' Hari</span>';
-                    }
+               ->editColumn('expired', function ($row) {
+                    $today = Carbon::now('Asia/Jakarta')->startOfDay();
+                    $expiredAt = Carbon::parse($row->tgl_expired)->startOfDay();
+                    $isActive = ((int) $row->is_active === 1) && $expiredAt->greaterThanOrEqualTo($today);
 
-                    if ($row->lifecycle_status === 'suspend') {
-                        return '<span class="badge bg-warning text-dark fs-12px">Suspend</span>';
-                    }
-
-                    if ($row->lifecycle_status === 'inactive') {
-                        return '<span class="badge fs-12px bg-secondary">Inactive</span>';
-                    }
-
-                    return '<span class="badge fs-12px bg-success">Active</span>';
+                    return $isActive
+                        ? '<span class="badge fs-12px bg-success">Active</span>'
+                        : '<span class="badge fs-12px bg-danger">Expired</span>';
                 })
                 ->editColumn('masa_berlaku', function ($row) {
                     return Carbon::parse($row->tgl_register)->format('d/m/Y') . ' - ' . Carbon::parse($row->tgl_expired)->format('d/m/Y');
                 })
-                ->editColumn('sisa_hari', content: function ($row) use ($suspendDays) {
+                ->editColumn('sisa_hari', content: function ($row) {
                     $today = Carbon::now('Asia/Jakarta')->startOfDay();
                     $expiredAt = Carbon::parse($row->tgl_expired)->startOfDay();
                     $sisa = $today->diffInDays($expiredAt, false);
 
                     if ($sisa < 0) {
-                        if ($row->days_after_expired <= $suspendDays) {
-                            return '<span class="badge bg-warning text-dark rounded-0 fs-11px">H+' . $row->days_after_expired . ' (Suspend)</span>';
-                        }
-
-                        return '<span class="badge bg-danger rounded-0 fs-11px">Expired &gt; ' . $suspendDays . ' Hari</span>';
+                        return '<span class="badge bg-danger rounded-0 fs-11px">Expired</span>';
                     }
 
                     return $sisa . ' Hari';
@@ -164,11 +173,12 @@ class MemberController extends Controller
     {
         $filter = $request->get('filter', 'all');
         $membershipId = (int) $request->get('membership_id', 0);
+        $statusFilter = (string) $request->get('status_filter', 'all');
 
         $filename = 'member_export_' . now('Asia/Jakarta')->format('Ymd_His') . '.xlsx';
 
         return Excel::download(
-            new MemberExport($filter, $membershipId),
+            new MemberExport($filter, $membershipId, $statusFilter),
             $filename
         );
     }
@@ -296,13 +306,21 @@ public function store(CreateMemberRequest $request)
             $basePricePerMember = (float) $membership->price;
             $ppnAmount = $membership->use_ppn ? ((float) $membership->ppn) : 0;
             $validatedPayment = $request->validate([
-                'metode' => 'required|in:cash,debit,kredit,qris,transfer,tap,lain-lain',
+                'metode' => ['required', Rule::in(PaymentMethod::coreValidationValues())],
             ]);
 
             $now = Carbon::now('Asia/Jakarta');
             $notrx = Transaction::nextNoTrxByType('registration', $now);
 
-            $metode = strtolower((string) $validatedPayment['metode']);
+            $metode = PaymentMethod::normalize($validatedPayment['metode']);
+            $isCardMethod = in_array($metode, ['debit', 'kredit'], true);
+            if ($isCardMethod) {
+                $request->validate([
+                    'nama_kartu' => 'required|string|max:100',
+                    'no_kartu' => 'required|string|max:100',
+                    'bank' => 'required|string|max:100',
+                ]);
+            }
 
             $transaction = Transaction::create([
                 'user_id' => auth()->id() ?? 1,
@@ -318,6 +336,9 @@ public function store(CreateMemberRequest $request)
                 'status' => 'open',
                 'is_active' => 1,
                 'metode' => $metode,
+                'nama_kartu' => $isCardMethod ? $request->nama_kartu : null,
+                'no_kartu' => $isCardMethod ? $request->no_kartu : null,
+                'bank' => $isCardMethod ? $request->bank : null,
                 'ticket_id'=> $membership->id,
                 'member_id' => $member->id,
                 'member_info' => $member->nama . ' - ' . $member->no_hp
@@ -478,7 +499,7 @@ public function update(UpdateMemberRequest $request, Member $member)
                     $basePricePerMember = (float) $membership->price; // Harga dasar per member
                     $ppnAmount = $membership->use_ppn ? ((float) $membership->ppn) : 0;
                     $validatedPayment = $request->validate([
-                        'metode' => 'required|in:cash,debit,kredit,qris,transfer,tap,lain-lain',
+                        'metode' => ['required', Rule::in(PaymentMethod::coreValidationValues())],
                     ]);
 
                     $now = Carbon::now('Asia/Jakarta');
@@ -487,7 +508,15 @@ public function update(UpdateMemberRequest $request, Member $member)
                     $tipeTransaksi = ($totalMembersRegistered > 1) ? 'group' : 'individual';
                     $ticketCode = Transaction::buildTicketCodeByType('registration', $now, $notrx);
 
-                    $metode = strtolower((string) $validatedPayment['metode']);
+                    $metode = PaymentMethod::normalize($validatedPayment['metode']);
+                    $isCardMethod = in_array($metode, ['debit', 'kredit'], true);
+                    if ($isCardMethod) {
+                        $request->validate([
+                            'nama_kartu' => 'required|string|max:100',
+                            'no_kartu' => 'required|string|max:100',
+                            'bank' => 'required|string|max:100',
+                        ]);
+                    }
 
                     $transaction = Transaction::create([
                         'user_id' => auth()->id() ?? 1,
@@ -503,6 +532,9 @@ public function update(UpdateMemberRequest $request, Member $member)
                         'status' => 'open',
                         'is_active' => 1,
                         'metode' => $metode,
+                        'nama_kartu' => $isCardMethod ? $request->nama_kartu : null,
+                        'no_kartu' => $isCardMethod ? $request->no_kartu : null,
+                        'bank' => $isCardMethod ? $request->bank : null,
                         'ticket_id'=> $membership->id,
                         'member_id' => $member->id,
                         'member_info' => $member->nama . ' - ' . $member->no_hp
@@ -868,13 +900,7 @@ public function getRenewableMembers(Request $request)
     $suspendAfterDays = max((int) ($setting->member_suspend_after_days ?? 0), 0);
     $reactivationAdminFee = max((int) ($setting->member_reactivation_admin_fee ?? 0), 0);
 
-    // 2. Hitung tanggal batas (Hari ini + X hari dari setting)
-    $limitDate = Carbon::now('Asia/Jakarta')->addDays($suspendBeforeDays)->format('Y-m-d');
-
-    $data = Member::with('membership')
-        ->where('tgl_expired', '<=', $limitDate)
-        ->where('parent_id', 0)
-        ->orderBy('tgl_expired', 'asc');
+    $data = $this->renewableMembersQuery($suspendBeforeDays);
 
     return DataTables::eloquent($data)
         ->filter(function ($query) use ($request) {
@@ -941,8 +967,10 @@ public function getRenewableMembers(Request $request)
             $renewalMode = $isRenewalBaru ? 'renewal_baru' : 'renewal';
 
             $detailRoute = route('members.show', $row->id);
+            $noticePdfRoute = route('members.download_renewal_notice_member', ['member' => $row->id, 'format' => 'pdf']);
 
-            return '<button type="button"
+            return '<div class="d-inline-flex flex-wrap gap-1">
+                    <button type="button"
                         class="btn btn-sm btn-info btn-member-detail me-1"
                         data-route="' . $detailRoute . '">
                         <i class="fa fa-eye"></i> Detail
@@ -957,16 +985,202 @@ public function getRenewableMembers(Request $request)
                         data-renewal-mode="' . $renewalMode . '"
                         data-price="' . $formattedPrice . '">
                         <i class="fa fa-sync"></i> ' . $buttonLabel . '
-                    </button>';
+                    </button>
+                    <a href="' . $noticePdfRoute . '"
+                        class="btn btn-sm btn-outline-secondary">
+                        <i class="fa fa-download"></i> Download PDF
+                    </a>
+                </div>';
         })
         ->rawColumns(['action', 'renewal_status'])
         ->make(true);
 }
 
+public function downloadSingleRenewalNotice(Request $request, Member $member)
+{
+    $format = (string) $request->route('format', 'preview');
+    if (!in_array($format, ['preview', 'pdf'], true)) {
+        abort(404);
+    }
+
+    $setting = Setting::asObject();
+    $suspendBeforeDays = max((int) ($setting->member_suspend_before_days ?? 7), 1);
+    $suspendAfterDays = max((int) ($setting->member_suspend_after_days ?? 0), 0);
+    $reactivationAdminFee = max((int) ($setting->member_reactivation_admin_fee ?? 0), 0);
+
+    $member->loadMissing('membership');
+    $expiredAt = Carbon::parse($member->tgl_expired)->startOfDay();
+    $limitDate = Carbon::now('Asia/Jakarta')->addDays($suspendBeforeDays)->startOfDay();
+
+    if ((int) $member->parent_id !== 0 || (int) $member->membership_id === 0 || !$member->membership || $expiredAt->greaterThan($limitDate)) {
+        return redirect()->route('members.bulk_renew')->with('error', 'Member tidak valid untuk reminder perpanjangan.');
+    }
+
+    $notices = $this->buildRenewalNoticeRows(collect([$member]), $suspendAfterDays, $reactivationAdminFee);
+    if (empty($notices)) {
+        return redirect()->route('members.bulk_renew')->with('error', 'Data reminder member tidak ditemukan.');
+    }
+
+    $noticeContent = $this->renewalNoticeContent();
+    $logoData = $this->resolveRenewalNoticeLogoData($setting);
+
+    if ($format === 'pdf') {
+        $filename = 'renewal_notice_' . Str::slug((string) ($member->nama ?? 'member')) . '_' . now('Asia/Jakarta')->format('Ymd_His') . '.pdf';
+
+        return Pdf::loadView('member.renewal_notice_download', [
+            'notices' => $notices,
+            'logoData' => $logoData,
+            'noticeContent' => $noticeContent,
+            'autoPrint' => false,
+        ])->setPaper('a4', 'portrait')->download($filename);
+    }
+
+    return response()->view('member.renewal_notice_download', [
+        'notices' => $notices,
+        'logoData' => $logoData,
+        'noticeContent' => $noticeContent,
+        'autoPrint' => true,
+    ], 200, [
+        'Content-Type' => 'text/html; charset=UTF-8',
+    ]);
+}
+
+public function downloadRenewalNotice(Request $request)
+{
+    $validated = $request->validate([
+        'mode' => 'required|in:selected,all',
+        'member_ids' => 'nullable|array',
+        'member_ids.*' => 'integer|exists:members,id',
+    ]);
+
+    $setting = Setting::asObject();
+    $suspendBeforeDays = max((int) ($setting->member_suspend_before_days ?? 7), 1);
+    $suspendAfterDays = max((int) ($setting->member_suspend_after_days ?? 0), 0);
+    $reactivationAdminFee = max((int) ($setting->member_reactivation_admin_fee ?? 0), 0);
+
+    $query = $this->renewableMembersQuery($suspendBeforeDays);
+
+    if ($validated['mode'] === 'selected') {
+        $selectedIds = collect($validated['member_ids'] ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->unique()
+            ->values();
+
+        if ($selectedIds->isEmpty()) {
+            return back()->with('error', 'Pilih minimal 1 member untuk download reminder.');
+        }
+
+        $query->whereIn('id', $selectedIds->all());
+    }
+
+    $members = $query->get()->filter(function ($member) {
+        return $member->membership_id != 0 && $member->membership;
+    })->values();
+
+    if ($members->isEmpty()) {
+        return back()->with('error', 'Data member renewal tidak ditemukan.');
+    }
+
+    $notices = $this->buildRenewalNoticeRows($members, $suspendAfterDays, $reactivationAdminFee);
+    $noticeContent = $this->renewalNoticeContent();
+
+    $logoData = $this->resolveRenewalNoticeLogoData($setting);
+
+    $html = view('member.renewal_notice_download', [
+        'notices' => $notices,
+        'logoData' => $logoData,
+        'noticeContent' => $noticeContent,
+        'autoPrint' => false,
+    ])->render();
+
+    $filename = 'renewal_notice_' . now('Asia/Jakarta')->format('Ymd_His') . '.html';
+
+    return response($html, 200, [
+        'Content-Type' => 'text/html; charset=UTF-8',
+        'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+    ]);
+}
+
+private function buildRenewalNoticeRows($members, int $suspendAfterDays, int $reactivationAdminFee): array
+{
+    $today = Carbon::now('Asia/Jakarta')->startOfDay();
+
+    return collect($members)
+        ->filter(function ($member) {
+            return $member && $member->membership_id != 0 && $member->membership;
+        })
+        ->map(function ($member) use ($today, $suspendAfterDays, $reactivationAdminFee) {
+            $expiredAt = Carbon::parse($member->tgl_expired)->startOfDay();
+            $daysAfterExpired = $today->greaterThan($expiredAt) ? $expiredAt->diffInDays($today) : 0;
+            $isRenewalBaru = $daysAfterExpired > $suspendAfterDays;
+
+            $basePrice = (float) ($member->membership->price ?? 0);
+            $ppnAmount = (int) ($member->membership->use_ppn ?? 0) === 1 ? (float) ($member->membership->ppn ?? 0) : 0;
+            $adminFee = $isRenewalBaru ? $reactivationAdminFee : 0;
+            $totalPrice = $basePrice + $ppnAmount + $adminFee;
+
+            return [
+                'member_name' => (string) ($member->nama ?? '-'),
+                'membership_name' => (string) ($member->membership->name ?? '-'),
+                'expired_date' => $expiredAt->format('d/m/Y'),
+                'due_date' => $expiredAt->format('d/m/Y'),
+                'base_price' => $basePrice,
+                'ppn_amount' => $ppnAmount,
+                'admin_fee' => $adminFee,
+                'total_price' => $totalPrice,
+                'is_renewal_baru' => $isRenewalBaru,
+            ];
+        })
+        ->values()
+        ->all();
+}
+
+private function renewalNoticeContent(): array
+{
+    return [
+        'club_name' => (string) Setting::valueOf('renewal_notice_club_name', 'Sport Club Anwa Puri'),
+        'bank_account' => (string) Setting::valueOf('renewal_notice_bank_account', 'TRANSFER BANK: BCA 0289011155 A/N PT KARTUNINDO PERKASA ABADI'),
+        'admin_phone' => (string) Setting::valueOf('renewal_notice_admin_phone', '0821 2222 9358'),
+        'body_template' => (string) Setting::valueOf(
+            'renewal_notice_body_template',
+            "Yth. Bapak/Ibu :member_name,\n\nKami informasikan bahwa masa aktif membership Anda akan berakhir pada :expired_date.\n\nAgar tetap dapat menikmati seluruh fasilitas, mohon melakukan perpanjangan dengan rincian:\n\nTipe Member: :membership_name\nBiaya: :total_price\nJatuh tempo: :due_date\n:note_block\nSilakan melakukan pembayaran sebelum jatuh tempo agar membership tetap aktif.\n\n:bank_account\n\nJika sudah melakukan pembayaran, harap informasi dan kirim bukti pembayaran ke nomor Admin.\nTerima kasih.\n\nAdmin\n:club_name\nNo.Hp: :admin_phone"
+        ),
+    ];
+}
+
+private function renewableMembersQuery(int $suspendBeforeDays)
+{
+    $limitDate = Carbon::now('Asia/Jakarta')->addDays($suspendBeforeDays)->format('Y-m-d');
+
+    return Member::with('membership')
+        ->where('tgl_expired', '<=', $limitDate)
+        ->where('parent_id', 0)
+        ->orderBy('tgl_expired', 'asc');
+}
+
+private function resolveRenewalNoticeLogoData(object $setting): ?string
+{
+    if (empty($setting->logo)) {
+        return null;
+    }
+
+    $logoPath = storage_path('app/public/' . ltrim((string) $setting->logo, '/'));
+    if (!is_file($logoPath)) {
+        return null;
+    }
+
+    $ext = strtolower((string) pathinfo($logoPath, PATHINFO_EXTENSION));
+    $mime = in_array($ext, ['jpg', 'jpeg'], true) ? 'image/jpeg' : ($ext === 'gif' ? 'image/gif' : 'image/png');
+    $data = base64_encode((string) file_get_contents($logoPath));
+
+    return 'data:' . $mime . ';base64,' . $data;
+}
+
 public function processBulkRenew(Request $request)
 {
     $validatedPayment = $request->validate([
-        'metode' => 'required|in:cash,debit,kredit,qris,transfer,tap,lain-lain',
+        'metode' => ['required', Rule::in(PaymentMethod::coreValidationValues())],
         'renewal_mode' => 'nullable|in:renewal,renewal_baru',
     ]);
 
@@ -1084,7 +1298,15 @@ public function processBulkRenew(Request $request)
 
         $tipeTransaksi = $successCount > 1 ? 'group' : 'individual';
 
-        $metode = strtolower((string) $validatedPayment['metode']);
+        $metode = PaymentMethod::normalize($validatedPayment['metode']);
+        $isCardMethod = in_array($metode, ['debit', 'kredit'], true);
+        if ($isCardMethod) {
+            $request->validate([
+                'nama_kartu' => 'required|string|max:100',
+                'no_kartu' => 'required|string|max:100',
+                'bank' => 'required|string|max:100',
+            ]);
+        }
 
         $transaction = Transaction::create([
             'user_id' => auth()->user()->id,
@@ -1100,6 +1322,9 @@ public function processBulkRenew(Request $request)
             'is_active' => 1,
             'tipe' => $tipeTransaksi,
             'metode' => $metode,
+            'nama_kartu' => $isCardMethod ? $request->nama_kartu : null,
+            'no_kartu' => $isCardMethod ? $request->no_kartu : null,
+            'bank' => $isCardMethod ? $request->bank : null,
             'ticket_id' => $member->membership_id,
             'member_id' => $firstParentMember ? $firstParentMember->id : null,
             'member_info' => $firstParentMember ? ($firstParentMember->nama . ' - ' . $firstParentMember->no_hp) : null

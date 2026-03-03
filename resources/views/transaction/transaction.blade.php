@@ -35,10 +35,6 @@ date_default_timezone_set('Asia/Jakarta')
                     </span>
                 </span>
                 <div style="display: flex;font-weight: 900; justify-content: space-between; margin-left: 10px; margin-right: 10px;">
-                    <span>Jumlah Jenis : </span>
-                    <span>{{ $jumlahJenis }}</span>
-                </div>
-                <div style="display: flex;font-weight: 900; justify-content: space-between; margin-left: 10px; margin-right: 10px;">
                     <span>Jumlah Ticket : </span>
                     <span>{{ $jumlahTicket }}</span>
                 </div>

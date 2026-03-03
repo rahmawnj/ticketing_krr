@@ -11,9 +11,11 @@ use App\Models\Penyewaan;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
 use App\Models\HistoryPenyewaan;
+use App\Support\PaymentMethod;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
+use Illuminate\Validation\Rule;
 use Yajra\DataTables\Facades\DataTables;
 
 class PenyewaanController extends Controller
@@ -80,7 +82,7 @@ public function store(Request $request)
         $request->validate([
             'ticket' => 'required|numeric',
             'qty' => 'required|numeric',
-            'metode' => 'required|in:cash,debit,qris,kredit,transfer,tap,lain-lain,qr,credit',
+            'metode' => ['required', Rule::in(PaymentMethod::coreValidationValues())],
             'jumlah' => 'required|string',
             'harga_ticket' => 'nullable|string',
             'jam' => 'nullable|numeric|min:1',
@@ -89,11 +91,22 @@ public function store(Request $request)
             'kembali' => 'nullable|string',
             // Validasi RFID jika metode tap
             'name' => 'nullable|string',
+            'nama_kartu' => 'nullable|string|max:100',
+            'no_kartu' => 'nullable|string|max:100',
+            'bank' => 'nullable|string|max:100',
         ]);
 
         DB::beginTransaction();
         $now = Carbon::now('Asia/Jakarta');
-        $metode = $this->normalizePaymentMethod($request->metode);
+        $metode = PaymentMethod::normalize($request->metode);
+        $isCardMethod = in_array($metode, ['debit', 'kredit'], true);
+        if ($isCardMethod) {
+            $request->validate([
+                'nama_kartu' => 'required|string|max:100',
+                'no_kartu' => 'required|string|max:100',
+                'bank' => 'required|string|max:100',
+            ]);
+        }
 
         $ticketData = Sewa::findOrFail($request->ticket);
         $qty = (int) $request->qty;
@@ -111,23 +124,31 @@ public function store(Request $request)
             $endTime = $startTimeObj->copy()->addMinutes((int) round($jamSewa * 60))->format('H:i');
         }
 
-        // Harga per-item dari form (editable). Jika kosong, fallback ke harga default item.
+        // Harga per-item dari form diperlakukan sebagai DPP (sebelum PBJT).
         $hargaTicketInput = (int) str_replace('.', '', (string) $request->harga_ticket);
-        $defaultHargaPerItem = (int) $ticketData->harga + ((int) $ticketData->use_ppn === 1 ? (int) $ticketData->ppn : 0);
+        $defaultHargaPerItem = (int) $ticketData->harga;
         $isNominalFlexible = (int) ($ticketData->is_nominal_flexible ?? 0) === 1;
+        $usePpn = (int) ($ticketData->use_ppn ?? 0) === 1;
 
-        // Keamanan: jika dynamic price nonaktif, abaikan input harga dari client.
-        $grossPerItem = $defaultHargaPerItem;
-        if ($isNominalFlexible && $hargaTicketInput > 0) {
-            $grossPerItem = $hargaTicketInput;
+        $setting = Setting::asObject();
+        $defaultPpnRate = max((float) (($setting->ppn ?? 0) / 100), 0.0);
+        $ppnRate = $defaultPpnRate;
+        if ($usePpn && (float) $ticketData->harga > 0) {
+            // Prioritas pakai rasio PBJT dari master item agar tetap konsisten per item.
+            $ppnRate = max((float) $ticketData->ppn / (float) $ticketData->harga, 0.0);
         }
 
-        // Simpan struktur lama: bayar(net) + ppn, tapi total tetap mengikuti harga editable.
-        $ppnPerItem = ((int) $ticketData->use_ppn === 1) ? (float) $ticketData->ppn : 0;
-        $netPerItem = max(0, $grossPerItem - $ppnPerItem);
-        $basePrice = $netPerItem * $qty;      // net total
-        $ppnAmount = $ppnPerItem * $qty;      // pbjt total
-        $grossAmountTotal = $grossPerItem * $qty; // total akhir sesuai form
+        // Keamanan: jika dynamic price nonaktif, abaikan input harga dari client.
+        $basePerItem = $defaultHargaPerItem;
+        if ($isNominalFlexible && $hargaTicketInput > 0) {
+            $basePerItem = $hargaTicketInput;
+        }
+
+        // Untuk dynamic price, PBJT ikut kalkulasi otomatis dari DPP input.
+        $ppnPerItem = $usePpn ? (float) round($basePerItem * $ppnRate) : 0.0;
+        $basePrice = max(0, $basePerItem * $qty); // net total (DPP)
+        $ppnAmount = max(0, $ppnPerItem * $qty);  // PBJT total
+        $grossAmountTotal = $basePrice + $ppnAmount; // total akhir
 
         // ================== TRANSACTION ==================
 
@@ -188,6 +209,9 @@ public function store(Request $request)
             'transaction_type' => 'rental',
             'tipe' => 'individual',
                 'metode' => $metode,
+            'nama_kartu' => $isCardMethod ? $request->nama_kartu : null,
+            'no_kartu' => $isCardMethod ? $request->no_kartu : null,
+            'bank' => $isCardMethod ? $request->bank : null,
             'amount' => $request->qty,       // harga bersih (net price)
             'bayar' => $basePrice,       // Total dibayar (gross price)
             'status' => 'open',
@@ -228,6 +252,9 @@ public function store(Request $request)
             'transaction_type' => 'rental',
             'tipe' => 'individual',
                 'metode' => $metode,
+            'nama_kartu' => $isCardMethod ? $request->nama_kartu : null,
+            'no_kartu' => $isCardMethod ? $request->no_kartu : null,
+            'bank' => $isCardMethod ? $request->bank : null,
             'amount' => $request->qty,       // harga bersih (net price)
             'bayar' => $basePrice,       // Total dibayar (gross price)
             'status' => 'open',
@@ -300,16 +327,5 @@ public function store(Request $request)
         $tickets = Sewa::get();
 
         return view('penyewaan.create', compact('title', 'breadcrumbs', 'tickets'));
-    }
-
-    private function normalizePaymentMethod(?string $method): string
-    {
-        $normalized = strtolower(trim((string) $method));
-
-        return match ($normalized) {
-            'qr' => 'qris',
-            'credit', 'credit card', 'kartu kredit' => 'kredit',
-            default => $normalized,
-        };
     }
 }

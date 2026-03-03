@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Feb 26, 2026 at 11:08 AM
+-- Generation Time: Feb 27, 2026 at 02:31 PM
 -- Server version: 11.4.9-MariaDB-cll-lve
 -- PHP Version: 8.4.17
 
@@ -102,7 +102,9 @@ INSERT INTO `detail_transactions` (`id`, `transaction_id`, `ticket_id`, `qty`, `
 (88, 65, 14, 1, 100000, 0.00, '2026-02-24 08:29:20', '2026-02-24 08:29:20', 'TKT20260224152920899', 'open', 0, NULL, NULL, 0),
 (89, 66, 8, 1, 45000, 0.00, '2026-02-24 08:29:45', '2026-02-24 08:29:45', 'TKT20260224152945895', 'open', 0, NULL, NULL, 0),
 (90, 67, 14, 1, 100000, 0.00, '2026-02-24 08:34:54', '2026-02-24 08:34:54', 'TKT20260224153454654', 'open', 0, NULL, NULL, 0),
-(91, 68, 14, 1, 100000, 0.00, '2026-02-24 08:47:25', '2026-02-24 08:47:25', 'TKT20260224154725288', 'open', 0, NULL, NULL, 0);
+(91, 68, 14, 1, 100000, 0.00, '2026-02-24 08:47:25', '2026-02-24 08:47:25', 'TKT20260224154725288', 'open', 0, NULL, NULL, 0),
+(92, 71, 13, 2, 40000, 0.00, '2026-02-26 09:02:26', '2026-02-26 09:02:30', 'TKT20260226160226333', 'open', 0, NULL, NULL, 0),
+(93, 71, 9, 1, 60000, 0.00, '2026-02-26 09:02:27', '2026-02-26 09:02:27', 'TKT20260226160227846', 'open', 0, NULL, NULL, 0);
 
 -- --------------------------------------------------------
 
@@ -344,27 +346,28 @@ CREATE TABLE `members` (
   `updated_at` timestamp NULL DEFAULT NULL,
   `limit` int(11) NOT NULL DEFAULT 0,
   `jenis_member` varchar(50) DEFAULT NULL,
-  `access_used` int(11) NOT NULL DEFAULT 0
+  `access_used` int(11) NOT NULL DEFAULT 0,
+  `member_code` varchar(30) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `members`
 --
 
-INSERT INTO `members` (`id`, `parent_id`, `membership_id`, `rfid`, `no_ktp`, `no_hp`, `nama`, `alamat`, `tgl_lahir`, `tgl_register`, `tgl_expired`, `saldo`, `is_active`, `jenis_kelamin`, `image_profile`, `qr_code`, `created_at`, `updated_at`, `limit`, `jenis_member`, `access_used`) VALUES
-(1, 0, 2, NULL, '3277654567825678', '089687695437', 'Budi', 'Jl. Melati No. 123, Jakarta', '2026-01-30', '2026-01-30', '2026-04-30', 0, 1, 'L', NULL, 'MBRBVCAWZRZ7WXN2', '2026-01-30 08:48:59', '2026-01-30 08:48:59', 0, NULL, 0),
-(2, 1, 2, NULL, '3277654567825678', '089687695437', 'Dina', 'Jl. Melati No. 123, Jakarta', '2026-01-30', '2026-01-30', '2026-04-30', 0, 1, 'L', NULL, 'MBRVK4DFYKK4BCKU', '2026-01-30 08:48:59', '2026-01-30 08:48:59', 0, NULL, 0),
-(3, 1, 2, NULL, '3277654567825678', '089687695437', 'Andi', 'Jl. Melati No. 123, Jakarta', '2026-01-30', '2026-01-30', '2026-04-30', 0, 1, 'L', NULL, 'MBRPWQMAWVI7SSCF', '2026-01-30 08:48:59', '2026-01-30 08:48:59', 0, NULL, 0),
-(4, 1, 2, NULL, '3277654567825678', '089687695437', 'Rara', 'Jl. Melati No. 123, Jakarta', '2026-01-30', '2026-01-30', '2026-04-30', 0, 1, 'L', NULL, 'MBRJPG3DKVV3W5TO', '2026-01-30 08:48:59', '2026-01-30 08:48:59', 0, NULL, 0),
-(5, 0, 1, NULL, '32068780301554', '081222466665', 'Gigink Nugraha', 'Bandung (testing)', '2026-02-03', '2026-02-03', '2026-03-05', 0, 1, 'L', NULL, 'MBRUFID13SWRDICQ', '2026-02-03 06:26:33', '2026-02-03 06:26:33', 0, NULL, 0),
-(13, 0, 1, '723521', '1563165465', '09848465', 'kevin', 'jakarta', '2026-02-01', '2026-02-03', '2026-03-05', 0, 1, 'L', NULL, 'MBRJCBNWQFGP9HLD', '2026-02-03 06:50:14', '2026-02-03 06:50:14', 0, NULL, 0),
-(16, 0, 1, NULL, '320104042', '08887776665', 'Tralala', 'tvm', '2000-01-05', '2026-02-04', '2026-03-06', 0, 1, 'P', 'members/XyMrG8QLR020260204152839.png', 'MBREUB03OYAQDCIT', '2026-02-04 08:28:39', '2026-02-04 08:28:39', 0, NULL, 0),
-(17, 0, 3, '354736236', NULL, '2436464537698', 'Tenis Sport Club', 'sdfdxh mdfgdj', '2026-02-19', '2026-02-19', '2026-03-22', 0, 1, 'L', NULL, 'MBRAMQUYMRRNHRVR', '2026-02-19 05:34:29', '2026-02-19 05:34:29', 0, NULL, 0),
-(18, 17, 3, '4673523424', NULL, '2436464537698', 'hjvghncvn', 'sdfdxh mdfgdj', '2026-02-19', '2026-02-19', '2026-03-22', 0, 1, 'L', NULL, 'MBRVXHEWRT2U3TLA', '2026-02-19 05:34:29', '2026-02-19 05:34:29', 0, NULL, 0),
-(19, 17, 3, '542342424', NULL, '2436464537698', 'cvnvbmb', 'sdfdxh mdfgdj', '2026-02-19', '2026-02-19', '2026-03-22', 0, 1, 'L', NULL, 'MBRXRTPOMFNTNRRR', '2026-02-19 05:34:29', '2026-02-19 05:34:29', 0, NULL, 0),
-(20, 17, 3, '242365477', NULL, '2436464537698', 'fhfchjg', 'sdfdxh mdfgdj', '2026-02-19', '2026-02-19', '2026-03-22', 0, 1, 'L', NULL, 'MBRBPOULKJMZPB5O', '2026-02-19 05:34:29', '2026-02-19 05:34:29', 0, NULL, 0),
-(21, 17, 3, '343435465', NULL, '2436464537698', 'cjcgjkgkh', 'sdfdxh mdfgdj', '2026-02-19', '2026-02-19', '2026-03-22', 0, 1, 'L', NULL, 'MBRWAHTOSUBE7N8M', '2026-02-19 05:34:29', '2026-02-19 05:34:29', 0, NULL, 0),
-(22, 0, 1, NULL, NULL, '08887776543', 'abdi', 'dki jakarta', '2000-02-19', '2026-02-20', '2026-03-22', 0, 1, 'L', NULL, 'MBROJFQXSBKKZZ2J', '2026-02-20 03:05:21', '2026-02-21 06:07:10', 0, NULL, 17);
+INSERT INTO `members` (`id`, `parent_id`, `membership_id`, `rfid`, `no_ktp`, `no_hp`, `nama`, `alamat`, `tgl_lahir`, `tgl_register`, `tgl_expired`, `saldo`, `is_active`, `jenis_kelamin`, `image_profile`, `qr_code`, `created_at`, `updated_at`, `limit`, `jenis_member`, `access_used`, `member_code`) VALUES
+(1, 0, 2, NULL, '3277654567825678', '089687695437', 'Budi', 'Jl. Melati No. 123, Jakarta', '2026-01-30', '2026-01-30', '2026-04-30', 0, 1, 'L', NULL, 'MBRBVCAWZRZ7WXN2', '2026-01-30 08:48:59', '2026-01-30 08:48:59', 0, NULL, 0, ''),
+(2, 1, 2, NULL, '3277654567825678', '089687695437', 'Dina', 'Jl. Melati No. 123, Jakarta', '2026-01-30', '2026-01-30', '2026-04-30', 0, 1, 'L', NULL, 'MBRVK4DFYKK4BCKU', '2026-01-30 08:48:59', '2026-01-30 08:48:59', 0, NULL, 0, ''),
+(3, 1, 2, NULL, '3277654567825678', '089687695437', 'Andi', 'Jl. Melati No. 123, Jakarta', '2026-01-30', '2026-01-30', '2026-04-30', 0, 1, 'L', NULL, 'MBRPWQMAWVI7SSCF', '2026-01-30 08:48:59', '2026-01-30 08:48:59', 0, NULL, 0, ''),
+(4, 1, 2, NULL, '3277654567825678', '089687695437', 'Rara', 'Jl. Melati No. 123, Jakarta', '2026-01-30', '2026-01-30', '2026-04-30', 0, 1, 'L', NULL, 'MBRJPG3DKVV3W5TO', '2026-01-30 08:48:59', '2026-01-30 08:48:59', 0, NULL, 0, ''),
+(5, 0, 1, NULL, '32068780301554', '081222466665', 'Gigink Nugraha', 'Bandung (testing)', '2026-02-03', '2026-02-03', '2026-03-05', 0, 1, 'L', NULL, 'MBRUFID13SWRDICQ', '2026-02-03 06:26:33', '2026-02-03 06:26:33', 0, NULL, 0, ''),
+(13, 0, 1, '723521', '1563165465', '09848465', 'kevin', 'jakarta', '2026-02-01', '2026-02-03', '2026-03-05', 0, 1, 'L', NULL, 'MBRJCBNWQFGP9HLD', '2026-02-03 06:50:14', '2026-02-03 06:50:14', 0, NULL, 0, ''),
+(16, 0, 1, NULL, '320104042', '08887776665', 'Tralala', 'tvm', '2000-01-05', '2026-02-04', '2026-03-06', 0, 1, 'P', 'members/XyMrG8QLR020260204152839.png', 'MBREUB03OYAQDCIT', '2026-02-04 08:28:39', '2026-02-04 08:28:39', 0, NULL, 0, ''),
+(17, 0, 3, '354736236', NULL, '2436464537698', 'Tenis Sport Club', 'sdfdxh mdfgdj', '2026-02-19', '2026-02-19', '2026-03-22', 0, 1, 'L', NULL, 'MBRAMQUYMRRNHRVR', '2026-02-19 05:34:29', '2026-02-19 05:34:29', 0, NULL, 0, ''),
+(18, 17, 3, '4673523424', NULL, '2436464537698', 'hjvghncvn', 'sdfdxh mdfgdj', '2026-02-19', '2026-02-19', '2026-03-22', 0, 1, 'L', NULL, 'MBRVXHEWRT2U3TLA', '2026-02-19 05:34:29', '2026-02-19 05:34:29', 0, NULL, 0, ''),
+(19, 17, 3, '542342424', NULL, '2436464537698', 'cvnvbmb', 'sdfdxh mdfgdj', '2026-02-19', '2026-02-19', '2026-03-22', 0, 1, 'L', NULL, 'MBRXRTPOMFNTNRRR', '2026-02-19 05:34:29', '2026-02-19 05:34:29', 0, NULL, 0, ''),
+(20, 17, 3, '242365477', NULL, '2436464537698', 'fhfchjg', 'sdfdxh mdfgdj', '2026-02-19', '2026-02-19', '2026-03-22', 0, 1, 'L', NULL, 'MBRBPOULKJMZPB5O', '2026-02-19 05:34:29', '2026-02-19 05:34:29', 0, NULL, 0, ''),
+(21, 17, 3, '343435465', NULL, '2436464537698', 'cjcgjkgkh', 'sdfdxh mdfgdj', '2026-02-19', '2026-02-19', '2026-03-22', 0, 1, 'L', NULL, 'MBRWAHTOSUBE7N8M', '2026-02-19 05:34:29', '2026-02-19 05:34:29', 0, NULL, 0, ''),
+(22, 0, 1, NULL, NULL, '08887776543', 'abdi', 'dki jakarta', '2000-02-19', '2026-02-20', '2026-03-22', 0, 1, 'L', NULL, 'MBROJFQXSBKKZZ2J', '2026-02-20 03:05:21', '2026-02-21 06:07:10', 0, NULL, 17, '');
 
 -- --------------------------------------------------------
 
@@ -383,18 +386,19 @@ CREATE TABLE `memberships` (
   `ppn` decimal(12,2) NOT NULL DEFAULT 0.00,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
-  `max_access` int(11) NOT NULL DEFAULT 0
+  `max_access` int(11) NOT NULL DEFAULT 0,
+  `code` varchar(20) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `memberships`
 --
 
-INSERT INTO `memberships` (`id`, `name`, `duration_days`, `price`, `max_person`, `is_active`, `use_ppn`, `ppn`, `created_at`, `updated_at`, `max_access`) VALUES
-(1, 'Member Bulanan Reguler', 30, 150000, 1, 1, 0, 0.00, '2026-01-30 08:44:15', '2026-01-30 08:44:42', 0),
-(2, 'Family Pass 3 Bulan', 90, 500000, 4, 1, 1, 0.00, '2026-01-30 08:45:02', '2026-01-30 08:45:02', 0),
-(3, 'family 2 dewasa new', 31, 875000, 5, 1, 0, 0.00, '2026-02-03 06:43:24', '2026-02-03 06:43:24', 0),
-(5, 'Admin Membership', 30, 100000, 1, 1, 0, 0.00, '2026-02-05 07:13:02', '2026-02-20 04:22:45', 0);
+INSERT INTO `memberships` (`id`, `name`, `duration_days`, `price`, `max_person`, `is_active`, `use_ppn`, `ppn`, `created_at`, `updated_at`, `max_access`, `code`) VALUES
+(1, 'Member Bulanan Reguler', 30, 150000, 1, 1, 0, 0.00, '2026-01-30 08:44:15', '2026-01-30 08:44:42', 0, NULL),
+(2, 'Family Pass 3 Bulan', 90, 500000, 4, 1, 1, 0.00, '2026-01-30 08:45:02', '2026-01-30 08:45:02', 0, NULL),
+(3, 'family 2 dewasa new', 31, 875000, 5, 1, 0, 0.00, '2026-02-03 06:43:24', '2026-02-03 06:43:24', 0, NULL),
+(5, 'Admin Membership', 30, 100000, 1, 1, 0, 0.00, '2026-02-05 07:13:02', '2026-02-20 04:22:45', 0, NULL);
 
 -- --------------------------------------------------------
 
@@ -538,7 +542,10 @@ INSERT INTO `penyewaans` (`id`, `sewa_id`, `user_id`, `qty`, `metode`, `jumlah`,
 (4, 1, 1, 1, 'cash', 10000, NULL, NULL, NULL, '2026-02-04 06:32:25', '2026-02-04 06:32:25', 10000, 0),
 (5, 1, 1, 1, 'cash', 10000, NULL, NULL, NULL, '2026-02-05 07:40:39', '2026-02-05 07:40:39', 10000, 0),
 (6, 1, 1, 1, 'debit', 10000, NULL, '16:21:00', '18:21:00', '2026-02-16 09:21:14', '2026-02-16 09:21:14', 10000, 0),
-(7, 5, 1, 1, 'debit', 80000, 'Gazebo no 2', '15:41:00', '17:41:00', '2026-02-20 08:41:36', '2026-02-20 08:41:36', 80000, 0);
+(7, 5, 1, 1, 'debit', 80000, 'Gazebo no 2', '15:41:00', '17:41:00', '2026-02-20 08:41:36', '2026-02-20 08:41:36', 80000, 0),
+(8, 1, 1, 1, 'cash', 10000, NULL, '16:01:00', '18:01:00', '2026-02-26 09:01:52', '2026-02-26 09:01:52', 10000, 0),
+(9, 6, 1, 1, 'cash', 55000, NULL, '10:46:00', '12:46:00', '2026-02-27 03:46:38', '2026-02-27 03:46:38', 55000, 0),
+(10, 6, 1, 1, 'cash', 55000, NULL, '10:47:00', '12:47:00', '2026-02-27 03:47:08', '2026-02-27 03:47:08', 55000, 0);
 
 -- --------------------------------------------------------
 
@@ -673,15 +680,30 @@ CREATE TABLE `settings` (
   `use_logo` int(11) NOT NULL DEFAULT 1,
   `print_mode` varchar(20) NOT NULL DEFAULT 'per_qty',
   `dashboard_metric_mode` varchar(20) NOT NULL DEFAULT 'amount',
-  `whatsapp_enabled` tinyint(1) NOT NULL DEFAULT 0
+  `whatsapp_enabled` tinyint(1) NOT NULL DEFAULT 0,
+  `key` varchar(191) NOT NULL,
+  `value` text DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `settings`
 --
 
-INSERT INTO `settings` (`id`, `name`, `logo`, `ucapan`, `deskripsi`, `ppn`, `member_reminder_days`, `member_delete_grace_days`, `created_at`, `updated_at`, `use_logo`, `print_mode`, `dashboard_metric_mode`, `whatsapp_enabled`) VALUES
-(1, 'ANWA PURI RESIDENCE SPORT CLUB', 'logo/260216042041133.png', 'Terima kasih atas kunjungan anda', 'WA: 0812xxxx | IG: @sportclub_id', 0, 7, 0, NULL, '2026-02-20 07:24:21', 1, 'per_ticket', 'count', 0);
+INSERT INTO `settings` (`id`, `name`, `logo`, `ucapan`, `deskripsi`, `ppn`, `member_reminder_days`, `member_delete_grace_days`, `created_at`, `updated_at`, `use_logo`, `print_mode`, `dashboard_metric_mode`, `whatsapp_enabled`, `key`, `value`) VALUES
+(1, 'ANWA PURI RESIDENCE SPORT CLUB', 'logo/260216042041133.png', 'Terima kasih atas kunjungan anda', 'WA: 0812xxxx | IG: @sportclub_id', 0, 7, 0, NULL, '2026-02-20 07:24:21', 1, 'per_ticket', 'count', 0, '', NULL),
+(2, NULL, NULL, NULL, NULL, NULL, 7, 0, '2026-02-26 04:22:44', '2026-02-26 04:22:44', 1, 'per_qty', 'amount', 0, 'name', 'ANWA PURI RESIDENCE SPORT CLUB'),
+(3, NULL, NULL, NULL, NULL, NULL, 7, 0, '2026-02-26 04:22:44', '2026-02-26 04:22:44', 1, 'per_qty', 'amount', 0, 'ucapan', 'Terima kasih atas kunjungan anda'),
+(4, NULL, NULL, NULL, NULL, NULL, 7, 0, '2026-02-26 04:22:44', '2026-02-26 04:22:44', 1, 'per_qty', 'amount', 0, 'deskripsi', 'WA: 0812xxxx | IG: @sportclub_id'),
+(5, NULL, NULL, NULL, NULL, NULL, 7, 0, '2026-02-26 04:22:44', '2026-02-26 04:22:55', 1, 'per_qty', 'amount', 0, 'ppn', '10'),
+(6, NULL, NULL, NULL, NULL, NULL, 7, 0, '2026-02-26 04:22:44', '2026-02-26 04:22:44', 1, 'per_qty', 'amount', 0, 'member_suspend_before_days', '7'),
+(7, NULL, NULL, NULL, NULL, NULL, 7, 0, '2026-02-26 04:22:44', '2026-02-26 08:22:23', 1, 'per_qty', 'amount', 0, 'member_suspend_after_days', '30'),
+(8, NULL, NULL, NULL, NULL, NULL, 7, 0, '2026-02-26 04:22:44', '2026-02-26 04:22:51', 1, 'per_qty', 'amount', 0, 'member_reactivation_admin_fee', '2500'),
+(9, NULL, NULL, NULL, NULL, NULL, 7, 0, '2026-02-26 04:22:44', '2026-02-26 08:22:16', 1, 'per_qty', 'amount', 0, 'print_mode', 'per_ticket'),
+(10, NULL, NULL, NULL, NULL, NULL, 7, 0, '2026-02-26 04:22:44', '2026-02-26 08:22:19', 1, 'per_qty', 'amount', 0, 'ticket_print_orientation', 'landscape'),
+(11, NULL, NULL, NULL, NULL, NULL, 7, 0, '2026-02-26 04:22:44', '2026-02-26 08:22:11', 1, 'per_qty', 'amount', 0, 'dashboard_metric_mode', 'count'),
+(12, NULL, NULL, NULL, NULL, NULL, 7, 0, '2026-02-26 04:22:44', '2026-02-26 08:51:37', 1, 'per_qty', 'amount', 0, 'use_logo', '1'),
+(13, NULL, NULL, NULL, NULL, NULL, 7, 0, '2026-02-26 04:22:44', '2026-02-26 04:22:44', 1, 'per_qty', 'amount', 0, 'whatsapp_enabled', '0'),
+(14, NULL, NULL, NULL, NULL, NULL, 7, 0, '2026-02-26 04:22:44', '2026-02-26 08:51:37', 1, 'per_qty', 'amount', 0, 'logo', 'logo/260226155137829.png');
 
 -- --------------------------------------------------------
 
@@ -698,16 +720,19 @@ CREATE TABLE `sewa` (
   `use_ppn` tinyint(1) NOT NULL DEFAULT 0,
   `ppn` decimal(12,2) NOT NULL DEFAULT 0.00,
   `created_at` timestamp NULL DEFAULT NULL,
-  `updated_at` timestamp NULL DEFAULT NULL
+  `updated_at` timestamp NULL DEFAULT NULL,
+  `is_nominal_flexible` tinyint(1) NOT NULL DEFAULT 0,
+  `print_qr` tinyint(1) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `sewa`
 --
 
-INSERT INTO `sewa` (`id`, `name`, `harga`, `device`, `use_time`, `use_ppn`, `ppn`, `created_at`, `updated_at`) VALUES
-(1, 'Sewa Ban', 10000, 1, 1, 0, 0.00, '2026-01-30 07:32:23', '2026-02-20 04:22:42'),
-(5, 'Sewa Gazebo', 80000, 1, 1, 0, 0.00, '2026-02-20 08:41:11', '2026-02-20 08:41:11');
+INSERT INTO `sewa` (`id`, `name`, `harga`, `device`, `use_time`, `use_ppn`, `ppn`, `created_at`, `updated_at`, `is_nominal_flexible`, `print_qr`) VALUES
+(1, 'Sewa Ban', 10000, 1, 1, 0, 0.00, '2026-01-30 07:32:23', '2026-02-20 04:22:42', 0, 0),
+(5, 'Sewa Gazebo', 80000, 1, 1, 0, 0.00, '2026-02-20 08:41:11', '2026-02-20 08:41:11', 0, 0),
+(6, 'Sewa Gazebo 1 jam', 50000, 1, 1, 1, 5000.00, '2026-02-27 03:45:46', '2026-02-27 03:45:46', 0, 0);
 
 -- --------------------------------------------------------
 
@@ -815,83 +840,92 @@ CREATE TABLE `transactions` (
   `updated_at` timestamp NULL DEFAULT NULL,
   `is_print` int(11) DEFAULT 0,
   `bayar` double NOT NULL DEFAULT 0,
-  `kembali` double NOT NULL DEFAULT 0
+  `kembali` double NOT NULL DEFAULT 0,
+  `nama_kartu` varchar(100) DEFAULT NULL,
+  `no_kartu` varchar(100) DEFAULT NULL,
+  `bank` varchar(100) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `transactions`
 --
 
-INSERT INTO `transactions` (`id`, `ticket_id`, `member_id`, `member_info`, `user_id`, `no_trx`, `ticket_code`, `transaction_type`, `tipe`, `amount`, `disc`, `metode`, `discount`, `amount_scanned`, `status`, `gate`, `is_active`, `ppn`, `created_at`, `updated_at`, `is_print`, `bayar`, `kembali`) VALUES
-(1, 0, NULL, NULL, 1, 1, 'INV/30012026/2373', 'ticket', 'group', 2, 7000, 'cash', 10, 0, 'open', NULL, 1, 0.00, '2026-01-30 08:27:42', '2026-01-30 08:49:29', 0, 70000, 0),
-(2, 2, NULL, NULL, 1, 2, 'REG/300120261845', 'registration', 'group', 4, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-01-30 08:48:59', '2026-01-30 08:48:59', 0, 500000, 0),
-(3, 1, NULL, NULL, 1, 3, 'TKT/1769762959', 'rental', 'individual', 1, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-01-30 08:49:19', '2026-01-30 08:49:19', 0, 10000, 0),
-(4, 0, NULL, NULL, 1, 4, 'INV/30012026/3937', 'ticket', 'group', 2, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-01-30 08:49:33', '2026-01-30 09:47:25', 0, 35000, 0),
-(5, 0, NULL, NULL, 1, 5, 'INV/30012026/3659', 'ticket', 'group', 2, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-01-30 09:47:52', '2026-01-30 09:47:56', 0, 70000, 0),
-(6, 0, NULL, NULL, 1, 6, 'INV/30012026/3828', 'ticket', 'group', 4, 0, 'cash', 0, 4, 'closed', NULL, 1, 0.00, '2026-01-30 09:48:29', '2026-01-30 09:49:10', 0, 80000, 0),
-(7, 1, NULL, NULL, 1, 1, 'REG/030220267543', 'registration', 'individual', 1, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-02-03 06:26:33', '2026-02-03 06:26:33', 0, 150000, 0),
-(8, 1, NULL, NULL, 1, 2, 'REG/030220264587', 'registration', 'individual', 1, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-02-03 06:50:14', '2026-02-03 06:50:14', 0, 150000, 0),
-(9, 0, NULL, NULL, 1, 3, 'INV/03022026/5265', 'ticket', 'group', 1, 0, 'qris', 0, 1, 'closed', NULL, 1, 0.00, '2026-02-03 06:55:07', '2026-02-03 06:57:09', 0, 20000, 0),
-(10, 0, NULL, NULL, 1, 4, 'INV/03022026/3815', 'ticket', 'group', 25, 0, 'qris', 0, 0, 'open', NULL, 1, 0.00, '2026-02-03 06:56:03', '2026-02-03 06:59:59', 0, 500000, 0),
-(11, 0, NULL, NULL, 1, 5, 'INV/03022026/7444', 'ticket', 'group', 1, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-02-03 07:00:08', '2026-02-03 07:01:04', 0, 20000, 0),
-(12, 0, NULL, NULL, 1, 6, 'INV/03022026/8120', 'ticket', 'group', 1, 0, 'qris', 0, 1, 'closed', NULL, 1, 0.00, '2026-02-03 07:01:07', '2026-02-03 07:01:39', 0, 20000, 0),
-(13, 0, NULL, NULL, 1, 7, 'INV/03022026/7680', 'ticket', 'group', 0, 0, NULL, 0, 0, 'open', NULL, 0, 0.00, '2026-02-03 07:01:21', '2026-02-03 07:01:21', 0, 0, 0),
-(14, 0, NULL, NULL, 3, 8, 'INV/03022026/2658', 'ticket', 'group', 6, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-02-03 07:12:14', '2026-02-03 07:15:22', 0, 50000, 0),
-(15, 0, NULL, NULL, 3, 9, 'INV/03022026/3178', 'ticket', 'group', 0, 0, NULL, 0, 0, 'open', NULL, 0, 0.00, '2026-02-03 07:15:25', '2026-02-03 07:15:25', 0, 0, 0),
-(16, 0, NULL, NULL, 2, 10, 'INV/03022026/6686', 'ticket', 'group', 1, 0, 'qris', 0, 1, 'closed', NULL, 1, 0.00, '2026-02-03 08:10:32', '2026-02-03 08:11:23', 0, 45000, 0),
-(17, 0, NULL, NULL, 2, 11, 'INV/03022026/8821', 'ticket', 'group', 0, 0, NULL, 0, 0, 'open', NULL, 0, 0.00, '2026-02-03 08:10:48', '2026-02-03 08:10:48', 0, 0, 0),
-(18, 0, NULL, NULL, 1, 1, 'INV/04022026/1740', 'ticket', 'group', 0, 0, NULL, 0, 0, 'open', NULL, 0, 0.00, '2026-02-04 01:28:53', '2026-02-04 01:28:53', 0, 0, 0),
-(19, 2, NULL, NULL, 1, 12, 'TKT/1770169498', 'rental', 'individual', 1, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-02-04 01:44:58', '2026-02-04 01:44:58', 0, 10000, 0),
-(20, 0, NULL, NULL, 3, 13, 'INV/04022026/3229', 'ticket', 'group', 2, 0, 'cash', 0, 2, 'closed', NULL, 1, 0.00, '2026-02-04 03:28:18', '2026-02-04 03:29:16', 0, 90000, 0),
-(21, 0, NULL, NULL, 3, 14, 'INV/04022026/6720', 'ticket', 'group', 0, 0, NULL, 0, 0, 'open', NULL, 0, 0.00, '2026-02-04 03:28:44', '2026-02-04 03:28:44', 0, 0, 0),
-(22, 3, NULL, NULL, 1, 15, 'TKT/1770186680', 'rental', 'individual', 1, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-02-04 06:31:20', '2026-02-04 06:31:20', 0, 10000, 0),
-(23, 4, NULL, NULL, 1, 16, 'TKT/1770186745', 'rental', 'individual', 1, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-02-04 06:32:25', '2026-02-04 06:32:25', 0, 10000, 0),
-(24, 1, NULL, NULL, 1, 17, 'REG/040220268423', 'registration', 'individual', 1, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-02-04 08:28:39', '2026-02-04 08:28:39', 0, 150000, 0),
-(25, 0, NULL, NULL, 1, 1, 'INV/05022026/3300', 'ticket', 'group', 7, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-02-05 03:36:30', '2026-02-05 07:44:27', 0, 465000, 0),
-(26, 5, NULL, NULL, 1, 18, 'TKT/1770277239', 'rental', 'individual', 1, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-02-05 07:40:39', '2026-02-05 07:40:39', 0, 10000, 0),
-(27, 0, NULL, NULL, 2, 19, 'INV/05022026/5601', 'ticket', 'group', 2, 0, 'qris', 0, 2, 'closed', NULL, 1, 0.00, '2026-02-05 07:51:10', '2026-02-05 07:52:50', 0, 70000, 0),
-(28, 0, NULL, NULL, 2, 20, 'INV/05022026/4661', 'ticket', 'group', 0, 0, NULL, 0, 0, 'open', NULL, 0, 0.00, '2026-02-05 07:52:23', '2026-02-05 07:52:23', 0, 0, 0),
-(29, 0, NULL, NULL, 1, 21, 'INV/05022026/3386', 'ticket', 'group', 2, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-02-05 07:52:35', '2026-02-05 07:52:58', 0, 70000, 0),
-(30, 0, NULL, NULL, 1, 22, 'INV/05022026/5403', 'ticket', 'group', 2, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-02-05 07:55:58', '2026-02-05 07:56:40', 0, 70000, 0),
-(31, 0, NULL, NULL, 1, 23, 'INV/05022026/7278', 'ticket', 'group', 4, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-02-05 07:58:12', '2026-02-05 08:00:45', 0, 150000, 0),
-(32, 0, NULL, NULL, 1, 24, 'INV/05022026/3956', 'ticket', 'group', 29, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-02-05 08:05:23', '2026-02-05 08:10:14', 0, 1030000, 0),
-(33, 0, NULL, NULL, 1, 25, 'INV/05022026/1327', 'ticket', 'group', 0, 0, NULL, 0, 0, 'open', NULL, 0, 0.00, '2026-02-05 08:15:59', '2026-02-05 08:15:59', 0, 0, 0),
-(34, 0, NULL, NULL, 1, 1, 'INV/06022026/1415', 'ticket', 'group', 0, 0, NULL, 0, 0, 'open', NULL, 0, 0.00, '2026-02-05 23:41:30', '2026-02-05 23:41:30', 0, 0, 0),
-(35, 0, NULL, NULL, 2, 1, 'INV/10022026/1272', 'ticket', 'group', 1, 0, 'qris', 0, 1, 'closed', NULL, 1, 0.00, '2026-02-10 01:37:21', '2026-02-10 01:39:40', 0, 35000, 0),
-(36, 0, NULL, NULL, 2, 2, 'INV/10022026/5393', 'ticket', 'group', 0, 0, NULL, 0, 0, 'open', NULL, 0, 0.00, '2026-02-10 01:37:57', '2026-02-10 01:37:57', 0, 0, 0),
-(37, 6, NULL, NULL, 1, 1, 'RENT/001', 'rental', 'individual', 1, 0, 'debit', 0, 0, 'open', NULL, 1, 0.00, '2026-02-16 09:21:14', '2026-02-16 09:21:14', 0, 10000, 0),
-(38, 0, NULL, NULL, 2, 1, 'TKT/001', 'ticket', 'group', 2, 0, 'qris', 0, 0, 'open', NULL, 1, 0.00, '2026-02-19 05:24:32', '2026-02-19 05:24:48', 0, 65000, 0),
-(39, 0, NULL, NULL, 2, 2, 'TKT/002', 'ticket', 'group', 2, 0, 'qris', 0, 0, 'open', NULL, 1, 0.00, '2026-02-19 05:25:16', '2026-02-19 05:25:32', 0, 65000, 0),
-(40, 0, NULL, NULL, 2, 3, 'TKT/003', 'ticket', 'group', 2, 0, 'qris', 0, 2, 'closed', NULL, 1, 0.00, '2026-02-19 05:28:50', '2026-02-19 05:30:57', 0, 90000, 0),
-(41, 0, NULL, NULL, 2, 4, 'TKT/004', 'ticket', 'group', 1, 0, 'debit', 0, 0, 'open', NULL, 1, 0.00, '2026-02-19 05:30:38', '2026-02-19 06:52:57', 0, 45000, 0),
-(42, 3, 17, 'Tenis Sport Club - 2436464537698', 2, 1, 'REG/001', 'registration', 'group', 5, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-02-19 05:34:29', '2026-02-19 05:34:29', 0, 875000, 0),
-(43, 0, NULL, NULL, 2, 5, 'TKT/005', 'ticket', 'group', 2, 0, 'debit', 0, 0, 'open', NULL, 1, 0.00, '2026-02-19 06:53:06', '2026-02-19 06:53:18', 0, 90000, 0),
-(44, 0, NULL, NULL, 2, 6, 'TKT/006', 'ticket', 'group', 2, 0, 'debit', 0, 0, 'open', NULL, 1, 0.00, '2026-02-19 06:53:29', '2026-02-19 06:53:39', 0, 130000, 0),
-(45, 0, NULL, NULL, 2, 7, 'TKT/007', 'ticket', 'group', 125, 0, 'debit', 0, 0, 'open', NULL, 1, 0.00, '2026-02-19 06:53:47', '2026-02-19 06:54:08', 0, 4375000, 0),
-(46, 0, NULL, NULL, 3, 1, 'TKT/001', 'ticket', 'group', 1, 0, 'debit', 0, 0, 'open', NULL, 1, 0.00, '2026-02-20 02:13:32', '2026-02-20 02:13:40', 0, 100000, 0),
-(47, 0, NULL, NULL, 3, 2, 'TKT/002', 'ticket', 'group', 1, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-02-20 02:16:32', '2026-02-20 02:16:43', 0, 350000, 0),
-(48, 0, NULL, NULL, 3, 3, 'TKT/003', 'ticket', 'group', 4, 0, 'qris', 0, 0, 'open', NULL, 1, 0.00, '2026-02-20 02:16:52', '2026-02-20 02:25:56', 0, 180000, 0),
-(49, 1, 22, 'abdi - 08887776543', 1, 1, 'REG/001', 'registration', 'individual', 1, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-02-20 03:05:21', '2026-02-20 03:05:21', 0, 150000, 0),
-(50, 0, NULL, NULL, 1, 4, 'TKT/004', 'ticket', 'group', 1, 0, 'debit', 0, 0, 'open', NULL, 1, 0.00, '2026-02-20 03:08:39', '2026-02-20 03:10:00', 0, 100000, 0),
-(51, 0, NULL, NULL, 1, 5, 'TKT/005', 'ticket', 'group', 1, 0, 'debit', 0, 0, 'open', NULL, 1, 0.00, '2026-02-20 03:10:17', '2026-02-20 03:10:30', 0, 100000, 0),
-(52, 0, NULL, NULL, 1, 6, 'TKT/006', 'ticket', 'group', 1, 0, 'debit', 0, 0, 'open', NULL, 1, 0.00, '2026-02-20 03:10:47', '2026-02-20 03:11:02', 0, 100000, 0),
-(53, 0, NULL, NULL, 1, 7, 'TKT/007', 'ticket', 'group', 4, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-02-20 03:11:21', '2026-02-20 07:24:26', 0, 200000, 0),
-(54, 0, NULL, NULL, 3, 8, 'TKT/008', 'ticket', 'group', 1, 0, 'cash', 0, 1, 'closed', NULL, 1, 0.00, '2026-02-20 03:25:04', '2026-02-20 05:23:00', 0, 350000, 0),
-(55, 0, NULL, NULL, 3, 9, 'TKT/009', 'ticket', 'group', 2, 0, 'qris', 0, 0, 'open', NULL, 1, 0.00, '2026-02-20 05:22:12', '2026-02-20 07:26:01', 0, 90000, 0),
-(56, 0, NULL, NULL, 1, 10, 'TKT/010', 'ticket', 'group', 4, 0, 'cash', 0, 0, 'closed', NULL, 1, 0.00, '2026-02-20 07:24:49', '2026-02-20 08:56:11', 0, 190000, 0),
-(57, 0, NULL, NULL, 3, 11, 'TKT/011', 'ticket', 'group', 0, 0, NULL, 0, 0, 'open', NULL, 0, 0.00, '2026-02-20 07:27:34', '2026-02-20 07:27:34', 0, 0, 0),
-(58, 7, NULL, NULL, 1, 1, 'RENT/001', 'rental', 'individual', 1, 0, 'debit', 0, 0, 'open', NULL, 1, 0.00, '2026-02-20 08:41:36', '2026-02-20 08:41:36', 0, 80000, 0),
-(59, 0, NULL, NULL, 2, 12, 'TKT/012', 'ticket', 'group', 0, 0, NULL, 0, 0, 'open', NULL, 0, 0.00, '2026-02-20 09:18:18', '2026-02-20 09:18:18', 0, 0, 0),
-(60, 0, NULL, NULL, 1, 13, 'TKT/013', 'ticket', 'group', 0, 0, NULL, 0, 0, 'open', NULL, 0, 0.00, '2026-02-20 09:48:19', '2026-02-20 09:48:19', 0, 0, 0),
-(61, 0, NULL, NULL, 3, 1, 'TKT/001', 'ticket', 'group', 1, 0, 'qris', 0, 0, 'open', NULL, 1, 0.00, '2026-02-24 08:25:28', '2026-02-24 08:25:40', 0, 45000, 0),
-(62, 0, NULL, NULL, 3, 2, 'TKT/002', 'ticket', 'group', 2, 0, 'qris', 0, 0, 'open', NULL, 1, 0.00, '2026-02-24 08:25:57', '2026-02-24 08:26:10', 0, 90000, 0),
-(63, 0, NULL, NULL, 3, 3, 'TKT/003', 'ticket', 'group', 1, 0, 'qris', 0, 0, 'open', NULL, 1, 0.00, '2026-02-24 08:28:19', '2026-02-24 08:28:32', 0, 20000, 0),
-(64, 0, NULL, NULL, 3, 4, 'TKT/004', 'ticket', 'group', 1, 0, 'qris', 0, 1, 'closed', NULL, 1, 0.00, '2026-02-24 08:28:37', '2026-02-24 08:29:11', 0, 20000, 0),
-(65, 0, NULL, NULL, 3, 5, 'TKT/005', 'ticket', 'group', 1, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-02-24 08:28:57', '2026-02-24 08:29:24', 0, 100000, 0),
-(66, 0, NULL, NULL, 3, 6, 'TKT/006', 'ticket', 'group', 0, 0, NULL, 0, 0, 'open', NULL, 0, 0.00, '2026-02-24 08:29:31', '2026-02-24 08:29:31', 0, 0, 0),
-(67, 0, NULL, NULL, 1, 7, 'TKT/007', 'ticket', 'group', 1, 0, 'qris', 0, 0, 'open', NULL, 1, 0.00, '2026-02-24 08:34:48', '2026-02-24 08:35:05', 0, 100000, 0),
-(68, 0, NULL, NULL, 1, 8, 'TKT/008', 'ticket', 'group', 1, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-02-24 08:35:33', '2026-02-24 08:47:34', 0, 100000, 0),
-(69, 0, NULL, NULL, 1, 9, 'TKT/009', 'ticket', 'group', 0, 0, NULL, 0, 0, 'open', NULL, 0, 0.00, '2026-02-24 08:47:49', '2026-02-24 08:47:49', 0, 0, 0);
+INSERT INTO `transactions` (`id`, `ticket_id`, `member_id`, `member_info`, `user_id`, `no_trx`, `ticket_code`, `transaction_type`, `tipe`, `amount`, `disc`, `metode`, `discount`, `amount_scanned`, `status`, `gate`, `is_active`, `ppn`, `created_at`, `updated_at`, `is_print`, `bayar`, `kembali`, `nama_kartu`, `no_kartu`, `bank`) VALUES
+(1, 0, NULL, NULL, 1, 1, 'INV/30012026/2373', 'ticket', 'group', 2, 7000, 'cash', 10, 0, 'open', NULL, 1, 0.00, '2026-01-30 08:27:42', '2026-01-30 08:49:29', 0, 70000, 0, NULL, NULL, NULL),
+(2, 2, NULL, NULL, 1, 2, 'REG/300120261845', 'registration', 'group', 4, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-01-30 08:48:59', '2026-01-30 08:48:59', 0, 500000, 0, NULL, NULL, NULL),
+(3, 1, NULL, NULL, 1, 3, 'TKT/1769762959', 'rental', 'individual', 1, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-01-30 08:49:19', '2026-01-30 08:49:19', 0, 10000, 0, NULL, NULL, NULL),
+(4, 0, NULL, NULL, 1, 4, 'INV/30012026/3937', 'ticket', 'group', 2, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-01-30 08:49:33', '2026-01-30 09:47:25', 0, 35000, 0, NULL, NULL, NULL),
+(5, 0, NULL, NULL, 1, 5, 'INV/30012026/3659', 'ticket', 'group', 2, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-01-30 09:47:52', '2026-01-30 09:47:56', 0, 70000, 0, NULL, NULL, NULL),
+(6, 0, NULL, NULL, 1, 6, 'INV/30012026/3828', 'ticket', 'group', 4, 0, 'cash', 0, 4, 'closed', NULL, 1, 0.00, '2026-01-30 09:48:29', '2026-01-30 09:49:10', 0, 80000, 0, NULL, NULL, NULL),
+(7, 1, NULL, NULL, 1, 1, 'REG/030220267543', 'registration', 'individual', 1, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-02-03 06:26:33', '2026-02-03 06:26:33', 0, 150000, 0, NULL, NULL, NULL),
+(8, 1, NULL, NULL, 1, 2, 'REG/030220264587', 'registration', 'individual', 1, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-02-03 06:50:14', '2026-02-03 06:50:14', 0, 150000, 0, NULL, NULL, NULL),
+(9, 0, NULL, NULL, 1, 3, 'INV/03022026/5265', 'ticket', 'group', 1, 0, 'qris', 0, 1, 'closed', NULL, 1, 0.00, '2026-02-03 06:55:07', '2026-02-03 06:57:09', 0, 20000, 0, NULL, NULL, NULL),
+(10, 0, NULL, NULL, 1, 4, 'INV/03022026/3815', 'ticket', 'group', 25, 0, 'qris', 0, 0, 'open', NULL, 1, 0.00, '2026-02-03 06:56:03', '2026-02-03 06:59:59', 0, 500000, 0, NULL, NULL, NULL),
+(11, 0, NULL, NULL, 1, 5, 'INV/03022026/7444', 'ticket', 'group', 1, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-02-03 07:00:08', '2026-02-03 07:01:04', 0, 20000, 0, NULL, NULL, NULL),
+(12, 0, NULL, NULL, 1, 6, 'INV/03022026/8120', 'ticket', 'group', 1, 0, 'qris', 0, 1, 'closed', NULL, 1, 0.00, '2026-02-03 07:01:07', '2026-02-03 07:01:39', 0, 20000, 0, NULL, NULL, NULL),
+(13, 0, NULL, NULL, 1, 7, 'INV/03022026/7680', 'ticket', 'group', 0, 0, NULL, 0, 0, 'open', NULL, 0, 0.00, '2026-02-03 07:01:21', '2026-02-03 07:01:21', 0, 0, 0, NULL, NULL, NULL),
+(14, 0, NULL, NULL, 3, 8, 'INV/03022026/2658', 'ticket', 'group', 6, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-02-03 07:12:14', '2026-02-03 07:15:22', 0, 50000, 0, NULL, NULL, NULL),
+(15, 0, NULL, NULL, 3, 9, 'INV/03022026/3178', 'ticket', 'group', 0, 0, NULL, 0, 0, 'open', NULL, 0, 0.00, '2026-02-03 07:15:25', '2026-02-03 07:15:25', 0, 0, 0, NULL, NULL, NULL),
+(16, 0, NULL, NULL, 2, 10, 'INV/03022026/6686', 'ticket', 'group', 1, 0, 'qris', 0, 1, 'closed', NULL, 1, 0.00, '2026-02-03 08:10:32', '2026-02-03 08:11:23', 0, 45000, 0, NULL, NULL, NULL),
+(17, 0, NULL, NULL, 2, 11, 'INV/03022026/8821', 'ticket', 'group', 0, 0, NULL, 0, 0, 'open', NULL, 0, 0.00, '2026-02-03 08:10:48', '2026-02-03 08:10:48', 0, 0, 0, NULL, NULL, NULL),
+(18, 0, NULL, NULL, 1, 1, 'INV/04022026/1740', 'ticket', 'group', 0, 0, NULL, 0, 0, 'open', NULL, 0, 0.00, '2026-02-04 01:28:53', '2026-02-04 01:28:53', 0, 0, 0, NULL, NULL, NULL),
+(19, 2, NULL, NULL, 1, 12, 'TKT/1770169498', 'rental', 'individual', 1, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-02-04 01:44:58', '2026-02-04 01:44:58', 0, 10000, 0, NULL, NULL, NULL),
+(20, 0, NULL, NULL, 3, 13, 'INV/04022026/3229', 'ticket', 'group', 2, 0, 'cash', 0, 2, 'closed', NULL, 1, 0.00, '2026-02-04 03:28:18', '2026-02-04 03:29:16', 0, 90000, 0, NULL, NULL, NULL),
+(21, 0, NULL, NULL, 3, 14, 'INV/04022026/6720', 'ticket', 'group', 0, 0, NULL, 0, 0, 'open', NULL, 0, 0.00, '2026-02-04 03:28:44', '2026-02-04 03:28:44', 0, 0, 0, NULL, NULL, NULL),
+(22, 3, NULL, NULL, 1, 15, 'TKT/1770186680', 'rental', 'individual', 1, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-02-04 06:31:20', '2026-02-04 06:31:20', 0, 10000, 0, NULL, NULL, NULL),
+(23, 4, NULL, NULL, 1, 16, 'TKT/1770186745', 'rental', 'individual', 1, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-02-04 06:32:25', '2026-02-04 06:32:25', 0, 10000, 0, NULL, NULL, NULL),
+(24, 1, NULL, NULL, 1, 17, 'REG/040220268423', 'registration', 'individual', 1, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-02-04 08:28:39', '2026-02-04 08:28:39', 0, 150000, 0, NULL, NULL, NULL),
+(25, 0, NULL, NULL, 1, 1, 'INV/05022026/3300', 'ticket', 'group', 7, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-02-05 03:36:30', '2026-02-05 07:44:27', 0, 465000, 0, NULL, NULL, NULL),
+(26, 5, NULL, NULL, 1, 18, 'TKT/1770277239', 'rental', 'individual', 1, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-02-05 07:40:39', '2026-02-05 07:40:39', 0, 10000, 0, NULL, NULL, NULL),
+(27, 0, NULL, NULL, 2, 19, 'INV/05022026/5601', 'ticket', 'group', 2, 0, 'qris', 0, 2, 'closed', NULL, 1, 0.00, '2026-02-05 07:51:10', '2026-02-05 07:52:50', 0, 70000, 0, NULL, NULL, NULL),
+(28, 0, NULL, NULL, 2, 20, 'INV/05022026/4661', 'ticket', 'group', 0, 0, NULL, 0, 0, 'open', NULL, 0, 0.00, '2026-02-05 07:52:23', '2026-02-05 07:52:23', 0, 0, 0, NULL, NULL, NULL),
+(29, 0, NULL, NULL, 1, 21, 'INV/05022026/3386', 'ticket', 'group', 2, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-02-05 07:52:35', '2026-02-05 07:52:58', 0, 70000, 0, NULL, NULL, NULL),
+(30, 0, NULL, NULL, 1, 22, 'INV/05022026/5403', 'ticket', 'group', 2, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-02-05 07:55:58', '2026-02-05 07:56:40', 0, 70000, 0, NULL, NULL, NULL),
+(31, 0, NULL, NULL, 1, 23, 'INV/05022026/7278', 'ticket', 'group', 4, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-02-05 07:58:12', '2026-02-05 08:00:45', 0, 150000, 0, NULL, NULL, NULL),
+(32, 0, NULL, NULL, 1, 24, 'INV/05022026/3956', 'ticket', 'group', 29, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-02-05 08:05:23', '2026-02-05 08:10:14', 0, 1030000, 0, NULL, NULL, NULL),
+(33, 0, NULL, NULL, 1, 25, 'INV/05022026/1327', 'ticket', 'group', 0, 0, NULL, 0, 0, 'open', NULL, 0, 0.00, '2026-02-05 08:15:59', '2026-02-05 08:15:59', 0, 0, 0, NULL, NULL, NULL),
+(34, 0, NULL, NULL, 1, 1, 'INV/06022026/1415', 'ticket', 'group', 0, 0, NULL, 0, 0, 'open', NULL, 0, 0.00, '2026-02-05 23:41:30', '2026-02-05 23:41:30', 0, 0, 0, NULL, NULL, NULL),
+(35, 0, NULL, NULL, 2, 1, 'INV/10022026/1272', 'ticket', 'group', 1, 0, 'qris', 0, 1, 'closed', NULL, 1, 0.00, '2026-02-10 01:37:21', '2026-02-10 01:39:40', 0, 35000, 0, NULL, NULL, NULL),
+(36, 0, NULL, NULL, 2, 2, 'INV/10022026/5393', 'ticket', 'group', 0, 0, NULL, 0, 0, 'open', NULL, 0, 0.00, '2026-02-10 01:37:57', '2026-02-10 01:37:57', 0, 0, 0, NULL, NULL, NULL),
+(37, 6, NULL, NULL, 1, 1, 'RENT/001', 'rental', 'individual', 1, 0, 'debit', 0, 0, 'open', NULL, 1, 0.00, '2026-02-16 09:21:14', '2026-02-16 09:21:14', 0, 10000, 0, NULL, NULL, NULL),
+(38, 0, NULL, NULL, 2, 1, 'TKT/001', 'ticket', 'group', 2, 0, 'qris', 0, 0, 'open', NULL, 1, 0.00, '2026-02-19 05:24:32', '2026-02-19 05:24:48', 0, 65000, 0, NULL, NULL, NULL),
+(39, 0, NULL, NULL, 2, 2, 'TKT/002', 'ticket', 'group', 2, 0, 'qris', 0, 0, 'open', NULL, 1, 0.00, '2026-02-19 05:25:16', '2026-02-19 05:25:32', 0, 65000, 0, NULL, NULL, NULL),
+(40, 0, NULL, NULL, 2, 3, 'TKT/003', 'ticket', 'group', 2, 0, 'qris', 0, 2, 'closed', NULL, 1, 0.00, '2026-02-19 05:28:50', '2026-02-19 05:30:57', 0, 90000, 0, NULL, NULL, NULL),
+(41, 0, NULL, NULL, 2, 4, 'TKT/004', 'ticket', 'group', 1, 0, 'debit', 0, 0, 'open', NULL, 1, 0.00, '2026-02-19 05:30:38', '2026-02-19 06:52:57', 0, 45000, 0, NULL, NULL, NULL),
+(42, 3, 17, 'Tenis Sport Club - 2436464537698', 2, 1, 'REG/001', 'registration', 'group', 5, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-02-19 05:34:29', '2026-02-19 05:34:29', 0, 875000, 0, NULL, NULL, NULL),
+(43, 0, NULL, NULL, 2, 5, 'TKT/005', 'ticket', 'group', 2, 0, 'debit', 0, 0, 'open', NULL, 1, 0.00, '2026-02-19 06:53:06', '2026-02-19 06:53:18', 0, 90000, 0, NULL, NULL, NULL),
+(44, 0, NULL, NULL, 2, 6, 'TKT/006', 'ticket', 'group', 2, 0, 'debit', 0, 0, 'open', NULL, 1, 0.00, '2026-02-19 06:53:29', '2026-02-19 06:53:39', 0, 130000, 0, NULL, NULL, NULL),
+(45, 0, NULL, NULL, 2, 7, 'TKT/007', 'ticket', 'group', 125, 0, 'debit', 0, 0, 'open', NULL, 1, 0.00, '2026-02-19 06:53:47', '2026-02-19 06:54:08', 0, 4375000, 0, NULL, NULL, NULL),
+(46, 0, NULL, NULL, 3, 1, 'TKT/001', 'ticket', 'group', 1, 0, 'debit', 0, 0, 'open', NULL, 1, 0.00, '2026-02-20 02:13:32', '2026-02-20 02:13:40', 0, 100000, 0, NULL, NULL, NULL),
+(47, 0, NULL, NULL, 3, 2, 'TKT/002', 'ticket', 'group', 1, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-02-20 02:16:32', '2026-02-20 02:16:43', 0, 350000, 0, NULL, NULL, NULL),
+(48, 0, NULL, NULL, 3, 3, 'TKT/003', 'ticket', 'group', 4, 0, 'qris', 0, 0, 'open', NULL, 1, 0.00, '2026-02-20 02:16:52', '2026-02-20 02:25:56', 0, 180000, 0, NULL, NULL, NULL),
+(49, 1, 22, 'abdi - 08887776543', 1, 1, 'REG/001', 'registration', 'individual', 1, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-02-20 03:05:21', '2026-02-20 03:05:21', 0, 150000, 0, NULL, NULL, NULL),
+(50, 0, NULL, NULL, 1, 4, 'TKT/004', 'ticket', 'group', 1, 0, 'debit', 0, 0, 'open', NULL, 1, 0.00, '2026-02-20 03:08:39', '2026-02-20 03:10:00', 0, 100000, 0, NULL, NULL, NULL),
+(51, 0, NULL, NULL, 1, 5, 'TKT/005', 'ticket', 'group', 1, 0, 'debit', 0, 0, 'open', NULL, 1, 0.00, '2026-02-20 03:10:17', '2026-02-20 03:10:30', 0, 100000, 0, NULL, NULL, NULL),
+(52, 0, NULL, NULL, 1, 6, 'TKT/006', 'ticket', 'group', 1, 0, 'debit', 0, 0, 'open', NULL, 1, 0.00, '2026-02-20 03:10:47', '2026-02-20 03:11:02', 0, 100000, 0, NULL, NULL, NULL),
+(53, 0, NULL, NULL, 1, 7, 'TKT/007', 'ticket', 'group', 4, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-02-20 03:11:21', '2026-02-20 07:24:26', 0, 200000, 0, NULL, NULL, NULL),
+(54, 0, NULL, NULL, 3, 8, 'TKT/008', 'ticket', 'group', 1, 0, 'cash', 0, 1, 'closed', NULL, 1, 0.00, '2026-02-20 03:25:04', '2026-02-20 05:23:00', 0, 350000, 0, NULL, NULL, NULL),
+(55, 0, NULL, NULL, 3, 9, 'TKT/009', 'ticket', 'group', 2, 0, 'qris', 0, 0, 'open', NULL, 1, 0.00, '2026-02-20 05:22:12', '2026-02-20 07:26:01', 0, 90000, 0, NULL, NULL, NULL),
+(56, 0, NULL, NULL, 1, 10, 'TKT/010', 'ticket', 'group', 4, 0, 'cash', 0, 0, 'closed', NULL, 1, 0.00, '2026-02-20 07:24:49', '2026-02-20 08:56:11', 0, 190000, 0, NULL, NULL, NULL),
+(57, 0, NULL, NULL, 3, 11, 'TKT/011', 'ticket', 'group', 0, 0, NULL, 0, 0, 'open', NULL, 0, 0.00, '2026-02-20 07:27:34', '2026-02-20 07:27:34', 0, 0, 0, NULL, NULL, NULL),
+(58, 7, NULL, NULL, 1, 1, 'RENT/001', 'rental', 'individual', 1, 0, 'debit', 0, 0, 'open', NULL, 1, 0.00, '2026-02-20 08:41:36', '2026-02-20 08:41:36', 0, 80000, 0, NULL, NULL, NULL),
+(59, 0, NULL, NULL, 2, 12, 'TKT/012', 'ticket', 'group', 0, 0, NULL, 0, 0, 'open', NULL, 0, 0.00, '2026-02-20 09:18:18', '2026-02-20 09:18:18', 0, 0, 0, NULL, NULL, NULL),
+(60, 0, NULL, NULL, 1, 13, 'TKT/013', 'ticket', 'group', 0, 0, NULL, 0, 0, 'open', NULL, 0, 0.00, '2026-02-20 09:48:19', '2026-02-20 09:48:19', 0, 0, 0, NULL, NULL, NULL),
+(61, 0, NULL, NULL, 3, 1, 'TKT/001', 'ticket', 'group', 1, 0, 'qris', 0, 0, 'open', NULL, 1, 0.00, '2026-02-24 08:25:28', '2026-02-24 08:25:40', 0, 45000, 0, NULL, NULL, NULL),
+(62, 0, NULL, NULL, 3, 2, 'TKT/002', 'ticket', 'group', 2, 0, 'qris', 0, 0, 'open', NULL, 1, 0.00, '2026-02-24 08:25:57', '2026-02-24 08:26:10', 0, 90000, 0, NULL, NULL, NULL),
+(63, 0, NULL, NULL, 3, 3, 'TKT/003', 'ticket', 'group', 1, 0, 'qris', 0, 0, 'open', NULL, 1, 0.00, '2026-02-24 08:28:19', '2026-02-24 08:28:32', 0, 20000, 0, NULL, NULL, NULL),
+(64, 0, NULL, NULL, 3, 4, 'TKT/004', 'ticket', 'group', 1, 0, 'qris', 0, 1, 'closed', NULL, 1, 0.00, '2026-02-24 08:28:37', '2026-02-24 08:29:11', 0, 20000, 0, NULL, NULL, NULL),
+(65, 0, NULL, NULL, 3, 5, 'TKT/005', 'ticket', 'group', 1, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-02-24 08:28:57', '2026-02-24 08:29:24', 0, 100000, 0, NULL, NULL, NULL),
+(66, 0, NULL, NULL, 3, 6, 'TKT/006', 'ticket', 'group', 0, 0, NULL, 0, 0, 'open', NULL, 0, 0.00, '2026-02-24 08:29:31', '2026-02-24 08:29:31', 0, 0, 0, NULL, NULL, NULL),
+(67, 0, NULL, NULL, 1, 7, 'TKT/007', 'ticket', 'group', 1, 0, 'qris', 0, 0, 'open', NULL, 1, 0.00, '2026-02-24 08:34:48', '2026-02-24 08:35:05', 0, 100000, 0, NULL, NULL, NULL),
+(68, 0, NULL, NULL, 1, 8, 'TKT/008', 'ticket', 'group', 1, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-02-24 08:35:33', '2026-02-24 08:47:34', 0, 100000, 0, NULL, NULL, NULL),
+(69, 0, NULL, NULL, 1, 9, 'TKT/009', 'ticket', 'group', 0, 0, NULL, 0, 0, 'open', NULL, 0, 0.00, '2026-02-24 08:47:49', '2026-02-24 08:47:49', 0, 0, 0, NULL, NULL, NULL),
+(70, 8, NULL, NULL, 1, 1, 'RENT/001', 'rental', 'individual', 1, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-02-26 09:01:52', '2026-02-26 09:01:52', 0, 10000, 0, NULL, NULL, NULL),
+(71, 0, NULL, NULL, 1, 1, 'TKT/001', 'ticket', 'group', 3, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-02-26 09:02:25', '2026-02-26 09:02:33', 0, 100000, 0, NULL, NULL, NULL),
+(72, 0, NULL, NULL, 1, 2, 'TKT/002', 'ticket', 'group', 0, 0, NULL, 0, 0, 'open', NULL, 0, 0.00, '2026-02-26 09:03:08', '2026-02-26 09:03:08', 0, 0, 0, NULL, NULL, NULL),
+(73, 0, NULL, NULL, 1, 1, 'TKT/001', 'ticket', 'group', 0, 0, NULL, 0, 0, 'open', NULL, 0, 0.00, '2026-02-27 03:45:00', '2026-02-27 03:45:00', 0, 0, 0, NULL, NULL, NULL),
+(74, 9, NULL, NULL, 1, 1, 'RENT/001', 'rental', 'individual', 1, 0, 'cash', 0, 0, 'open', NULL, 1, 5000.00, '2026-02-27 03:46:38', '2026-02-27 03:46:38', 0, 50000, 0, NULL, NULL, NULL),
+(75, 10, NULL, NULL, 1, 2, 'RENT/002', 'rental', 'individual', 1, 0, 'cash', 0, 0, 'open', NULL, 1, 5000.00, '2026-02-27 03:47:08', '2026-02-27 03:47:08', 0, 50000, 0, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -1160,7 +1194,7 @@ ALTER TABLE `whatsapp_notification_logs`
 -- AUTO_INCREMENT for table `detail_transactions`
 --
 ALTER TABLE `detail_transactions`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=92;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=94;
 
 --
 -- AUTO_INCREMENT for table `failed_jobs`
@@ -1226,7 +1260,7 @@ ALTER TABLE `migrations`
 -- AUTO_INCREMENT for table `penyewaans`
 --
 ALTER TABLE `penyewaans`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `permissions`
@@ -1250,13 +1284,13 @@ ALTER TABLE `roles`
 -- AUTO_INCREMENT for table `settings`
 --
 ALTER TABLE `settings`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
 -- AUTO_INCREMENT for table `sewa`
 --
 ALTER TABLE `sewa`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `terusans`
@@ -1280,7 +1314,7 @@ ALTER TABLE `topups`
 -- AUTO_INCREMENT for table `transactions`
 --
 ALTER TABLE `transactions`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=70;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=76;
 
 --
 -- AUTO_INCREMENT for table `users`

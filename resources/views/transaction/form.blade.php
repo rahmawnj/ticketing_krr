@@ -56,12 +56,9 @@
             <div class="form-group mb-3">
                 <label for="metode">Metode Pembayaran</label>
                 <select name="metode" id="metode" class="form-control">
-                    <option value="cash">Cash</option>
-                    <option value="qris">QRIS</option>
-                    <option value="debit">Debit</option>
-                    <option value="kredit">Kredit</option>
-                    <option value="transfer">Transfer</option>
-                    <option value="lain-lain">Lain-lain</option>
+                    @foreach(\App\Support\PaymentMethod::options() as $methodValue => $methodLabel)
+                    <option value="{{ $methodValue }}">{{ $methodLabel }}</option>
+                    @endforeach
                 </select>
             </div>
 

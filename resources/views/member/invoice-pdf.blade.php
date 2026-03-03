@@ -5,8 +5,9 @@
     <meta charset="UTF-8">
     <title>Invoice Membership</title>
     <style>
-        body { font-family: Arial, sans-serif; font-size: 12px; color: #111; }
-        .page { max-width: 180mm; margin: 0 auto; border: 1px solid #0f2a3c; padding: 14px; }
+        @page { size: 80mm auto; margin: 0; }
+        body { font-family: Arial, sans-serif; font-size: 11px; color: #111; margin: 0; }
+        .page { width: 80mm; max-width: 80mm; margin: 0 auto; border: 1px solid #0f2a3c; padding: 8px; }
         .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
         .brand { display: flex; align-items: center; gap: 10px; }
         .brand img { height: 36px; }

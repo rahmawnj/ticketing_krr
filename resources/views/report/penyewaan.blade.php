@@ -57,7 +57,8 @@
                     <th>Tanggal</th>
                     <th>FO/Kasir</th>
                     <th>Kode Transaksi</th>
-                    <th>Tiket</th>
+                    <th>Jenis Transaksi</th>
+                    <th>Item</th>
                     <th class="text-center">Qty</th>
                     <th>Metode</th>
                     <th class="text-end">PBJT</th>
@@ -75,7 +76,8 @@
                         <td>{{ $detail['tanggal'] }}</td>
                         <td>{{ $detail['kasir'] }}</td>
                         <td>{{ $detail['kode_trx'] }}</td>
-                        <td>{{ $group['sewa_name'] }}</td>
+                        <td>{{ $group['transaction_type_label'] }}</td>
+                        <td>{{ $group['item_name'] }}</td>
                         <td class="text-center">{{ number_format($detail['qty'], 0, ',', '.') }}</td>
                         <td>{{ $detail['metode'] }}</td>
                         <td class="text-end">Rp. {{ number_format($detail['ppn'], 0, ',', '.') }}</td>
@@ -83,8 +85,8 @@
                     </tr>
                     @endforeach
                     <tr style="background-color: #f5f5f5; font-weight: 700;">
-                        <td colspan="5">TOTAL</td>
-                        <td>{{ $group['sewa_name'] }}</td>
+                        <td colspan="6">TOTAL</td>
+                        <td>{{ $group['item_name'] }}</td>
                         <td class="text-center">{{ number_format($group['subtotal_qty'], 0, ',', '.') }}</td>
                         <td></td>
                         <td class="text-end">Rp. {{ number_format($group['subtotal_ppn'], 0, ',', '.') }}</td>
@@ -94,13 +96,13 @@
                 @endforelse
                 @if(!$hasData)
                     <tr>
-                        <td colspan="10" class="text-center text-muted">Tidak ada data transaksi lainnya pada rentang tanggal ini.</td>
+                        <td colspan="11" class="text-center text-muted">Tidak ada data transaksi pada rentang tanggal ini.</td>
                     </tr>
                 @endif
             </tbody>
             <tfoot>
                 <tr>
-                    <th colspan="6" class="text-end">GRAND TOTAL</th>
+                    <th colspan="7" class="text-end">GRAND TOTAL</th>
                     <th class="text-center">{{ number_format($grandQty, 0, ',', '.') }}</th>
                     <th></th>
                     <th class="text-end">Rp. {{ number_format($grandPpn, 0, ',', '.') }}</th>

@@ -47,12 +47,24 @@ class ReportTransactionExport implements FromCollection, WithHeadings, WithMappi
 
     public function map($data): array
     {
-        // Hitung diskon (sesuai logika di Controller kamu)
-        $totalDetail = $data->detail()->sum('total');
-        $disc = $totalDetail * $data->discount / 100;
+        $totalDetail = (float) $data->detail()->sum('total');
+        $storedDisc = (float) ($data->disc ?? 0);
+        $disc = $storedDisc > 0
+            ? $storedDisc
+            : ($totalDetail * (float) ($data->discount ?? 0) / 100);
+
+        if (($data->transaction_type ?? '') === 'ticket') {
+            $dpp = (float) $data->detail()->sum('total');
+            $ppn = (float) $data->detail()->sum('ppn');
+        } else {
+            $dpp = max(0.0, ((float) ($data->bayar ?? 0)) - ((float) ($data->kembali ?? 0)));
+            $ppn = (float) ($data->ppn ?? 0);
+        }
+
         $adminFee = in_array($data->transaction_type, ['registration', 'renewal'], true)
             ? (float) ($data->admin_fee ?? 0)
             : 0.0;
+        $total = $dpp - $disc + $ppn + $adminFee;
 
         return [
             $this->rowNumber++, // Nomor urut
@@ -63,9 +75,9 @@ class ReportTransactionExport implements FromCollection, WithHeadings, WithMappi
             $this->resolveProductDescription($data),
             strtoupper($data->metode ?? '-'),
             $data->amount,
-            $data->bayar,
-            $data->bayar - $disc + $data->ppn + $adminFee,
-            $data->ppn,
+            $dpp,
+            $total,
+            $ppn,
             $adminFee,
             $disc,
         ];

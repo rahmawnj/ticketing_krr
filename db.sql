@@ -31,24 +31,10 @@ CREATE TABLE IF NOT EXISTS `detail_transactions` (
   `gate` int DEFAULT NULL,
   `is_print` int DEFAULT '0',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table db_membership.detail_transactions: ~10 rows (approximately)
+-- Dumping data for table db_membership.detail_transactions: ~9 rows (approximately)
 DELETE FROM `detail_transactions`;
-INSERT INTO `detail_transactions` (`id`, `transaction_id`, `ticket_id`, `qty`, `total`, `ppn`, `created_at`, `updated_at`, `ticket_code`, `status`, `scanned`, `scanned_at`, `gate`, `is_print`) VALUES
-	(1, 1, 1, 1, 20000, 0.00, '2026-01-30 08:49:26', '2026-01-30 09:36:02', 'TKT20260130154926674', 'close', 1, '2026-01-30 09:36:02', 1, 0),
-	(2, 1, 4, 1, 50000, 0.00, '2026-01-30 08:49:27', '2026-01-30 08:49:27', 'TKT20260130154927608', 'open', 0, NULL, NULL, 0),
-	(3, 7, 1, 7, 140000, 0.00, '2026-02-10 02:11:40', '2026-02-10 02:11:46', 'TKT20260210091140603', 'open', 0, NULL, NULL, 0),
-	(4, 7, 2, 6, 180000, 0.00, '2026-02-10 02:11:41', '2026-02-10 02:11:51', 'TKT20260210091141221', 'open', 0, NULL, NULL, 0),
-	(5, 7, 5, 8, 120000, 0.00, '2026-02-10 02:11:42', '2026-02-10 02:11:56', 'TKT20260210091142683', 'open', 0, NULL, NULL, 0),
-	(6, 25, 1, 5, 100000, 0.00, '2026-02-12 02:21:39', '2026-02-12 02:21:53', 'TKT20260212092139225', 'open', 0, NULL, NULL, 0),
-	(7, 25, 4, 5, 250000, 0.00, '2026-02-12 02:21:40', '2026-02-12 02:21:49', 'TKT20260212092140218', 'open', 0, NULL, NULL, 0),
-	(8, 34, 4, 1, 50000, 0.00, '2026-02-16 07:44:07', '2026-02-16 07:44:07', 'TKT20260216144407878', 'open', 0, NULL, NULL, 0),
-	(9, 34, 1, 1, 20000, 0.00, '2026-02-16 07:44:07', '2026-02-16 07:44:07', 'TKT20260216144407162', 'open', 0, NULL, NULL, 0),
-	(10, 47, 4, 1, 50000, 0.00, '2026-02-24 04:13:53', '2026-02-24 04:13:53', 'TKT20260224111353582', 'open', 0, NULL, NULL, 0),
-	(11, 47, 1, 1, 20000, 0.00, '2026-02-24 04:13:53', '2026-02-24 04:13:53', 'TKT20260224111353523', 'open', 0, NULL, NULL, 0),
-	(12, 51, 4, 1, 50000, 0.00, '2026-02-25 05:01:18', '2026-02-25 05:01:18', 'TKT20260225120118819', 'open', 0, NULL, NULL, 0),
-	(13, 52, 1, 1, 20000, 0.00, '2026-02-25 05:13:00', '2026-02-25 05:13:00', 'TKT20260225121300804', 'open', 0, NULL, NULL, 0);
 
 -- Dumping structure for table db_membership.failed_jobs
 CREATE TABLE IF NOT EXISTS `failed_jobs` (
@@ -138,9 +124,9 @@ CREATE TABLE IF NOT EXISTS `history_memberships` (
   KEY `history_memberships_member_id_foreign` (`member_id`),
   CONSTRAINT `history_memberships_member_id_foreign` FOREIGN KEY (`member_id`) REFERENCES `members` (`id`) ON DELETE CASCADE,
   CONSTRAINT `history_memberships_membership_id_foreign` FOREIGN KEY (`membership_id`) REFERENCES `memberships` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=67 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=72 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table db_membership.history_memberships: ~12 rows (approximately)
+-- Dumping data for table db_membership.history_memberships: ~26 rows (approximately)
 DELETE FROM `history_memberships`;
 INSERT INTO `history_memberships` (`id`, `membership_id`, `member_id`, `start_date`, `end_date`, `status`, `created_at`, `updated_at`) VALUES
 	(1, 2, 1, '2026-01-30', '2026-04-30', 'active', '2026-01-30 08:48:59', '2026-01-30 08:48:59'),
@@ -167,7 +153,12 @@ INSERT INTO `history_memberships` (`id`, `membership_id`, `member_id`, `start_da
 	(63, 3, 23, '2026-02-25', '2026-03-02', 'active', '2026-02-25 05:55:15', '2026-02-25 05:55:15'),
 	(64, 3, 23, '2026-03-03', '2026-03-08', 'active', '2026-02-25 05:55:51', '2026-02-25 05:55:51'),
 	(65, 3, 19, '2026-02-25', '2026-03-02', 'active', '2026-02-25 08:57:45', '2026-02-25 08:57:45'),
-	(66, 1, 20, '2026-02-25', '2026-03-27', 'active', '2026-02-25 09:02:55', '2026-02-25 09:02:55');
+	(66, 1, 20, '2026-02-25', '2026-03-27', 'active', '2026-02-25 09:02:55', '2026-02-25 09:02:55'),
+	(67, 3, 23, '2026-02-27', '2026-03-04', 'active', '2026-02-27 03:32:22', '2026-02-27 03:32:22'),
+	(68, 1, 21, '2026-02-27', '2026-03-29', 'active', '2026-02-27 03:33:59', '2026-02-27 03:33:59'),
+	(69, 1, 21, '2026-02-27', '2026-03-29', 'active', '2026-02-27 06:28:12', '2026-02-27 06:28:12'),
+	(70, 1, 21, '2026-02-27', '2026-03-29', 'active', '2026-02-27 06:28:38', '2026-02-27 06:28:38'),
+	(71, 1, 21, '2026-02-27', '2026-03-29', 'active', '2026-02-27 06:31:27', '2026-02-27 06:31:27');
 
 -- Dumping structure for table db_membership.history_penyewaans
 CREATE TABLE IF NOT EXISTS `history_penyewaans` (
@@ -242,7 +233,7 @@ CREATE TABLE IF NOT EXISTS `members` (
   UNIQUE KEY `members_rfid_unique` (`rfid`)
 ) ENGINE=InnoDB AUTO_INCREMENT=24 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table db_membership.members: ~4 rows (approximately)
+-- Dumping data for table db_membership.members: ~9 rows (approximately)
 DELETE FROM `members`;
 INSERT INTO `members` (`id`, `parent_id`, `membership_id`, `member_code`, `rfid`, `no_ktp`, `no_hp`, `nama`, `access_used`, `alamat`, `tgl_lahir`, `tgl_register`, `tgl_expired`, `saldo`, `is_active`, `jenis_kelamin`, `image_profile`, `qr_code`, `created_at`, `updated_at`, `limit`, `jenis_member`) VALUES
 	(1, 0, 2, 'MBR000001', NULL, '3277654567825678', '6289637761500', 'Budi', 0, 'Jl. Melati No. 123, Jakarta', '2026-01-30', '2026-01-30', '2026-02-26', 0, 1, 'L', NULL, 'MBRBVCAWZRZ7WXN2', '2026-01-30 08:48:59', '2026-02-25 05:48:14', 0, NULL),
@@ -251,9 +242,9 @@ INSERT INTO `members` (`id`, `parent_id`, `membership_id`, `member_code`, `rfid`
 	(4, 1, 1, 'MBR000004', NULL, '3277654567825678', '6289637761500', 'Rara', 0, 'Jl. Melati No. 123, Jakarta', '2026-01-30', '2026-01-30', '2026-02-26', 0, 1, 'L', NULL, 'MBRJPG3DKVV3W5TO', '2026-01-30 08:48:59', '2026-02-25 05:48:14', 0, NULL),
 	(19, 0, 3, 'MSH00300001A', NULL, '7879', '08987654', 'Anggie', 0, 'Bandung', '2026-02-24', '2026-02-24', '2026-03-02', 0, 1, 'L', NULL, 'MBRTOBHEE4MS9MOJ', '2026-02-24 05:45:14', '2026-02-25 08:57:45', 0, NULL),
 	(20, 0, 1, 'MBR/0020', '22222222222', '575', '08954754776', 'Rahma', 0, 'Bandung', '2026-02-18', '2026-02-25', '2026-03-27', 0, 1, 'L', NULL, 'MBR/0020', '2026-02-25 05:41:35', '2026-02-25 09:02:55', 0, NULL),
-	(21, 0, 1, 'MBR/0021', NULL, NULL, '646564', 'Kino', 0, 'Cimahi', '2026-02-17', '2026-02-25', '2026-02-27', 0, 1, 'L', NULL, 'MBR/0021', '2026-02-25 05:52:29', '2026-02-25 05:52:29', 0, NULL),
+	(21, 0, 1, 'MBR/0021', NULL, NULL, '646564', 'Kino', 0, 'Cimahi', '2026-02-10', '2026-02-25', '2026-03-29', 0, 1, 'L', NULL, 'MBR/0021', '2026-02-25 05:52:29', '2026-02-27 06:31:27', 0, NULL),
 	(22, 0, 1, 'MBR/0022', NULL, '908980', '9059043859403', 'Jiju', 0, 'Cimahi', '2026-02-18', '2026-02-25', '2026-02-27', 0, 1, 'L', NULL, 'MBR/0022', '2026-02-25 05:53:00', '2026-02-25 05:53:00', 0, NULL),
-	(23, 0, 3, 'MV/0023', NULL, '8943', '8048204', 'DImaski', 0, 'Cimahi', '2026-02-18', '2026-02-25', '2026-02-08', 0, 1, 'L', NULL, 'MV/0023', '2026-02-25 05:55:15', '2026-02-25 05:55:51', 0, NULL);
+	(23, 0, 3, 'MV/0023', NULL, '8943', '8048204', 'DImaski', 0, 'Cimahi', '2026-02-18', '2026-02-25', '2026-03-04', 0, 1, 'L', NULL, 'MV/0023', '2026-02-25 05:55:15', '2026-02-27 03:32:22', 0, NULL);
 
 -- Dumping structure for table db_membership.memberships
 CREATE TABLE IF NOT EXISTS `memberships` (
@@ -393,26 +384,10 @@ CREATE TABLE IF NOT EXISTS `penyewaans` (
   KEY `penyewaans_user_id_foreign` (`user_id`),
   CONSTRAINT `penyewaans_sewa_id_foreign` FOREIGN KEY (`sewa_id`) REFERENCES `sewa` (`id`),
   CONSTRAINT `penyewaans_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table db_membership.penyewaans: ~11 rows (approximately)
 DELETE FROM `penyewaans`;
-INSERT INTO `penyewaans` (`id`, `sewa_id`, `user_id`, `qty`, `metode`, `jumlah`, `keterangan`, `start_time`, `end_time`, `created_at`, `updated_at`, `bayar`, `kembali`) VALUES
-	(1, 1, 1, 1, 'cash', 10000, NULL, NULL, NULL, '2026-01-30 08:49:19', '2026-01-30 08:49:19', 10000, 0),
-	(2, 2, 1, 4, 'cash', 40000, NULL, NULL, NULL, '2026-02-10 04:13:07', '2026-02-10 04:13:07', 40000, 0),
-	(3, 1, 1, 4, 'cash', 40000, NULL, NULL, NULL, '2026-02-10 04:13:53', '2026-02-10 04:13:53', 40000, 0),
-	(4, 4, 1, 1, 'cash', 10000, 'j\r\n\r\n\r\nhggj', '12:16:00', '14:16:00', '2026-02-10 05:16:57', '2026-02-10 05:16:57', 10000, 0),
-	(5, 4, 1, 1, 'cash', 10000, '86876', '12:18:00', '14:18:00', '2026-02-10 05:18:10', '2026-02-10 05:18:10', 10000, 0),
-	(6, 4, 1, 1, 'cash', 10000, '86876', '12:19:00', '14:18:00', '2026-02-10 05:19:22', '2026-02-10 05:19:22', 10000, 0),
-	(7, 1, 1, 1, 'credit', 10000, 'Dinda\r\n\r\nLoker 31', '15:09:00', NULL, '2026-02-10 08:09:26', '2026-02-10 08:09:26', 10000, 0),
-	(8, 2, 1, 5, 'debit', 50000, 'Dinar\r\n\r\nLOker 31', '15:13:00', NULL, '2026-02-10 08:13:27', '2026-02-10 08:13:27', 50000, 0),
-	(9, 4, 1, 1, 'debit', 10000, 'Tyto\r\nkarpet merah', '09:33:00', '11:33:00', '2026-02-12 02:33:16', '2026-02-12 02:33:16', 10000, 0),
-	(10, 2, 1, 1, 'transfer', 10000, 'hhghg', '17:15:00', NULL, '2026-02-12 10:15:10', '2026-02-12 10:15:10', 10000, 0),
-	(11, 3, 1, 1, 'credit', 10000, 'hhghg', '17:17:00', NULL, '2026-02-12 10:17:20', '2026-02-12 10:17:20', 100000, 0),
-	(12, 5, 1, 1, 'debit', 500000, 'bikin dengan data  member', '15:18:00', NULL, '2026-02-16 08:18:10', '2026-02-16 08:18:10', 500000, 0),
-	(13, 3, 1, 4, 'cash', 44000, 'loker', '11:04:00', NULL, '2026-02-24 04:04:40', '2026-02-24 04:04:40', 44000, 0),
-	(14, 1, 1, 1, 'debit', 10000, 'fsfds', '09:40:00', NULL, '2026-02-25 02:40:17', '2026-02-25 02:40:17', 10000, 0),
-	(15, 1, 1, 1, 'transfer', 10000, NULL, '12:56:00', NULL, '2026-02-25 05:56:30', '2026-02-25 05:56:30', 10000, 0);
 
 -- Dumping structure for table db_membership.permissions
 CREATE TABLE IF NOT EXISTS `permissions` (
@@ -530,7 +505,7 @@ INSERT INTO `settings` (`id`, `key`, `value`, `created_at`, `updated_at`) VALUES
 	(1, 'name', 'ANWA PURI RESIDENCE SPORT CLUB', '2026-02-24 04:50:44', '2026-02-24 07:08:31'),
 	(2, 'logo', 'logo/260224020831164.png', '2026-02-24 04:50:44', '2026-02-24 07:08:31'),
 	(3, 'ucapan', 'Terima Kasih', '2026-02-24 04:50:44', '2026-02-24 04:50:44'),
-	(4, 'deskripsi', 'qr code hanya berlaku satu kali', '2026-02-24 04:50:44', '2026-02-24 04:50:44'),
+	(4, 'deskripsi', 'IG WA', '2026-02-24 04:50:44', '2026-02-27 06:34:24'),
 	(5, 'ppn', '0', '2026-02-24 04:50:44', '2026-02-24 04:50:44'),
 	(8, 'print_mode', 'per_ticket', '2026-02-24 04:50:44', '2026-02-24 09:09:11'),
 	(9, 'dashboard_metric_mode', 'count', '2026-02-24 04:50:44', '2026-02-24 07:22:49'),
@@ -574,8 +549,8 @@ CREATE TABLE IF NOT EXISTS `sewa` (
 -- Dumping data for table db_membership.sewa: ~5 rows (approximately)
 DELETE FROM `sewa`;
 INSERT INTO `sewa` (`id`, `name`, `harga`, `is_nominal_flexible`, `device`, `use_time`, `print_qr`, `use_ppn`, `ppn`, `created_at`, `updated_at`) VALUES
-	(1, 'Sewa Ban', 10000, 0, 1, 0, 0, 0, 0.00, '2026-01-30 07:32:23', '2026-02-10 04:48:06'),
-	(2, 'Sewa Baju Renang', 10000, 0, 2, 0, 0, 0, 0.00, '2026-01-30 07:32:23', '2026-01-30 07:32:23'),
+	(1, 'Sewa Ban', 10000, 1, 1, 0, 0, 0, 0.00, '2026-01-30 07:32:23', '2026-02-27 05:56:03'),
+	(2, 'Sewa Baju Renang', 10000, 1, 2, 0, 0, 0, 0.00, '2026-01-30 07:32:23', '2026-02-27 05:56:09'),
 	(3, 'Sewa Pelampung', 10000, 0, 3, 0, 0, 0, 0.00, '2026-01-30 07:32:23', '2026-01-30 07:32:23'),
 	(4, 'Sewa Tikar', 10000, 0, 4, 1, 0, 0, 0.00, '2026-01-30 07:32:23', '2026-02-10 05:03:23'),
 	(5, 'Spicy Classic Fried Rice', 500000, 0, 3232, 0, 0, 0, 0.00, '2026-02-10 05:02:00', '2026-02-10 05:02:09');
@@ -670,6 +645,7 @@ CREATE TABLE IF NOT EXISTS `transactions` (
   `gate` int DEFAULT NULL,
   `is_active` int NOT NULL DEFAULT '0',
   `ppn` decimal(12,2) NOT NULL DEFAULT '0.00',
+  `admin_fee` bigint unsigned NOT NULL DEFAULT '0',
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
   `is_print` int DEFAULT '0',
@@ -678,74 +654,12 @@ CREATE TABLE IF NOT EXISTS `transactions` (
   PRIMARY KEY (`id`),
   KEY `transactions_user_id_foreign` (`user_id`),
   CONSTRAINT `transactions_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=64 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table db_membership.transactions: ~42 rows (approximately)
+-- Dumping data for table db_membership.transactions: ~59 rows (approximately)
 DELETE FROM `transactions`;
-INSERT INTO `transactions` (`id`, `ticket_id`, `member_id`, `member_info`, `user_id`, `no_trx`, `ticket_code`, `transaction_type`, `tipe`, `amount`, `disc`, `metode`, `nama_kartu`, `no_kartu`, `bank`, `discount`, `amount_scanned`, `status`, `gate`, `is_active`, `ppn`, `created_at`, `updated_at`, `is_print`, `bayar`, `kembali`) VALUES
-	(1, 0, NULL, NULL, 1, 1, 'INV/30012026/2373', 'ticket', 'group', 2, 7000, 'cash', NULL, NULL, NULL, 10, 0, 'open', NULL, 1, 0.00, '2026-01-30 08:27:42', '2026-01-30 08:49:29', 0, 70000, 0),
-	(2, 2, NULL, NULL, 1, 2, 'REG/300120261845', 'registration', 'group', 4, 0, 'cash', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-01-30 08:48:59', '2026-01-30 08:48:59', 0, 500000, 0),
-	(3, 1, NULL, NULL, 1, 3, 'TKT/1769762959', 'rental', 'individual', 1, 0, 'cash', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-01-30 08:49:19', '2026-01-30 08:49:19', 0, 10000, 0),
-	(4, 0, NULL, NULL, 1, 4, 'INV/30012026/3937', 'ticket', 'group', 0, 0, NULL, NULL, NULL, NULL, 0, 0, 'open', NULL, 0, 0.00, '2026-01-30 08:49:33', '2026-01-30 08:49:33', 0, 0, 0),
-	(5, 1, NULL, NULL, 1, 1, 'REG/100220265260', 'registration', 'individual', 1, 0, 'cash', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-02-10 01:35:52', '2026-02-10 01:35:52', 0, 150000, 0),
-	(6, 2, NULL, NULL, 1, 2, 'REG/100220269110', 'registration', 'group', 4, 0, 'cash', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-02-10 01:42:34', '2026-02-10 01:42:34', 0, 500000, 0),
-	(7, 0, NULL, NULL, 1, 3, 'INV/10022026/3096', 'ticket', 'group', 21, 0, 'cash', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-02-10 01:59:28', '2026-02-10 02:12:43', 0, 440000, 0),
-	(8, 2, NULL, NULL, 1, 4, 'RENEW/100220264765', 'renewal', 'group', 4, 0, 'cash', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-02-10 02:03:25', '2026-02-10 02:03:25', 0, 500000, 0),
-	(9, 0, NULL, NULL, 1, 5, 'INV/10022026/3212', 'ticket', 'group', 0, 0, NULL, NULL, NULL, NULL, 0, 0, 'open', NULL, 0, 0.00, '2026-02-10 02:13:08', '2026-02-10 02:13:08', 0, 0, 0),
-	(10, 1, NULL, NULL, 1, 6, 'REG/100220269434', 'registration', 'individual', 1, 0, 'cash', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-02-10 03:24:18', '2026-02-10 03:24:18', 0, 150000, 0),
-	(11, 2, 1, 'Budi - 089687695437', 1, 7, 'RENEW/100220265843', 'renewal', 'group', 4, 0, 'cash', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-02-10 03:36:17', '2026-02-10 03:36:17', 0, 500000, 0),
-	(12, 2, NULL, NULL, 1, 8, 'TKT/1770696787', 'rental', 'individual', 4, 0, 'cash', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-02-10 04:13:07', '2026-02-10 04:13:07', 0, 40000, 0),
-	(13, 3, NULL, NULL, 1, 9, 'TKT/1770696833', 'rental', 'individual', 4, 0, 'cash', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-02-10 04:13:53', '2026-02-10 04:13:53', 0, 40000, 0),
-	(14, 4, NULL, NULL, 1, 10, 'TKT/1770700617', 'rental', 'individual', 1, 0, 'cash', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-02-10 05:16:57', '2026-02-10 05:16:57', 0, 10000, 0),
-	(15, 5, NULL, NULL, 1, 11, 'TKT/1770700690', 'rental', 'individual', 1, 0, 'cash', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-02-10 05:18:10', '2026-02-10 05:18:10', 0, 10000, 0),
-	(16, 6, NULL, NULL, 1, 12, 'TKT/1770700762', 'rental', 'individual', 1, 0, 'cash', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-02-10 05:19:22', '2026-02-10 05:19:22', 0, 10000, 0),
-	(17, 1, 10, 'Summer - 97897898797', 1, 13, 'RENEW/100220269642', 'renewal', 'individual', 1, 0, 'cash', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-02-10 06:35:03', '2026-02-10 06:35:03', 0, 150000, 0),
-	(18, 1, 5, 'John - 0898998687687', 1, 14, 'RENEW/100220267327', 'renewal', 'individual', 1, 0, 'cash', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-02-10 06:41:23', '2026-02-10 06:41:23', 0, 150000, 0),
-	(19, 1, 10, 'Summer - 97897898797', 1, 15, 'RENEW/100220264964', 'renewal', 'individual', 1, 0, 'cash', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-02-10 06:44:37', '2026-02-10 06:44:37', 0, 150000, 0),
-	(20, 7, NULL, NULL, 1, 16, 'TKT/1770710966', 'rental', 'individual', 1, 0, 'cash', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-02-10 08:09:26', '2026-02-10 08:09:26', 0, 10000, 0),
-	(21, 8, NULL, NULL, 1, 17, 'TKT/1770711207', 'rental', 'individual', 5, 0, 'cash', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-02-10 08:13:27', '2026-02-10 08:13:27', 0, 50000, 0),
-	(22, 2, 6, 'Diki - 084374732', 1, 18, 'RENEW/100220264466', 'renewal', 'group', 4, 0, 'cash', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-02-10 08:19:10', '2026-02-10 08:19:10', 0, 500000, 0),
-	(23, 1, 11, 'Ina - 08989677667', 1, 1, 'REG/120220267951', 'registration', 'individual', 1, 0, 'cash', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-02-12 02:09:26', '2026-02-12 02:09:26', 0, 150000, 0),
-	(24, 3, 12, 'Ika - 08954635643', 1, 2, 'REG/120220262949', 'registration', 'individual', 1, 0, 'cash', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-02-12 02:11:43', '2026-02-12 02:11:43', 0, 20000, 0),
-	(25, 0, NULL, NULL, 1, 3, 'INV/12022026/9481', 'ticket', 'group', 10, 0, 'cash', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-02-12 02:13:13', '2026-02-12 02:22:03', 0, 350000, 0),
-	(26, 3, 12, 'Ika - 08954635643', 1, 4, 'RENEW/120220265453', 'renewal', 'individual', 1, 0, 'cash', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-02-12 02:16:23', '2026-02-12 02:16:23', 0, 20000, 0),
-	(27, 0, NULL, NULL, 1, 5, 'INV/12022026/7011', 'ticket', 'group', 0, 0, NULL, NULL, NULL, NULL, 0, 0, 'open', NULL, 0, 0.00, '2026-02-12 02:23:58', '2026-02-12 02:23:58', 0, 0, 0),
-	(28, 9, NULL, NULL, 1, 19, 'TKT/1770863596', 'rental', 'individual', 1, 0, 'cash', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-02-12 02:33:16', '2026-02-12 02:33:16', 0, 10000, 0),
-	(29, 1, 13, 'Ikag - 08954635643', 1, 3, 'REG/120220266564', 'registration', 'individual', 1, 0, 'cash', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-02-12 10:08:50', '2026-02-12 10:08:50', 0, 150000, 0),
-	(30, 1, 14, 'Ikag - 08954635643', 1, 4, 'REG/12022026/004', 'registration', 'individual', 1, 0, 'cash', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-02-12 10:11:58', '2026-02-12 10:11:58', 0, 150000, 0),
-	(31, 10, NULL, NULL, 1, 20, 'RENT/020', 'rental', 'individual', 1, 0, 'cash', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-02-12 10:15:10', '2026-02-12 10:15:10', 0, 10000, 0),
-	(32, 11, NULL, NULL, 1, 21, 'RENT/021', 'rental', 'individual', 1, 0, 'cash', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-02-12 10:17:20', '2026-02-12 10:17:20', 0, 10000, 0),
-	(33, 3, 12, 'Ika - 08954635643', 1, 1, 'RENEW/001', 'renewal', 'individual', 1, 0, 'cash', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-02-16 07:43:43', '2026-02-16 07:43:43', 0, 20000, 0),
-	(34, 0, NULL, NULL, 1, 1, 'TKT/001', 'ticket', 'group', 2, 0, 'cash', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-02-16 07:44:05', '2026-02-16 07:44:10', 0, 70000, 0),
-	(35, 0, NULL, NULL, 1, 2, 'TKT/002', 'ticket', 'group', 0, 0, NULL, NULL, NULL, NULL, 0, 0, 'open', NULL, 0, 0.00, '2026-02-16 07:44:17', '2026-02-16 07:44:17', 0, 0, 0),
-	(36, 12, NULL, NULL, 1, 1, 'RENT/001', 'rental', 'individual', 1, 0, 'debit', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-02-16 08:18:10', '2026-02-16 08:18:10', 0, 500000, 0),
-	(37, 3, 12, 'Ika - 08954635643', 1, 1, 'RENEW/001', 'renewal', 'individual', 1, 0, 'cash', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-02-19 07:48:21', '2026-02-19 07:48:21', 0, 20000, 0),
-	(38, 1, 14, 'Ikag - 6289637761500', 1, 2, 'RENEW/002', 'renewal', 'individual', 1, 0, 'cash', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-02-19 07:52:03', '2026-02-19 07:52:03', 0, 150000, 0),
-	(39, 3, 12, 'Ika - 6289637761500', 1, 3, 'RENEW/003', 'renewal', 'individual', 1, 0, 'cash', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-02-19 07:52:10', '2026-02-19 07:52:10', 0, 20000, 0),
-	(40, 2, 1, 'Budi - 6289637761500', 1, 4, 'RENEW/004', 'renewal', 'group', 4, 0, 'cash', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-02-19 07:52:17', '2026-02-19 07:52:17', 0, 500000, 0),
-	(41, 2, 15, 'duma - 6289637761500', 1, 1, 'REG/001', 'registration', 'group', 4, 0, 'cash', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-02-19 07:54:26', '2026-02-19 07:54:26', 0, 500000, 0),
-	(42, 3, 12, 'Ika - 6289637761500', 1, 5, 'RENEW/005', 'renewal', 'individual', 1, 0, 'cash', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-02-19 08:17:28', '2026-02-19 08:17:28', 0, 20000, 0),
-	(43, 2, 15, 'duma - 6289637761500', 1, 6, 'RENEW/006', 'renewal', 'group', 4, 0, 'cash', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-02-19 08:17:38', '2026-02-19 08:17:38', 0, 500000, 0),
-	(44, 1, 14, 'Ikag - 6289637761500', 1, 7, 'RENEW/007', 'renewal', 'individual', 1, 0, 'cash', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-02-19 08:17:51', '2026-02-19 08:17:51', 0, 150000, 0),
-	(45, 1, 13, 'Ikag - 6289637761500', 1, 8, 'RENEW/008', 'renewal', 'individual', 1, 0, 'cash', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-02-19 08:37:25', '2026-02-19 08:37:25', 0, 150000, 0),
-	(46, 13, NULL, NULL, 1, 1, 'RENT/001', 'rental', 'individual', 4, 0, 'cash', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-02-24 04:04:40', '2026-02-24 04:04:40', 0, 44000, 0),
-	(47, 0, NULL, NULL, 2, 1, 'TKT/001', 'ticket', 'group', 2, 0, 'cash', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-02-24 04:09:23', '2026-02-24 04:13:56', 0, 70000, 0),
-	(48, 3, 19, 'Anggie - 08987654', 1, 1, 'REG/001', 'registration', 'individual', 1, 0, 'cash', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-02-24 05:45:14', '2026-02-24 05:45:14', 0, 20000, 0),
-	(49, 0, NULL, NULL, 1, 2, 'TKT/002', 'ticket', 'group', 0, 0, NULL, NULL, NULL, NULL, 0, 0, 'open', NULL, 0, 0.00, '2026-02-24 07:38:08', '2026-02-24 07:38:08', 0, 0, 0),
-	(50, 14, NULL, NULL, 1, 1, 'RENT/001', 'rental', 'individual', 1, 0, 'debit', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-02-25 02:40:17', '2026-02-25 02:40:17', 0, 10000, 0),
-	(51, 0, NULL, NULL, 1, 1, 'TKT/001', 'ticket', 'group', 1, 0, 'transfer', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-02-25 02:45:34', '2026-02-25 05:02:26', 0, 50000, 0),
-	(52, 0, NULL, NULL, 1, 2, 'TKT/002', 'ticket', 'group', 1, 0, 'debit', 'oke', '08989', 'bandung', 0, 0, 'open', NULL, 1, 0.00, '2026-02-25 05:12:58', '2026-02-25 05:16:46', 0, 20000, 0),
-	(53, 0, NULL, NULL, 1, 3, 'TKT/003', 'ticket', 'group', 0, 0, NULL, NULL, NULL, NULL, 0, 0, 'open', NULL, 0, 0.00, '2026-02-25 05:18:06', '2026-02-25 05:18:06', 0, 0, 0),
-	(54, 3, 19, 'Anggie - 08987654', 1, 1, 'RENEW/001', 'renewal', 'individual', 1, 0, NULL, NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-02-25 05:36:24', '2026-02-25 05:36:24', 0, 20000, 0),
-	(55, 1, 20, 'Rahma - 08954754776', 1, 1, 'REG/001', 'registration', 'individual', 1, 0, NULL, NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-02-25 05:41:35', '2026-02-25 05:41:35', 0, 150000, 0),
-	(56, 2, 1, 'Budi - 6289637761500', 1, 2, 'RENEW/002', 'renewal', 'group', 4, 0, 'transfer', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-02-25 05:48:14', '2026-02-25 05:48:14', 0, 500000, 0),
-	(57, 1, 21, 'Kino - 646564', 1, 2, 'REG/002', 'registration', 'individual', 1, 0, 'debit', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-02-25 05:52:29', '2026-02-25 05:52:29', 0, 150000, 0),
-	(58, 1, 22, 'Jiju - 9059043859403', 1, 3, 'REG/003', 'registration', 'individual', 1, 0, 'transfer', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-02-25 05:53:00', '2026-02-25 05:53:00', 0, 150000, 0),
-	(59, 3, 23, 'DImaski - 8048204', 1, 4, 'REG/004', 'registration', 'individual', 1, 0, 'transfer', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-02-25 05:55:15', '2026-02-25 05:55:15', 0, 20000, 0),
-	(60, 3, 23, 'DImaski - 8048204', 1, 3, 'RENEW/003', 'renewal', 'individual', 1, 0, 'qris', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-02-25 05:55:51', '2026-02-25 05:55:51', 0, 20000, 0),
-	(61, 15, NULL, NULL, 1, 2, 'RENT/002', 'rental', 'individual', 1, 0, 'transfer', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-02-25 05:56:30', '2026-02-25 05:56:30', 0, 10000, 0),
-	(62, 3, 19, 'Anggie - 08987654', 1, 4, 'RENEW/004', 'renewal', 'individual', 1, 0, 'qris', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-02-25 08:57:45', '2026-02-25 08:57:45', 0, 22500, 0),
-	(63, 1, 20, 'Rahma - 08954754776', 1, 5, 'RENEW/005', 'renewal', 'individual', 1, 0, 'qris', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, '2026-02-25 09:02:55', '2026-02-25 09:02:55', 0, 150000, 0);
+INSERT INTO `transactions` (`id`, `ticket_id`, `member_id`, `member_info`, `user_id`, `no_trx`, `ticket_code`, `transaction_type`, `tipe`, `amount`, `disc`, `metode`, `nama_kartu`, `no_kartu`, `bank`, `discount`, `amount_scanned`, `status`, `gate`, `is_active`, `ppn`, `admin_fee`, `created_at`, `updated_at`, `is_print`, `bayar`, `kembali`) VALUES
+	(1, 1, 21, 'Kino - 646564', 1, 1, 'REG/001', 'registration', 'individual', 1, 0, 'debit', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, 2500, '2026-02-27 06:31:27', '2026-02-27 06:31:27', 0, 150000, 0);
 
 -- Dumping structure for table db_membership.users
 CREATE TABLE IF NOT EXISTS `users` (
@@ -789,16 +703,10 @@ CREATE TABLE IF NOT EXISTS `whatsapp_notification_logs` (
   KEY `idx_wa_logs_transaction_id` (`transaction_id`),
   KEY `idx_wa_logs_recipient_phone` (`recipient_phone`),
   KEY `idx_wa_logs_sent_at` (`sent_at`)
-) ENGINE=InnoDB AUTO_INCREMENT=21 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table db_membership.whatsapp_notification_logs: ~5 rows (approximately)
 DELETE FROM `whatsapp_notification_logs`;
-INSERT INTO `whatsapp_notification_logs` (`id`, `type`, `member_id`, `transaction_id`, `recipient_phone`, `message`, `status`, `retry_count`, `provider_response`, `sent_at`, `created_at`, `updated_at`) VALUES
-	(16, 'renewal_reminder', 1, NULL, '6289637761500', 'Halo Budi, masa berlaku membership Anda akan berakhir pada 20/02/2026 (1 hari lagi). Silakan lakukan renewal sebelum jatuh tempo.', 'sent', 1, '{"ok":true,"http_code":200,"error_code":null,"error_message":null,"response_body":"{\\"success\\":true,\\"data\\":{\\"success\\":true,\\"message\\":\\"Message queued successfully (position: 1)\\",\\"timestamp\\":\\"2026-02-19T15:37:06+07:00\\",\\"message_length\\":129,\\"recipient_type\\":\\"individual\\",\\"send_method\\":\\"unofficial\\",\\"security_level\\":\\"enhanced\\",\\"quota_remaining\\":4978,\\"country_code\\":\\"62\\",\\"country_name\\":\\"Indonesia\\"},\\"message\\":\\"Berhasil mengirim pesan\\"}"}', '2026-02-19 08:37:05', '2026-02-19 08:37:01', '2026-02-19 08:37:05'),
-	(17, 'renewal_reminder', 12, NULL, '6289637761500', 'Halo Ika, masa berlaku membership Anda akan berakhir pada 24/02/2026 (5 hari lagi). Silakan lakukan renewal sebelum jatuh tempo.', 'sent', 1, '{"ok":true,"http_code":200,"error_code":null,"error_message":null,"response_body":"{\\"success\\":true,\\"data\\":{\\"success\\":true,\\"message\\":\\"Message queued successfully (position: 1)\\",\\"timestamp\\":\\"2026-02-19T15:37:13+07:00\\",\\"message_length\\":128,\\"recipient_type\\":\\"individual\\",\\"send_method\\":\\"unofficial\\",\\"security_level\\":\\"enhanced\\",\\"quota_remaining\\":4977,\\"country_code\\":\\"62\\",\\"country_name\\":\\"Indonesia\\"},\\"message\\":\\"Berhasil mengirim pesan\\"}"}', '2026-02-19 08:37:12', '2026-02-19 08:37:01', '2026-02-19 08:37:12'),
-	(18, 'renewal_reminder', 14, NULL, '6289637761500', 'Halo Ikag, masa berlaku membership Anda akan berakhir pada 24/02/2026 (5 hari lagi). Silakan lakukan renewal sebelum jatuh tempo.', 'sent', 1, '{"ok":true,"http_code":200,"error_code":null,"error_message":null,"response_body":"{\\"success\\":true,\\"data\\":{\\"success\\":true,\\"message\\":\\"Message queued successfully (position: 1)\\",\\"timestamp\\":\\"2026-02-19T15:37:25+07:00\\",\\"message_length\\":129,\\"recipient_type\\":\\"individual\\",\\"send_method\\":\\"unofficial\\",\\"security_level\\":\\"enhanced\\",\\"quota_remaining\\":4976,\\"country_code\\":\\"62\\",\\"country_name\\":\\"Indonesia\\"},\\"message\\":\\"Berhasil mengirim pesan\\"}"}', '2026-02-19 08:37:24', '2026-02-19 08:37:01', '2026-02-19 08:37:24'),
-	(19, 'renewal_reminder', 15, NULL, '6289637761500', 'Halo duma, masa berlaku membership Anda akan berakhir pada 22/02/2026 (3 hari lagi). Silakan lakukan renewal sebelum jatuh tempo.', 'sent', 1, '{"ok":true,"http_code":200,"error_code":null,"error_message":null,"response_body":"{\\"success\\":true,\\"data\\":{\\"success\\":true,\\"message\\":\\"Message queued successfully (position: 1)\\",\\"timestamp\\":\\"2026-02-19T15:37:32+07:00\\",\\"message_length\\":129,\\"recipient_type\\":\\"individual\\",\\"send_method\\":\\"unofficial\\",\\"security_level\\":\\"enhanced\\",\\"quota_remaining\\":4975,\\"country_code\\":\\"62\\",\\"country_name\\":\\"Indonesia\\"},\\"message\\":\\"Berhasil mengirim pesan\\"}"}', '2026-02-19 08:37:32', '2026-02-19 08:37:01', '2026-02-19 08:37:32'),
-	(20, 'renewal', 13, 45, '6289637761500', 'Halo Ikag, perpanjangan membership Anda berhasil diproses pada 19/02/2026 15:37. Kode invoice: RENEW/008. Terima kasih.', 'sent', 1, '{"ok":true,"http_code":200,"error_code":null,"error_message":null,"response_body":"{\\"success\\":true,\\"data\\":{\\"success\\":true,\\"message\\":\\"Message queued successfully (position: 1)\\",\\"timestamp\\":\\"2026-02-19T15:38:04+07:00\\",\\"message_length\\":119,\\"recipient_type\\":\\"individual\\",\\"send_method\\":\\"unofficial\\",\\"security_level\\":\\"enhanced\\",\\"quota_remaining\\":4974,\\"country_code\\":\\"62\\",\\"country_name\\":\\"Indonesia\\"},\\"message\\":\\"Berhasil mengirim pesan\\"}"}', '2026-02-19 08:38:03', '2026-02-19 08:37:25', '2026-02-19 08:38:03');
 
 /*!40103 SET TIME_ZONE=IFNULL(@OLD_TIME_ZONE, 'system') */;
 /*!40101 SET SQL_MODE=IFNULL(@OLD_SQL_MODE, '') */;
