@@ -654,15 +654,34 @@ public function update(UpdateMemberRequest $request, Member $member)
         try {
             DB::beginTransaction();
 
-            $member->delete();
+            // Kumpulkan semua turunan member (child, grandchild, dst jika ada).
+            $memberIdsToDelete = [(int) $member->id];
+            $queue = [(int) $member->id];
+            while (!empty($queue)) {
+                $currentParentId = array_shift($queue);
+                $childIds = Member::where('parent_id', $currentParentId)->pluck('id')->map(fn ($id) => (int) $id)->all();
 
-            foreach ($member->histories as $history) {
-                $history->delete();
+                foreach ($childIds as $childId) {
+                    if (in_array($childId, $memberIdsToDelete, true)) {
+                        continue;
+                    }
+
+                    $memberIdsToDelete[] = $childId;
+                    $queue[] = $childId;
+                }
             }
+
+            // Hapus riwayat member & membership lebih dulu agar tidak menyisakan data orphan.
+            History::whereIn('member_id', $memberIdsToDelete)->delete();
+            HistoryMembership::whereIn('member_id', $memberIdsToDelete)->delete();
+
+            // Hapus member utama beserta seluruh submember.
+            Member::whereIn('id', $memberIdsToDelete)->delete();
 
             DB::commit();
 
-            return redirect()->route('members.index')->with('success', "Member {$member->nama} berhasil dihapus");
+            $deletedCount = count($memberIdsToDelete);
+            return redirect()->route('members.index')->with('success', "Member {$member->nama} berhasil dihapus ({$deletedCount} data termasuk submember).");
         } catch (\Throwable $th) {
             DB::rollBack();
             return back()->with('error', $th->getMessage());
