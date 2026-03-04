@@ -52,6 +52,7 @@
         <table class="table table-bordered table-hover align-middle">
             <thead>
                 <tr>
+                    <th style="width: 120px">Tanggal Group</th>
                     <th style="width: 50px">No</th>
                     <th>No Bukti</th>
                     <th>Tanggal</th>
@@ -67,42 +68,59 @@
             </thead>
             <tbody>
                 @php $hasData = false; @endphp
-                @forelse($groupedRows as $group)
+                @forelse($groupedRows as $dateGroup)
                     @php $hasData = true; @endphp
-                    @foreach($group['details'] as $detail)
-                    <tr>
-                        <td>{{ $detail['no'] }}</td>
-                        <td>{{ $detail['no_bukti'] }}</td>
-                        <td>{{ $detail['tanggal'] }}</td>
-                        <td>{{ $detail['kasir'] }}</td>
-                        <td>{{ $detail['kode_trx'] }}</td>
-                        <td>{{ $group['transaction_type_label'] }}</td>
-                        <td>{{ $group['item_name'] }}</td>
-                        <td class="text-center">{{ number_format($detail['qty'], 0, ',', '.') }}</td>
-                        <td>{{ $detail['metode'] }}</td>
-                        <td class="text-end">Rp. {{ number_format($detail['ppn'], 0, ',', '.') }}</td>
-                        <td class="text-end">Rp. {{ number_format($detail['total_bayar'], 0, ',', '.') }}</td>
-                    </tr>
+                    @php
+                        $dateCellRendered = false;
+                        $dateRowspan = max((int) ($dateGroup['rowspan'] ?? 1), 1);
+                    @endphp
+                    @foreach($dateGroup['groups'] as $group)
+                        @foreach($group['details'] as $detail)
+                        <tr>
+                            @if(!$dateCellRendered)
+                                <td rowspan="{{ $dateRowspan }}" class="align-top fw-bold">{{ $dateGroup['tanggal_label'] }}</td>
+                                @php $dateCellRendered = true; @endphp
+                            @endif
+                            <td>{{ $detail['no'] }}</td>
+                            <td>{{ $detail['no_bukti'] }}</td>
+                            <td>{{ $detail['tanggal'] }}</td>
+                            <td>{{ $detail['kasir'] }}</td>
+                            <td>{{ $detail['kode_trx'] }}</td>
+                            <td>{{ $group['transaction_type_label'] }}</td>
+                            <td>{{ $group['item_name'] }}</td>
+                            <td class="text-center">{{ number_format($detail['qty'], 0, ',', '.') }}</td>
+                            <td>{{ $detail['metode'] }}</td>
+                            <td class="text-end">Rp. {{ number_format($detail['ppn'], 0, ',', '.') }}</td>
+                            <td class="text-end">Rp. {{ number_format($detail['total_bayar'], 0, ',', '.') }}</td>
+                        </tr>
+                        @endforeach
+                        <tr style="background-color: #f5f5f5; font-weight: 700;">
+                            <td colspan="6">TOTAL</td>
+                            <td>{{ $group['item_name'] }}</td>
+                            <td class="text-center">{{ number_format($group['subtotal_qty'], 0, ',', '.') }}</td>
+                            <td></td>
+                            <td class="text-end">Rp. {{ number_format($group['subtotal_ppn'], 0, ',', '.') }}</td>
+                            <td class="text-end">Rp. {{ number_format($group['subtotal_total'], 0, ',', '.') }}</td>
+                        </tr>
                     @endforeach
-                    <tr style="background-color: #f5f5f5; font-weight: 700;">
-                        <td colspan="6">TOTAL</td>
-                        <td>{{ $group['item_name'] }}</td>
-                        <td class="text-center">{{ number_format($group['subtotal_qty'], 0, ',', '.') }}</td>
+                    <tr style="background-color: #e8ecef; font-weight: 700;">
+                        <td colspan="7" class="text-end">TOTAL TANGGAL {{ $dateGroup['tanggal_label'] }}</td>
+                        <td class="text-center">{{ number_format($dateGroup['subtotal_qty'], 0, ',', '.') }}</td>
                         <td></td>
-                        <td class="text-end">Rp. {{ number_format($group['subtotal_ppn'], 0, ',', '.') }}</td>
-                        <td class="text-end">Rp. {{ number_format($group['subtotal_total'], 0, ',', '.') }}</td>
+                        <td class="text-end">Rp. {{ number_format($dateGroup['subtotal_ppn'], 0, ',', '.') }}</td>
+                        <td class="text-end">Rp. {{ number_format($dateGroup['subtotal_total'], 0, ',', '.') }}</td>
                     </tr>
                 @empty
                 @endforelse
                 @if(!$hasData)
                     <tr>
-                        <td colspan="11" class="text-center text-muted">Tidak ada data transaksi pada rentang tanggal ini.</td>
+                        <td colspan="12" class="text-center text-muted">Tidak ada data transaksi pada rentang tanggal ini.</td>
                     </tr>
                 @endif
             </tbody>
             <tfoot>
                 <tr>
-                    <th colspan="7" class="text-end">GRAND TOTAL</th>
+                    <th colspan="8" class="text-end">GRAND TOTAL</th>
                     <th class="text-center">{{ number_format($grandQty, 0, ',', '.') }}</th>
                     <th></th>
                     <th class="text-end">Rp. {{ number_format($grandPpn, 0, ',', '.') }}</th>

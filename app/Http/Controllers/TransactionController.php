@@ -101,6 +101,9 @@ class TransactionController extends Controller
                 ->addColumn('detail_description', function ($row) {
                     return $this->resolveTransactionDetail($row);
                 })
+                ->addColumn('qty', function ($row) {
+                    return $this->resolveTransactionQty($row);
+                })
                 ->addColumn('member_info', function ($row) {
                     if (!in_array($row->transaction_type, ['renewal', 'registration'])) {
                         return '-';
@@ -481,6 +484,22 @@ class TransactionController extends Controller
         }
 
         return '-';
+    }
+
+    private function resolveTransactionQty(Transaction $transaction): int
+    {
+        if ($transaction->transaction_type === 'ticket') {
+            $details = $transaction->relationLoaded('detail')
+                ? $transaction->detail
+                : $transaction->detail()->get();
+
+            $qty = (int) $details->sum('qty');
+            if ($qty > 0) {
+                return $qty;
+            }
+        }
+
+        return max((int) ($transaction->amount ?? 1), 1);
     }
 
     private function buildDailyReceiptGroups($transactions): array

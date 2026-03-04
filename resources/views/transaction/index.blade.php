@@ -124,8 +124,8 @@
         <table id="datatable" class="table table-striped table-bordered align-middle">
             <thead>
                 <tr>
-                    <th class="text-nowrap">Tanggal</th>
                     <th class="text-nowrap">No</th>
+                    <th class="text-nowrap">Tanggal</th>
                     <!-- <th class="text-nowrap">No Trx</th> -->
                     <th class="text-nowrap">Invoice</th>
                     <th class="text-nowrap">Dibuat Oleh (Kasir)</th>
@@ -134,6 +134,7 @@
                     <!-- <th class="text-nowrap">Harga</th> -->
                     <th class="text-nowrap">Jenis Transaksi</th>
                     <th class="text-nowrap">Detail Transaksi</th>
+                    <th class="text-nowrap">Qty</th>
                     <th class="text-nowrap">Scanned</th>
                     <th class="text-nowrap">Bayar</th>
                     <th class="text-nowrap">PBJT</th>
@@ -353,14 +354,14 @@
         deferRender: true,
         pagination: true,
         columns: [{
-                data: 'tanggal',
-                name: 'tanggal'
-            },
-            {
                 data: 'DT_RowIndex',
                 name: 'DT_RowIndex',
                 sortable: false,
                 searchable: false
+            },
+            {
+                data: 'tanggal',
+                name: 'tanggal'
             },
             {
                 data: 'ticket_code',
@@ -381,6 +382,12 @@
             {
                 data: 'detail_description',
                 name: 'detail_description',
+                sortable: false,
+                searchable: false
+            },
+            {
+                data: 'qty',
+                name: 'qty',
                 sortable: false,
                 searchable: false
             },

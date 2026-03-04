@@ -273,8 +273,9 @@
                 if ($kasir != 'all' && $kasir) {
                     $queryTrxRental->where('user_id', $kasir);
                 }
-
-                $qtyRental = $queryTrxRental->count();
+                            $qtyRental = (clone $queryTrxRental)
+                                ->leftJoin('penyewaans as p', 'p.id', '=', 'transactions.ticket_id')
+                                ->sum(\DB::raw('COALESCE(p.qty, 1)'));
                 $totalPerRental = $queryTrxRental->sum(\DB::raw('(bayar - kembali) + ppn'));
                 $rentalByMethod = [];
                 foreach ($methodKeys as $methodKey) {

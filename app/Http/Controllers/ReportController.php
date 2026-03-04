@@ -489,7 +489,10 @@ class ReportController extends Controller
 
         foreach ($transactions as $trx) {
             $kasirName = $trx->user->name ?? '-';
-            $tanggal = Carbon::parse($trx->created_at)->format('d/m/Y H:i:s');
+            $createdAt = Carbon::parse($trx->created_at)->timezone('Asia/Jakarta');
+            $tanggal = $createdAt->format('d/m/Y H:i:s');
+            $tanggalKey = $createdAt->format('Y-m-d');
+            $tanggalLabel = $createdAt->format('d/m/Y');
             $kodeTrx = (string) ($trx->ticket_code ?? ('TRX/' . $trx->id));
             $metode = strtoupper((string) ($trx->metode ?? '-'));
             $noBukti = (string) ((int) ($trx->no_trx ?? 0) > 0 ? $trx->no_trx : $trx->id);
@@ -508,6 +511,8 @@ class ReportController extends Controller
                         'item_name' => $itemName,
                         'no_bukti' => $noBukti,
                         'tanggal' => $tanggal,
+                        'tanggal_key' => $tanggalKey,
+                        'tanggal_label' => $tanggalLabel,
                         'kasir' => $kasirName,
                         'kode_trx' => $kodeTrx,
                         'qty' => $qty,
@@ -533,6 +538,8 @@ class ReportController extends Controller
                     'item_name' => $itemName,
                     'no_bukti' => $noBukti,
                     'tanggal' => $tanggal,
+                    'tanggal_key' => $tanggalKey,
+                    'tanggal_label' => $tanggalLabel,
                     'kasir' => $kasirName,
                     'kode_trx' => $kodeTrx,
                     'qty' => $qty,
@@ -558,6 +565,8 @@ class ReportController extends Controller
                     'item_name' => $itemName,
                     'no_bukti' => $noBukti,
                     'tanggal' => $tanggal,
+                    'tanggal_key' => $tanggalKey,
+                    'tanggal_label' => $tanggalLabel,
                     'kasir' => $kasirName,
                     'kode_trx' => $kodeTrx,
                     'qty' => $qty,
@@ -569,20 +578,41 @@ class ReportController extends Controller
         }
 
         $groupedRows = $detailRows
-            ->groupBy('group_key')
-            ->map(function ($items) {
-                $details = $items->values()->map(function ($item, $index) {
-                    $item['no'] = $index + 1;
-                    return $item;
-                });
+            ->groupBy('tanggal_key')
+            ->sortKeys()
+            ->map(function ($dateItems, $dateKey) {
+                $firstDateItem = $dateItems->first();
+                $dateLabel = (string) ($firstDateItem['tanggal_label'] ?? Carbon::parse($dateKey)->format('d/m/Y'));
+
+                $itemGroups = $dateItems
+                    ->groupBy('group_key')
+                    ->map(function ($items) {
+                        $details = $items->values()->map(function ($item, $index) {
+                            $item['no'] = $index + 1;
+                            return $item;
+                        });
+
+                        return [
+                            'transaction_type_label' => (string) ($items->first()['transaction_type_label'] ?? '-'),
+                            'item_name' => (string) ($items->first()['item_name'] ?? '-'),
+                            'details' => $details,
+                            'subtotal_qty' => (int) $details->sum('qty'),
+                            'subtotal_ppn' => (float) $details->sum('ppn'),
+                            'subtotal_total' => (float) $details->sum('total_bayar'),
+                        ];
+                    })
+                    ->values();
 
                 return [
-                    'transaction_type_label' => (string) ($items->first()['transaction_type_label'] ?? '-'),
-                    'item_name' => (string) ($items->first()['item_name'] ?? '-'),
-                    'details' => $details,
-                    'subtotal_qty' => (int) $details->sum('qty'),
-                    'subtotal_ppn' => (float) $details->sum('ppn'),
-                    'subtotal_total' => (float) $details->sum('total_bayar'),
+                    'tanggal_key' => (string) $dateKey,
+                    'tanggal_label' => $dateLabel,
+                    'groups' => $itemGroups,
+                    'rowspan' => (int) ($itemGroups->sum(function ($group) {
+                        return count($group['details']) + 1;
+                    }) + 1),
+                    'subtotal_qty' => (int) $itemGroups->sum('subtotal_qty'),
+                    'subtotal_ppn' => (float) $itemGroups->sum('subtotal_ppn'),
+                    'subtotal_total' => (float) $itemGroups->sum('subtotal_total'),
                 ];
             })
             ->values();

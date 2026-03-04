@@ -26,35 +26,65 @@ class ReportPenyewaanExport implements FromCollection, WithHeadings, ShouldAutoS
     {
         $rows = new Collection();
 
-        foreach ($this->groupedRows as $group) {
-            foreach ($group['details'] as $detail) {
+        foreach ($this->groupedRows as $dateGroup) {
+            $rows->push([
+                'TANGGAL',
+                '',
+                $dateGroup['tanggal_label'] ?? '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+            ]);
+
+            foreach (($dateGroup['groups'] ?? []) as $group) {
+                foreach (($group['details'] ?? []) as $detail) {
+                    $rows->push([
+                        $detail['no'],
+                        $detail['no_bukti'],
+                        $detail['tanggal'],
+                        $detail['kasir'],
+                        $detail['kode_trx'],
+                        $group['transaction_type_label'],
+                        $group['item_name'],
+                        $detail['qty'],
+                        $detail['metode'],
+                        $detail['ppn'],
+                        $detail['total_bayar'],
+                    ]);
+                }
+
                 $rows->push([
-                    $detail['no'],
-                    $detail['no_bukti'],
-                    $detail['tanggal'],
-                    $detail['kasir'],
-                    $detail['kode_trx'],
-                    $group['transaction_type_label'],
+                    'TOTAL',
+                    '',
+                    '',
+                    '',
+                    '',
+                    '',
                     $group['item_name'],
-                    $detail['qty'],
-                    $detail['metode'],
-                    $detail['ppn'],
-                    $detail['total_bayar'],
+                    $group['subtotal_qty'],
+                    '',
+                    $group['subtotal_ppn'],
+                    $group['subtotal_total'],
                 ]);
             }
 
             $rows->push([
-                'TOTAL',
+                'TOTAL TANGGAL',
+                '',
+                $dateGroup['tanggal_label'] ?? '',
                 '',
                 '',
                 '',
                 '',
+                $dateGroup['subtotal_qty'] ?? 0,
                 '',
-                $group['item_name'],
-                $group['subtotal_qty'],
-                '',
-                $group['subtotal_ppn'],
-                $group['subtotal_total'],
+                $dateGroup['subtotal_ppn'] ?? 0,
+                $dateGroup['subtotal_total'] ?? 0,
             ]);
         }
 
