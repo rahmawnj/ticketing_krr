@@ -268,7 +268,7 @@
             $lainnyaTotal = App\Models\DetailTransaction::whereIn('transaction_id', $lainnyaIds)->sum(\DB::raw('total + ppn'))
                 + App\Models\Transaction::whereIn('id', $lainnyaIds)
                     ->whereIn('transaction_type', ['renewal', 'registration', 'rental'])
-                    ->sum(\DB::raw('(bayar - kembali) + (CASE WHEN transaction_type IN (\'registration\', \'renewal\') THEN admin_fee ELSE 0 END)'));
+                    ->sum(\DB::raw('(bayar - kembali) + ppn + (CASE WHEN transaction_type IN (\'registration\', \'renewal\') THEN admin_fee ELSE 0 END)'));
 
             $finalTotalAmount = $totalSalesAmount - $totalDiscount;
         @endphp

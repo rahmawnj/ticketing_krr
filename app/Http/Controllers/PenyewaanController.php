@@ -212,8 +212,8 @@ public function store(Request $request)
             'nama_kartu' => $isCardMethod ? $request->nama_kartu : null,
             'no_kartu' => $isCardMethod ? $request->no_kartu : null,
             'bank' => $isCardMethod ? $request->bank : null,
-            'amount' => $request->qty,       // harga bersih (net price)
-            'bayar' => $basePrice,       // Total dibayar (gross price)
+            'amount' => $request->qty,       // qty item
+            'bayar' => $basePrice,       // total DPP (sebelum PBJT)
             'status' => 'open',
             'is_active' => 1,
             'ppn' => $ppnAmount,         // simpan ppn untuk laporan
@@ -255,8 +255,8 @@ public function store(Request $request)
             'nama_kartu' => $isCardMethod ? $request->nama_kartu : null,
             'no_kartu' => $isCardMethod ? $request->no_kartu : null,
             'bank' => $isCardMethod ? $request->bank : null,
-            'amount' => $request->qty,       // harga bersih (net price)
-            'bayar' => $basePrice,       // Total dibayar (gross price)
+            'amount' => $request->qty,       // qty item
+            'bayar' => $basePrice,       // total DPP (sebelum PBJT)
             'status' => 'open',
             'is_active' => 1,
             'ppn' => $ppnAmount,         // simpan ppn untuk laporan

@@ -15,14 +15,14 @@
         <tr>
             @if($kasir == 'all')
             <td>{{ $sw->name }}</td>
-            <td class="text-center">{{ App\Models\Penyewaan::whereBetween('created_at', [$from, $to])->where('sewa_id', $sw->id)->count() }}</td>
+            <td class="text-center">{{ App\Models\Penyewaan::whereBetween('created_at', [$from, $to])->where('sewa_id', $sw->id)->sum('qty') }}</td>
             <td class="text-center">{{ $sw->harga }}</td>
             <td class="text-end">
                 {{ App\Models\Penyewaan::whereBetween('created_at', [$from, $to])->where('sewa_id', $sw->id)->sum('jumlah') ?? 0 }}
             </td>
             @else
             <td>{{ $sw->name }}</td>
-            <td class="text-center">{{ App\Models\Penyewaan::where('user_id', $kasir)->whereBetween('created_at', [$from, $to])->where('sewa_id', $sw->id)->count() }}</td>
+            <td class="text-center">{{ App\Models\Penyewaan::where('user_id', $kasir)->whereBetween('created_at', [$from, $to])->where('sewa_id', $sw->id)->sum('qty') }}</td>
             <td class="text-center">{{ $sw->harga }}</td>
             <td class="text-end">
                 {{ App\Models\Penyewaan::where('user_id', $kasir)->whereBetween('created_at', [$from, $to])->where('sewa_id', $sw->id)->sum('jumlah') ?? 0 }}

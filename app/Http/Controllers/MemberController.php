@@ -305,6 +305,7 @@ public function store(CreateMemberRequest $request)
 
             $basePricePerMember = (float) $membership->price;
             $ppnAmount = $membership->use_ppn ? ((float) $membership->ppn) : 0;
+            $registrationAdminFee = max((int) Setting::valueOf('member_reactivation_admin_fee', 0), 0);
             $validatedPayment = $request->validate([
                 'metode' => ['required', Rule::in(PaymentMethod::coreValidationValues())],
             ]);
@@ -331,7 +332,7 @@ public function store(CreateMemberRequest $request)
                 'discount' => 0,
                 'transaction_type' => 'registration',
                 'ppn' => $ppnAmount,
-                'admin_fee' => 0,
+                'admin_fee' => $registrationAdminFee,
                 'bayar' => $basePricePerMember,
                 'status' => 'open',
                 'is_active' => 1,
@@ -498,6 +499,7 @@ public function update(UpdateMemberRequest $request, Member $member)
                     $totalMembersRegistered = 1 + ($member->childs ? $member->childs->count() : 0);
                     $basePricePerMember = (float) $membership->price; // Harga dasar per member
                     $ppnAmount = $membership->use_ppn ? ((float) $membership->ppn) : 0;
+                    $registrationAdminFee = max((int) Setting::valueOf('member_reactivation_admin_fee', 0), 0);
                     $validatedPayment = $request->validate([
                         'metode' => ['required', Rule::in(PaymentMethod::coreValidationValues())],
                     ]);
@@ -527,7 +529,7 @@ public function update(UpdateMemberRequest $request, Member $member)
                         'discount' => 0,
                         'transaction_type' => 'registration',
                         'ppn' => $ppnAmount,
-                        'admin_fee' => 0,
+                        'admin_fee' => $registrationAdminFee,
                         'bayar' => $basePricePerMember,
                         'status' => 'open',
                         'is_active' => 1,

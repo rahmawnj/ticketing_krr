@@ -269,7 +269,7 @@
                 $rentalPenyewaanIds = App\Models\Penyewaan::where('sewa_id', $sewaItem->id)->pluck('id');
                 $queryTrxRental = App\Models\Transaction::where(['is_active' => 1, 'transaction_type' => 'rental'])
                     ->whereIn('ticket_id', $rentalPenyewaanIds)
-                    ->whereBetween('created_at', [$from, $to]);
+                    ->whereBetween('transactions.created_at', [$from, $to]);
                 if ($kasir != 'all' && $kasir) {
                     $queryTrxRental->where('user_id', $kasir);
                 }

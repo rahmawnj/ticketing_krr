@@ -12,6 +12,9 @@
 @endpush
 
 @section('content')
+@php
+    $registrationAdminFee = max((int) \App\Models\Setting::valueOf('member_reactivation_admin_fee', 0), 0);
+@endphp
 <div class="panel panel-inverse">
     <div class="panel-heading">
         <h4 class="panel-title">{{ $title }}</h4>
@@ -69,10 +72,9 @@
                     @php
                         $displayPrice = '';
                         if ($member->id && $member->membership_id != 0) {
-                            $membershipPrice = $member->membership->price;
-                            // PPN Rate yang disimpan di database adalah persentase, jadi bagi 100
-                            $ppnRate = $member->membership->use_ppn ? ($member->membership->ppn / 100) : 0;
-                            $totalDisplayPrice = $membershipPrice + ($membershipPrice * $ppnRate);
+                            $membershipPrice = (float) ($member->membership->price ?? 0);
+                            $ppnAmount = (int) ($member->membership->use_ppn ?? 0) === 1 ? (float) ($member->membership->ppn ?? 0) : 0;
+                            $totalDisplayPrice = $membershipPrice + $ppnAmount + $registrationAdminFee;
                             // Format harga dari PHP untuk tampilan awal
                             $displayPrice = number_format($totalDisplayPrice, 0, ',', '.');
                         }
@@ -82,7 +84,7 @@
             </div>
 
             <div class="form-group row mb-3">
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <label for="metode" class="form-label"><sup class="text-danger">*</sup>Metode Pembayaran</label>
                     <select name="metode" id="metode" class="form-control">
                         <option value="">-- Pilih Metode --</option>
@@ -94,13 +96,17 @@
                     <small class="text-danger">{{ $message }}</small>
                     @enderror
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <label for="price_base" class="form-label">Harga Dasar (Rp.)</label>
                     <input type="text" id="price_base" class="form-control" disabled value="">
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <label for="price_ppn" class="form-label">PBJT (Rp.)</label>
                     <input type="text" id="price_ppn" class="form-control" disabled value="">
+                </div>
+                <div class="col-md-3">
+                    <label for="price_admin" class="form-label">Biaya Admin (Rp.)</label>
+                    <input type="text" id="price_admin" class="form-control" disabled value="{{ number_format($registrationAdminFee, 0, ',', '.') }}">
                 </div>
             </div>
 
@@ -278,6 +284,7 @@
         ribuan = ribuan.join('.').split('').reverse().join('');
         return ribuan;
     }
+    var REGISTRATION_ADMIN_FEE = parseFloat("{{ $registrationAdminFee }}") || 0;
 
     $("#rfid").on('keypress', function(e) {
         var keyCode = e.keyCode || e.which;
@@ -301,13 +308,15 @@
                 duration = 0;
             }
 
-            // --- Kalkulasi Harga Total (Harga Dasar + PPN jika ada) ---
+            // --- Kalkulasi Harga Total (Harga Dasar + PBJT + Admin Fee) ---
             var ppnAmount = usePpn ? ppnRate : 0;
-            var totalPrice = basePrice + ppnAmount;
+            var adminFee = REGISTRATION_ADMIN_FEE;
+            var totalPrice = basePrice + ppnAmount + adminFee;
 
             $('#duration').val(duration);
             $('#price_base').val(formatRupiah(Math.round(basePrice)));
             $('#price_ppn').val(formatRupiah(Math.round(ppnAmount)));
+            $('#price_admin').val(formatRupiah(Math.round(adminFee)));
             $('#price').val(formatRupiah(Math.round(totalPrice))); // Tampilkan harga total dengan format Rupiah
 
             // --- Kalkulasi Tanggal Expired (hanya di create/saat ganti member) ---
@@ -364,6 +373,7 @@
             $('#duration').val('');
             $('#price_base').val('');
             $('#price_ppn').val('');
+            $('#price_admin').val(formatRupiah(Math.round(REGISTRATION_ADMIN_FEE)));
             $('#price').val('');
             $('#tgl_expired').val('');
             if ("{{ $method }}" === "POST") {

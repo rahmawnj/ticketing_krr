@@ -18,10 +18,13 @@
     </div>
 
     <div class="panel-body">
+        @php
+            $initialTotalPrice = (int) round((float) $transaction->detail()->sum('total') + (float) $transaction->detail()->sum('ppn'));
+        @endphp
         <form action="{{ route('detail.save', $transaction->id) }}" method="post" id="form-transaction">
             @csrf
             <div class="row">
-                <h2 class="mb-3">Total Price : <span id="price">Rp. {{ number_format($transaction->detail()->sum('total') + $transaction->detail()->sum('ppn'), 0, ',','.') }}</span></h2>
+                <h2 class="mb-3">Total Price : <span id="price">Rp. {{ number_format($initialTotalPrice, 0, ',','.') }}</span></h2>
                 <div class="col-md-6">
                     <table class="table table-bordered" id="datatable">
                         <thead>
@@ -35,16 +38,8 @@
                         </thead>
                     </table>
 
-                    <div class="form-group mb-3">
-                        <label for="discount">Discount</label><br>
-                        <button type="button" class="btn btn-sm btn-success btn-discount" id="10">10%</button>
-                        <button type="button" class="btn btn-sm btn-success btn-discount" id="20">20%</button>
-                        <button type="button" class="btn btn-sm btn-success btn-discount" id="30">30%</button>
-                        <button type="button" class="btn btn-sm btn-success btn-discount" id="50">50%</button>
-
-                        <input type="number" name="discount" id="discount" class="form-control mt-3" value="0" readonly>
-                        <input type="hidden" name="disc" id="disc" value="0">
-                    </div>
+                    <input type="hidden" name="discount" id="discount" value="0">
+                    <input type="hidden" name="disc" id="disc" value="0">
 
                     {{-- <div class="form-group mb-3">
                         <div class="form-check">
@@ -79,7 +74,7 @@
 
             <div class="form-group mb-3">
                 <label for="bayar">Bayar</label>
-                <input type="text" name="bayar" id="bayar" class="form-control" value="{{ $transaction->detail()->sum('total') + $transaction->detail()->sum('ppn') ?? 0 }}" autofocus>
+                <input type="text" name="bayar" id="bayar" class="form-control" value="{{ $initialTotalPrice }}" autofocus>
             </div>
 
             <div class="form-group mb-3">
@@ -94,7 +89,7 @@
                 </div>
             </div>
 
-            <input type="hidden" name="totalPrice" value="{{ $transaction->detail()->sum('total') }}" id="totalPrice">
+            <input type="hidden" name="totalPrice" value="{{ $initialTotalPrice }}" id="totalPrice">
 
             <div class="form-group">
                 <button type="submit" class="btn btn-primary btn-save">Submit</button>
@@ -279,27 +274,14 @@
                 },
                 success: function(response) {
                     $("#price").empty().append('Rp. ' + response.totalPrice)
-                    $("#totalPrice").val(response.price)
-                    $("#bayar").val(response.price)
+                    const numericPrice = Math.round(Number(response.price) || 0);
+                    $("#totalPrice").val(numericPrice)
+                    $("#bayar").val(formatRupiah(numericPrice.toString()))
                     localStorage.clear("total")
-                    localStorage.setItem("total", response.price)
+                    localStorage.setItem("total", numericPrice)
                     getData()
                 }
             })
-        })
-
-        $(".btn-discount").on('click', function() {
-            let disc = $(this).attr('id');
-            $("#discount").val(disc)
-            let total = localStorage.getItem("total")
-            // $(".btn-save").removeAttr("href")
-            // $(".btn-save").attr("href", "{{ route('detail.save', $transaction->id) }}?discount=" + disc)
-
-            let diskon = (disc * total / 100)
-            hasil = total - diskon;
-            $("#disc").val(diskon)
-            $("#totalPrice").val(hasil)
-            $("#price").empty().append('Rp. ' + (hasil / 1000).toFixed(3))
         })
 
         // $(document).on('click', '#ppn', function() {

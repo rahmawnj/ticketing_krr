@@ -21,7 +21,7 @@ class PaymentMethod
     ];
 
     private const LABELS = [
-        self::CASH => 'Cash',
+        self::CASH => 'Tunai',
         self::TAP => 'Emoney (Tap)',
         self::QRIS => 'QRIS',
         self::DEBIT => 'Debit',
@@ -96,5 +96,25 @@ class PaymentMethod
         }
 
         return array_values(array_unique($values));
+    }
+
+    public static function displayLabel(?string $method): string
+    {
+        $normalized = self::normalize($method);
+
+        if ($normalized === '') {
+            return '-';
+        }
+
+        if (isset(self::LABELS[$normalized])) {
+            return self::LABELS[$normalized];
+        }
+
+        return ucwords(str_replace(['-', '_'], ' ', $normalized));
+    }
+
+    public static function displayLabelUpper(?string $method): string
+    {
+        return strtoupper(self::displayLabel($method));
     }
 }

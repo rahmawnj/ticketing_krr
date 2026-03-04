@@ -60,7 +60,7 @@
 
                     {{-- Input Bayar (hanya untuk cash) --}}
                     <div class="form-group mb-3 bayar d-none">
-                        <label for="bayar">Bayar (Cash)</label>
+                        <label for="bayar">Bayar</label>
                         <input type="text" name="bayar" id="bayar" class="form-control" value="0">
                         @error('bayar')
                         <small class="text-danger">{{ $message }}</small>

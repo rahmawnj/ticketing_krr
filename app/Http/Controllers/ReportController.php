@@ -224,6 +224,37 @@ class ReportController extends Controller
             $query->where('transaction_type', $transactionType);
         }
 
+        $resolveRowAmounts = function ($row): array {
+            if (($row->transaction_type ?? '') === 'ticket') {
+                if ($row->relationLoaded('detail')) {
+                    $dpp = (float) $row->detail->sum('total');
+                    $ppn = (float) $row->detail->sum('ppn');
+                } else {
+                    $dpp = (float) $row->detail()->sum('total');
+                    $ppn = (float) $row->detail()->sum('ppn');
+                }
+            } else {
+                $dpp = max(0.0, ((float) ($row->bayar ?? 0)) - ((float) ($row->kembali ?? 0)));
+                $ppn = (float) ($row->ppn ?? 0);
+            }
+
+            $storedDisc = (float) ($row->disc ?? 0);
+            $disc = $storedDisc > 0
+                ? $storedDisc
+                : ($dpp * (float) ($row->discount ?? 0) / 100);
+
+            $adminFee = $this->resolveAdminFee($row);
+            $total = max(0.0, $dpp - $disc + $ppn + $adminFee);
+
+            return [
+                'dpp' => $dpp,
+                'ppn' => $ppn,
+                'disc' => $disc,
+                'admin_fee' => $adminFee,
+                'total' => $total,
+            ];
+        };
+
         return DataTables::eloquent($query)
             ->addIndexColumn()
             ->editColumn('tanggal', function ($row) {
@@ -241,25 +272,29 @@ class ReportController extends Controller
             ->addColumn('transaction_type_label', function ($row) {
                 return ucfirst($row->transaction_type ?? '-');
             })
-            ->editColumn('harga', function ($row) {
-                return 'Rp. ' . number_format($row->bayar, 0, ',', '.') ?? 0;
+            ->editColumn('harga', function ($row) use ($resolveRowAmounts) {
+                $amounts = $resolveRowAmounts($row);
+                return 'Rp. ' . number_format($amounts['dpp'], 0, ',', '.');
             })
-            ->editColumn('jumlah', function ($row) {
-                return 'Rp. ' . number_format($row->detail()->sum('total') + $row->detail()->sum('ppn'), 0, ',', '.') ?? 0;
+            ->editColumn('jumlah', function ($row) use ($resolveRowAmounts) {
+                $amounts = $resolveRowAmounts($row);
+                return 'Rp. ' . number_format($amounts['dpp'], 0, ',', '.');
             })
-            ->editColumn('discount', function ($row) {
-                return 'Rp. ' . number_format($row->detail()->sum('total') * $row->discount / 100, 0, ',', '.') ?? 0;
+            ->editColumn('discount', function ($row) use ($resolveRowAmounts) {
+                $amounts = $resolveRowAmounts($row);
+                return 'Rp. ' . number_format($amounts['disc'], 0, ',', '.');
             })
-            ->addColumn('harga_ticket', function ($row) {
-                $disc = $row->bayar * $row->discount / 100;
-                $adminFee = $this->resolveAdminFee($row);
-                return 'Rp. ' . number_format($row->bayar - $disc + $row->ppn + $adminFee, 0, ',', '.') ?? 0;
+            ->addColumn('harga_ticket', function ($row) use ($resolveRowAmounts) {
+                $amounts = $resolveRowAmounts($row);
+                return 'Rp. ' . number_format($amounts['total'], 0, ',', '.');
             })
-            ->editColumn('ppn', function ($row) {
-                return 'Rp. ' .  number_format($row->ppn, 0, ',', '.') ?? 0;
+            ->editColumn('ppn', function ($row) use ($resolveRowAmounts) {
+                $amounts = $resolveRowAmounts($row);
+                return 'Rp. ' . number_format($amounts['ppn'], 0, ',', '.');
             })
-            ->editColumn('admin_fee', function ($row) {
-                return 'Rp. ' . number_format($this->resolveAdminFee($row), 0, ',', '.') ?? 0;
+            ->editColumn('admin_fee', function ($row) use ($resolveRowAmounts) {
+                $amounts = $resolveRowAmounts($row);
+                return 'Rp. ' . number_format($amounts['admin_fee'], 0, ',', '.');
             })
             ->rawColumns(['action'])
             ->make(true);
