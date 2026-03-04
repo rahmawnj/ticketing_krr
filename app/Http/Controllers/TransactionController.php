@@ -622,32 +622,24 @@ class TransactionController extends Controller
             $tickets = Ticket::get();
         }
 
-        $now = Carbon::now('Asia/Jakarta');
+        $draftIds = Transaction::query()
+            ->where('user_id', auth()->id())
+            ->where('is_active', 0)
+            ->where('transaction_type', 'ticket')
+            ->pluck('id');
 
-        $active = Transaction::whereDate('created_at', $now)->where(['is_active' => 0, 'user_id' => auth()->user()->id])->latest()->first();
-
-        if ($active) {
-            if ((int) ($active->no_trx ?? 0) > 0) {
-                $active->update([
-                    'no_trx' => 0,
-                    'ticket_code' => 'DRAFT/' . $active->id,
-                ]);
-            }
-            $transaction = $active;
-        } else {
-            $transaction = Transaction::create([
-                'ticket_id' => 0,
-                'user_id' => auth()->user()->id,
-                'no_trx' => 0,
-                'ticket_code' => 'DRAFT/' . now('Asia/Jakarta')->format('YmdHis') . '/' . auth()->user()->id,
-                'transaction_type' => 'ticket',
-            ]);
+        if ($draftIds->isNotEmpty()) {
+            DetailTransaction::query()->whereIn('transaction_id', $draftIds->all())->delete();
+            Transaction::query()->whereIn('id', $draftIds->all())->delete();
         }
 
+        session()->forget('ticket_cart_items_user_' . auth()->id());
+
+        $transaction = new Transaction();
+        $transaction->id = 0;
+
         $setting = Setting::asObject();
-
-
-        $total = $transaction->detail()->sum('total') + $transaction->detail()->sum('ppn');
+        $total = 0;
 
 
         return view('transaction.form', compact('title', 'breadcrumbs', 'action', 'method', 'transaction', 'tickets', 'total', 'setting'));

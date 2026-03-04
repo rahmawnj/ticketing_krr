@@ -108,6 +108,7 @@ Route::middleware('auth')->group(function () {
 
 
     Route::get('detail/{id}/list', [DetailTransactionController::class, 'index'])->name('detail.list');
+    Route::delete('detail/session/{rowId}', [DetailTransactionController::class, 'destroySession'])->name('detail.destroy.session');
     Route::delete('detail/{detailTransaction:id}', [DetailTransactionController::class, 'destroy'])->name('detail.destroy');
     Route::post('detail/{id}/save', [DetailTransactionController::class, 'save'])->name('detail.save');
     Route::get('detail/{detailTransaction:id}/remove', [DetailTransactionController::class, 'remove'])->name('detail.remove');

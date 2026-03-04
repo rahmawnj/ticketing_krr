@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Feb 27, 2026 at 02:31 PM
+-- Generation Time: Mar 03, 2026 at 04:14 PM
 -- Server version: 11.4.9-MariaDB-cll-lve
 -- PHP Version: 8.4.17
 
@@ -104,7 +104,10 @@ INSERT INTO `detail_transactions` (`id`, `transaction_id`, `ticket_id`, `qty`, `
 (90, 67, 14, 1, 100000, 0.00, '2026-02-24 08:34:54', '2026-02-24 08:34:54', 'TKT20260224153454654', 'open', 0, NULL, NULL, 0),
 (91, 68, 14, 1, 100000, 0.00, '2026-02-24 08:47:25', '2026-02-24 08:47:25', 'TKT20260224154725288', 'open', 0, NULL, NULL, 0),
 (92, 71, 13, 2, 40000, 0.00, '2026-02-26 09:02:26', '2026-02-26 09:02:30', 'TKT20260226160226333', 'open', 0, NULL, NULL, 0),
-(93, 71, 9, 1, 60000, 0.00, '2026-02-26 09:02:27', '2026-02-26 09:02:27', 'TKT20260226160227846', 'open', 0, NULL, NULL, 0);
+(93, 71, 9, 1, 60000, 0.00, '2026-02-26 09:02:27', '2026-02-26 09:02:27', 'TKT20260226160227846', 'open', 0, NULL, NULL, 0),
+(94, 73, 14, 1, 100000, 0.00, '2026-02-27 08:35:18', '2026-02-27 08:35:18', 'TKT20260227153518409', 'open', 0, NULL, NULL, 0),
+(95, 77, 9, 1, 60000, 0.00, '2026-03-03 08:18:30', '2026-03-03 08:18:30', 'TKT20260303151830758', 'open', 0, NULL, NULL, 0),
+(96, 77, 15, 1, 50000, 0.00, '2026-03-03 08:18:36', '2026-03-03 08:18:36', 'TKT20260303151836894', 'open', 0, NULL, NULL, 0);
 
 -- --------------------------------------------------------
 
@@ -925,7 +928,10 @@ INSERT INTO `transactions` (`id`, `ticket_id`, `member_id`, `member_info`, `user
 (72, 0, NULL, NULL, 1, 2, 'TKT/002', 'ticket', 'group', 0, 0, NULL, 0, 0, 'open', NULL, 0, 0.00, '2026-02-26 09:03:08', '2026-02-26 09:03:08', 0, 0, 0, NULL, NULL, NULL),
 (73, 0, NULL, NULL, 1, 1, 'TKT/001', 'ticket', 'group', 0, 0, NULL, 0, 0, 'open', NULL, 0, 0.00, '2026-02-27 03:45:00', '2026-02-27 03:45:00', 0, 0, 0, NULL, NULL, NULL),
 (74, 9, NULL, NULL, 1, 1, 'RENT/001', 'rental', 'individual', 1, 0, 'cash', 0, 0, 'open', NULL, 1, 5000.00, '2026-02-27 03:46:38', '2026-02-27 03:46:38', 0, 50000, 0, NULL, NULL, NULL),
-(75, 10, NULL, NULL, 1, 2, 'RENT/002', 'rental', 'individual', 1, 0, 'cash', 0, 0, 'open', NULL, 1, 5000.00, '2026-02-27 03:47:08', '2026-02-27 03:47:08', 0, 50000, 0, NULL, NULL, NULL);
+(75, 10, NULL, NULL, 1, 2, 'RENT/002', 'rental', 'individual', 1, 0, 'cash', 0, 0, 'open', NULL, 1, 5000.00, '2026-02-27 03:47:08', '2026-02-27 03:47:08', 0, 50000, 0, NULL, NULL, NULL),
+(76, 0, NULL, NULL, 2, 2, 'TKT/002', 'ticket', 'group', 0, 0, NULL, 0, 0, 'open', NULL, 0, 0.00, '2026-02-27 08:42:00', '2026-02-27 08:42:00', 0, 0, 0, NULL, NULL, NULL),
+(77, 0, NULL, NULL, 3, 1, 'TKT/001', 'ticket', 'group', 2, 0, 'qris', 0, 0, 'open', NULL, 1, 0.00, '2026-03-03 08:18:24', '2026-03-03 08:18:53', 0, 110000, 0, NULL, NULL, NULL),
+(78, 0, NULL, NULL, 3, 2, 'TKT/002', 'ticket', 'group', 0, 0, NULL, 0, 0, 'open', NULL, 0, 0.00, '2026-03-03 08:18:57', '2026-03-03 08:18:57', 0, 0, 0, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -1194,7 +1200,7 @@ ALTER TABLE `whatsapp_notification_logs`
 -- AUTO_INCREMENT for table `detail_transactions`
 --
 ALTER TABLE `detail_transactions`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=94;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=97;
 
 --
 -- AUTO_INCREMENT for table `failed_jobs`
@@ -1314,7 +1320,7 @@ ALTER TABLE `topups`
 -- AUTO_INCREMENT for table `transactions`
 --
 ALTER TABLE `transactions`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=76;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=79;
 
 --
 -- AUTO_INCREMENT for table `users`

@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\View;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Yajra\DataTables\Facades\DataTables;
 use Mike42\Escpos\Printer;
@@ -21,9 +22,83 @@ use Mike42\Escpos\ImagickEscposImage;
 
 class DetailTransactionController extends Controller
 {
+    private function cartSessionKey(): string
+    {
+        return 'ticket_cart_items_user_' . (string) (auth()->id() ?? 'guest');
+    }
+
+    private function getCartItems(): array
+    {
+        return array_values(session($this->cartSessionKey(), []));
+    }
+
+    private function putCartItems(array $items): void
+    {
+        session([$this->cartSessionKey() => array_values($items)]);
+    }
+
+    private function clearCartItems(): void
+    {
+        session()->forget($this->cartSessionKey());
+    }
+
+    private function calculateCartTotalPrice(array $items): int
+    {
+        return (int) array_reduce($items, function ($carry, $item) {
+            $qty = max((int) ($item['qty'] ?? 1), 1);
+            $harga = max((int) ($item['ticket_harga'] ?? 0), 0);
+            $ppn = max((int) ($item['ticket_ppn'] ?? 0), 0);
+
+            return $carry + (($harga + $ppn) * $qty);
+        }, 0);
+    }
+
+    private function isSessionMode($transactionId): bool
+    {
+        $id = (int) $transactionId;
+        if ($id <= 0) {
+            return true;
+        }
+
+        return !Transaction::query()->whereKey($id)->exists();
+    }
+
     public function index(Request $request,  $id)
     {
         if ($request->ajax()) {
+            if ($this->isSessionMode($id)) {
+                $items = collect($this->getCartItems())->map(function (array $item) {
+                    return (object) [
+                        'id' => (string) ($item['row_id'] ?? ''),
+                        'ticket_name' => (string) ($item['ticket_name'] ?? 'Ticket'),
+                        'ticket_harga' => (int) ($item['ticket_harga'] ?? 0),
+                        'ticket_ppn' => (int) ($item['ticket_ppn'] ?? 0),
+                        'qty' => max((int) ($item['qty'] ?? 1), 1),
+                    ];
+                });
+
+                return DataTables::collection($items)
+                    ->addIndexColumn()
+                    ->editColumn('action', function ($row) {
+                        $route = route('detail.destroy.session', $row->id);
+                        return '<button type="button" data-route="' . $route . '" class="delete btn btn-danger btn-delete btn-sm"><i class="fas fa-trash"></i></button>';
+                    })
+                    ->editColumn('ticket', function ($row) {
+                        return $row->ticket_name;
+                    })
+                    ->editColumn('qty', function ($row) {
+                        return '<input type="number" name="qty" id="' . $row->id . '" class="form-control qty" min="1" value="' . $row->qty . '" autofocus>';
+                    })
+                    ->editColumn('harga', function ($row) {
+                        return number_format(($row->ticket_harga + $row->ticket_ppn), 0, ',', '.');
+                    })
+                    ->editColumn('total', function ($row) {
+                        return number_format(($row->ticket_harga + $row->ticket_ppn) * $row->qty, 0, ',', '.');
+                    })
+                    ->rawColumns(['action', 'qty'])
+                    ->make(true);
+            }
+
             $data = DetailTransaction::where('transaction_id', $id);
 
             return DataTables::eloquent($data)
@@ -52,22 +127,38 @@ class DetailTransactionController extends Controller
     public function store(Request $request)
     {
         try {
-            DB::beginTransaction();
-
-            $cek = DetailTransaction::where(['transaction_id' => $request->transaction, 'ticket_id' => $request->ticket])->first();
-
-            // if ($cek) {
-            //     $qty = $cek->qty;
-
-            //     $cek->update([
-            //         'qty' => $qty += 1
-            //     ]);
-
-            //     $cek->update([
-            //         'total' => Ticket::find($request->ticket)->harga * $cek->qty
-            //     ]);
-            // } else {
             $ticket = Ticket::find($request->ticket);
+            if (!$ticket) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Ticket tidak ditemukan.',
+                ], 404);
+            }
+
+            if ($this->isSessionMode($request->transaction)) {
+                $items = $this->getCartItems();
+                $items[] = [
+                    'row_id' => (string) Str::uuid(),
+                    'ticket_id' => (int) $ticket->id,
+                    'ticket_name' => (string) $ticket->name,
+                    'ticket_harga' => (int) $ticket->harga,
+                    'ticket_ppn' => (int) $ticket->ppn,
+                    'ticket_code' => 'TKT' . date('YmdHis') . rand(100, 999),
+                    'qty' => 1,
+                ];
+                $this->putCartItems($items);
+
+                $totalPrice = $this->calculateCartTotalPrice($items);
+
+                return response()->json([
+                    'status' => 'success',
+                    'detail' => $items,
+                    'totalPrice' => number_format($totalPrice, 0, ',', '.'),
+                    'price' => $totalPrice,
+                ]);
+            }
+
+            DB::beginTransaction();
 
             DetailTransaction::create([
                 'transaction_id' => $request->transaction,
@@ -77,9 +168,6 @@ class DetailTransactionController extends Controller
                 'total' => $ticket->harga,
                 'ppn' => $ticket->ppn,
             ]);
-
-
-            // }
 
             $amount = DetailTransaction::where(['transaction_id' => $request->transaction])->sum('qty');
 
@@ -109,7 +197,9 @@ class DetailTransactionController extends Controller
                 'price' => $totalPrice
             ]);
         } catch (\Throwable $th) {
-            DB::rollBack();
+            if (DB::transactionLevel() > 0) {
+                DB::rollBack();
+            }
             return response()->json([
                 'status' => 'error',
                 'message' => $th->getMessage()
@@ -151,11 +241,24 @@ class DetailTransactionController extends Controller
             DB::commit();
             return back();
         } catch (\Throwable $th) {
-            DB::rollBack();
+            if (DB::transactionLevel() > 0) {
+                DB::rollBack();
+            }
             return response()->json([
                 'message' => $th->getMessage()
             ]);
         }
+    }
+
+    public function destroySession(string $rowId)
+    {
+        $items = $this->getCartItems();
+        $items = array_values(array_filter($items, function (array $item) use ($rowId) {
+            return (string) ($item['row_id'] ?? '') !== (string) $rowId;
+        }));
+        $this->putCartItems($items);
+
+        return back();
     }
 
     public function save(Request $request, $id)
@@ -164,9 +267,41 @@ class DetailTransactionController extends Controller
             DB::beginTransaction();
 
             $transaction = Transaction::find($id);
+            if (!$transaction) {
+                $cartItems = $this->getCartItems();
+                if (empty($cartItems)) {
+                    DB::rollBack();
+                    return back()->with('error', 'Belum ada item ticket yang dipilih.');
+                }
+
+                $transaction = Transaction::create([
+                    'ticket_id' => 0,
+                    'user_id' => auth()->id(),
+                    'no_trx' => 0,
+                    'ticket_code' => 'TMP/' . now('Asia/Jakarta')->format('YmdHis') . '/' . auth()->id(),
+                    'transaction_type' => 'ticket',
+                    'status' => 'open',
+                    'is_active' => 0,
+                ]);
+
+                foreach ($cartItems as $item) {
+                    $qty = max((int) ($item['qty'] ?? 1), 1);
+                    $harga = max((int) ($item['ticket_harga'] ?? 0), 0);
+                    $ppn = max((int) ($item['ticket_ppn'] ?? 0), 0);
+
+                    DetailTransaction::create([
+                        'transaction_id' => $transaction->id,
+                        'ticket_id' => (int) ($item['ticket_id'] ?? 0),
+                        'ticket_code' => (string) ($item['ticket_code'] ?? ('TKT' . date('YmdHis') . rand(100, 999))),
+                        'qty' => $qty,
+                        'total' => $harga * $qty,
+                        'ppn' => $ppn * $qty,
+                    ]);
+                }
+            }
 
             $now = Carbon::now()->format('Y-m-d');
-            $lastTrx = Transaction::whereDate('created_at', $now)->orderBy('no_trx', 'DESC')->first()->no_trx ?? 0;
+            $lastTrx = optional(Transaction::whereDate('created_at', $now)->orderBy('no_trx', 'DESC')->first())->no_trx ?? 0;
             $tickets = [];
             $idtrx = [];
             $print = $transaction->detail()->sum('qty') ?? 1;
@@ -281,6 +416,7 @@ class DetailTransactionController extends Controller
             ]);
 
             DB::commit();
+            $this->clearCartItems();
             $logo = !empty($setting->logo) ? asset('/storage/' . $setting->logo) : 'data:image/png;base64,' . base64_encode(file_get_contents(public_path('/images/rio.png')));
             $ucapan = $setting->ucapan ?? 'Terima Kasih';
             $name = $setting->name ?? 'Ticketing';
@@ -296,7 +432,8 @@ class DetailTransactionController extends Controller
             //     return back()->with('error', $print["message"]);
             // }
         } catch (\Throwable $th) {
-            return $th->getMessage();
+            DB::rollBack();
+            return back()->with('error', $th->getMessage());
         }
     }
 
@@ -340,14 +477,49 @@ class DetailTransactionController extends Controller
     public function qty(Request $request)
     {
         try {
+            $detailId = (string) $request->id;
+            $qty = max((int) $request->qty, 1);
+            $detail = ctype_digit($detailId) ? DetailTransaction::find((int) $detailId) : null;
+
+            if (!$detail) {
+                $items = $this->getCartItems();
+                $updated = false;
+
+                foreach ($items as &$item) {
+                    if ((string) ($item['row_id'] ?? '') !== $detailId) {
+                        continue;
+                    }
+
+                    $item['qty'] = $qty;
+                    $updated = true;
+                    break;
+                }
+                unset($item);
+
+                if (!$updated) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Item ticket tidak ditemukan.'
+                    ], 404);
+                }
+
+                $this->putCartItems($items);
+                $totalPrice = $this->calculateCartTotalPrice($items);
+
+                return response()->json([
+                    'status' => 'success',
+                    'totalPrice' => number_format($totalPrice, 0, ',', '.'),
+                    'price' => $totalPrice
+                ]);
+            }
+
             DB::beginTransaction();
 
-            $detail = DetailTransaction::find($request->id);
-            $total = $request->qty * $detail->ticket->harga;
+            $total = $qty * $detail->ticket->harga;
             $detail->update([
-                'qty' => $request->qty,
+                'qty' => $qty,
                 'total' => $total,
-                'ppn' => $detail->ticket->ppn * $request->qty,
+                'ppn' => $detail->ticket->ppn * $qty,
             ]);
 
             $totalPrice = DetailTransaction::where('transaction_id', $detail->transaction_id)
@@ -361,7 +533,9 @@ class DetailTransactionController extends Controller
                 'price' => $totalPrice
             ]);
         } catch (\Throwable $th) {
-            DB::rollBack();
+            if (DB::transactionLevel() > 0) {
+                DB::rollBack();
+            }
             return response()->json([
                 'message' => $th->getMessage()
             ]);

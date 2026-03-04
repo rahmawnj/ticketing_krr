@@ -113,15 +113,25 @@ public function index(Request $request)
         ? 'Perbandingan jumlah transaksi per tipe pada periode terpilih'
         : 'Perbandingan nominal transaksi per tipe pada periode terpilih';
 
+    $currentUser = auth()->user();
+    $isAdmin = (int) ($currentUser?->roles()->first()?->id ?? 0) === 1;
+    $baseTransactionQuery = Transaction::query()
+        ->where('is_active', 1)
+        ->whereBetween('created_at', [$startDate, $endDate]);
+
+    if (!$isAdmin) {
+        $baseTransactionQuery->where('user_id', (int) ($currentUser?->id ?? 0));
+    }
+
     // Data summary berdasarkan periode terpilih.
-    $renewal = Transaction::whereBetween('created_at', [$startDate, $endDate])->where('transaction_type', 'renewal')->sum('bayar');
-    $renewalCount = Transaction::whereBetween('created_at', [$startDate, $endDate])->where('transaction_type', 'renewal')->count();
-    $newMember = Transaction::whereBetween('created_at', [$startDate, $endDate])->where('transaction_type', 'registration')->sum('bayar');
-    $newMemberCount = Transaction::whereBetween('created_at', [$startDate, $endDate])->where('transaction_type', 'registration')->count();
-    $rental = Transaction::whereBetween('created_at', [$startDate, $endDate])->where('transaction_type', 'rental')->sum('bayar');
-    $rentalCount = Transaction::whereBetween('created_at', [$startDate, $endDate])->where('transaction_type', 'rental')->count();
-    $ticket = Transaction::whereBetween('created_at', [$startDate, $endDate])->where('transaction_type', 'ticket')->sum('bayar');
-    $ticketCount = Transaction::whereBetween('created_at', [$startDate, $endDate])->where('transaction_type', 'ticket')->count();
+    $renewal = (clone $baseTransactionQuery)->where('transaction_type', 'renewal')->sum('bayar');
+    $renewalCount = (clone $baseTransactionQuery)->where('transaction_type', 'renewal')->count();
+    $newMember = (clone $baseTransactionQuery)->where('transaction_type', 'registration')->sum('bayar');
+    $newMemberCount = (clone $baseTransactionQuery)->where('transaction_type', 'registration')->count();
+    $rental = (clone $baseTransactionQuery)->where('transaction_type', 'rental')->sum('bayar');
+    $rentalCount = (clone $baseTransactionQuery)->where('transaction_type', 'rental')->count();
+    $ticket = (clone $baseTransactionQuery)->where('transaction_type', 'ticket')->sum('bayar');
+    $ticketCount = (clone $baseTransactionQuery)->where('transaction_type', 'ticket')->count();
 
     $bucketExpression = 'HOUR(created_at)';
     if ($periodType === 'daily' || $periodType === 'monthly') {
@@ -131,7 +141,7 @@ public function index(Request $request)
     }
 
     // 1. Ambil data chart berdasarkan bucket periode.
-    $chartDataRaw = Transaction::whereBetween('created_at', [$startDate, $endDate])
+    $chartDataRaw = (clone $baseTransactionQuery)
         ->whereIn('transaction_type', ['rental', 'ticket', 'registration', 'renewal'])
         ->selectRaw(
             $isCountMode
