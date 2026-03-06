@@ -806,59 +806,64 @@ class TransactionController extends Controller
     }
 
     $setting = Setting::asObject();
+    $ticketCodeMode = in_array((string) ($setting->ticket_code_mode ?? 'unique'), ['shared', 'unique'], true)
+        ? (string) $setting->ticket_code_mode
+        : 'unique';
 
-    // 1. TAMBAHKAN INI: Inisialisasi agar variabel selalu ada
+    DB::transaction(function () use ($transaction, $ticketCodeMode) {
+        DetailTransaction::applyTicketCodeMode($transaction, $ticketCodeMode);
+    });
+
+    $transaction->load(['detail.ticket', 'user']);
     $tickets = [];
-
-    $printMode = $setting->print_mode ?? 'per_qty';
-    foreach ($transaction->detail as $detail) {
-        if ($printMode === 'per_ticket') {
-            $tickets[] = [
-                "name" => $detail->ticket->name,
-                "harga" => number_format($detail->ticket->harga + $detail->ppn, 0, ',', '.'),
-                "ticket_code" => $detail->ticket_code,
-                "qty" => $detail->qty,
+    if ($ticketCodeMode === 'unique') {
+        $tickets = $transaction->detail->map(function ($detail) {
+            return [
+                'name' => $detail->ticket->name ?? '-',
+                'harga' => number_format(((float) ($detail->total ?? 0)) + ((float) ($detail->ppn ?? 0)), 0, ',', '.'),
+                'ticket_code' => (string) ($detail->ticket_code ?? '-'),
+                'qty' => 1,
             ];
-            continue;
-        }
+        })->values()->all();
+    } else {
+        foreach ($transaction->detail as $detail) {
+            $qty = max((int) ($detail->qty ?? 1), 1);
+            $lineSubtotal = ((float) ($detail->total ?? 0)) + ((float) ($detail->ppn ?? 0));
+            $lineUnitPrice = $qty > 0 ? ($lineSubtotal / $qty) : $lineSubtotal;
 
-        for ($i = 1; $i <= $detail->qty; $i++) {
-            $tickets[] = [
-                "name" => $detail->ticket->name,
-                "harga" => number_format($detail->ticket->harga + $detail->ppn, 0, ',', '.'),
-                "ticket_code" => $detail->ticket_code,
-                "qty" => $detail->qty,
-            ];
+            for ($i = 1; $i <= $qty; $i++) {
+                $tickets[] = [
+                    'name' => $detail->ticket->name ?? '-',
+                    'harga' => number_format($lineUnitPrice, 0, ',', '.'),
+                    'ticket_code' => (string) ($detail->ticket_code ?? '-'),
+                    'qty' => $qty,
+                ];
+            }
         }
     }
 
     $logo = null;
-    $use = (int) ($setting->use_logo ?? 0);
-    if ($use === 1) {
-        if (!empty($setting->logo)) {
-            $logoPath = public_path('storage/' . $setting->logo);
-            if (is_file($logoPath)) {
-                $logo = asset('/storage/' . $setting->logo);
-            }
-        }
-
-        if ($logo === null) {
-            $fallbackLogoPath = public_path('/images/rio.png');
-            if (is_file($fallbackLogoPath)) {
-                $logo = 'data:image/png;base64,' . base64_encode(file_get_contents($fallbackLogoPath));
-            } else {
-                $use = 0;
-            }
+    if (!empty($setting->logo)) {
+        $logoPath = public_path('storage/' . $setting->logo);
+        if (is_file($logoPath)) {
+            $logo = asset('/storage/' . $setting->logo);
         }
     }
+    if ($logo === null) {
+        $fallbackLogoPath = public_path('/images/rio.png');
+        if (is_file($fallbackLogoPath)) {
+            $logo = 'data:image/png;base64,' . base64_encode(file_get_contents($fallbackLogoPath));
+        }
+    }
+    $use = $logo !== null ? 1 : 0;
     $name = $setting->name ?? 'Ticketing';
     $ucapan = $setting->ucapan ?? 'Terima Kasih';
     $deskripsi = $setting->deskripsi ?? 'qr code hanya berlaku satu kali';
     $ppn = $setting->ppn ?? 0;
     $print = 0;
-    $ticketPrintOrientation = $setting->ticket_print_orientation ?? 'portrait';
+    $ticketPrintOrientation = $setting->ticket_print_orientation ?? 'without_summary';
 
-    return view('transaction.print', compact('transaction', 'logo', 'ucapan', 'deskripsi', 'use', 'name', "tickets", 'ppn', 'print', 'printMode', 'ticketPrintOrientation'));
+    return view('transaction.print', compact('transaction', 'logo', 'ucapan', 'deskripsi', 'use', 'name', 'tickets', 'ppn', 'print', 'ticketPrintOrientation'));
 }
 
     public function report(Request $request)

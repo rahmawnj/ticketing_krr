@@ -105,7 +105,7 @@
                     </div>
 
                     @can('master-access')
-                    <div class="menu-item {{ request()->is('users*') ||  request()->is('terusan*') || request()->is('tickets*') || request()->is('sewa*') || request()->is('memberships*') || request()->routeIs('gate-accesses.*') ? 'active' : '' }} has-sub">
+                    <div class="menu-item {{ request()->is('users*') ||  request()->is('terusan*') || request()->is('tickets*') || request()->is('sewa*') || request()->is('memberships*') || request()->routeIs('membership-admin-fees.*') || request()->routeIs('gate-accesses.*') ? 'active' : '' }} has-sub">
                         <a href="javascript:;" class="menu-link">
                             <div class="menu-icon">
                                 <i class="ion-ios-apps"></i>
@@ -156,6 +156,14 @@
                                 @can('sewa-access')
                                 <a href="{{ route('memberships.index') }}" class="menu-link">
                                     <div class="menu-text">Data Membership</div>
+                                </a>
+                                @endcan
+                            </div>
+
+                            <div class="menu-item {{ request()->routeIs('membership-admin-fees.*') ? 'active' : '' }}">
+                                @can('sewa-access')
+                                <a href="{{ route('membership-admin-fees.index') }}" class="menu-link">
+                                    <div class="menu-text">Master Jenis Admin</div>
                                 </a>
                                 @endcan
                             </div>

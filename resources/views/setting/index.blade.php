@@ -90,39 +90,47 @@
                             </div>
 
                             <div class="form-group mb-3">
-                                <label for="print_mode">Mode Print Tiket</label>
-                                <select name="print_mode" id="print_mode" class="form-control">
+                                <label for="ticket_code_mode">Mode Kode Tiket</label>
+                                <select name="ticket_code_mode" id="ticket_code_mode" class="form-control">
                                     @php
-                                        $printMode = $setting->print_mode ?? old('print_mode', 'per_qty');
+                                        $ticketCodeModeRaw = old('ticket_code_mode', $setting->ticket_code_mode ?? 'unique');
+                                        $ticketCodeMode = in_array($ticketCodeModeRaw, ['shared', 'unique'], true)
+                                            ? $ticketCodeModeRaw
+                                            : 'unique';
                                     @endphp
-                                    <option value="per_qty" {{ $printMode === 'per_qty' ? 'selected' : '' }}>
-                                        Print sesuai jumlah (qty)
+                                    <option value="unique" {{ $ticketCodeMode === 'unique' ? 'selected' : '' }}>
+                                        Kode Berbeda Semua (Unik)
                                     </option>
-                                    <option value="per_ticket" {{ $printMode === 'per_ticket' ? 'selected' : '' }}>
-                                        Print 1x per jenis tiket (barcode sama)
+                                    <option value="shared" {{ $ticketCodeMode === 'shared' ? 'selected' : '' }}>
+                                        Kode Sama per Jenis Ticket
                                     </option>
                                 </select>
-                                <small class="text-muted">Jika barcode sama, bisa pilih 1x per jenis tiket agar tidak berulang.</small>
-                                @error('print_mode') <br><small class="text-danger">{{ $message }}</small> @enderror
+                                <small class="text-muted">Atur apakah 1 jenis ticket qty banyak dicetak dengan barcode unik semua atau barcode sama.</small>
+                                @error('ticket_code_mode') <br><small class="text-danger">{{ $message }}</small> @enderror
                             </div>
 
                             <div class="form-group mb-3">
-                                <label for="ticket_print_orientation">Mode Cetak Tiket</label>
+                                <label for="ticket_print_orientation">Cetak Nota Kalkulasi (Halaman Pertama)</label>
                                 <select name="ticket_print_orientation" id="ticket_print_orientation" class="form-control">
                                     @php
-                                        $ticketPrintOrientationRaw = old('ticket_print_orientation', $setting->ticket_print_orientation ?? 'portrait');
-                                        $ticketPrintOrientation = in_array($ticketPrintOrientationRaw, ['portrait', 'portrait_with_first_qr'], true)
+                                        $ticketPrintOrientationRaw = old('ticket_print_orientation', $setting->ticket_print_orientation ?? 'without_summary');
+                                        if ($ticketPrintOrientationRaw === 'portrait') {
+                                            $ticketPrintOrientationRaw = 'with_summary';
+                                        } elseif ($ticketPrintOrientationRaw === 'portrait_with_first_qr') {
+                                            $ticketPrintOrientationRaw = 'without_summary';
+                                        }
+                                        $ticketPrintOrientation = in_array($ticketPrintOrientationRaw, ['with_summary', 'without_summary'], true)
                                             ? $ticketPrintOrientationRaw
-                                            : 'portrait';
+                                            : 'without_summary';
                                     @endphp
-                                    <option value="portrait" {{ $ticketPrintOrientation === 'portrait' ? 'selected' : '' }}>
-                                        Portrait (Default)
+                                    <option value="without_summary" {{ $ticketPrintOrientation === 'without_summary' ? 'selected' : '' }}>
+                                        Tidak Dicetak (Default)
                                     </option>
-                                    <option value="portrait_with_first_qr" {{ $ticketPrintOrientation === 'portrait_with_first_qr' ? 'selected' : '' }}>
-                                        Portrait + QR Pertama di Halaman Ringkasan
+                                    <option value="with_summary" {{ $ticketPrintOrientation === 'with_summary' ? 'selected' : '' }}>
+                                        Dicetak
                                     </option>
                                 </select>
-                                <small class="text-muted">Default tetap portrait. Opsi kedua menggabungkan QR tiket pertama ke halaman ringkasan transaksi.</small>
+                                <small class="text-muted">Atur apakah halaman nota kalkulasi transaksi dicetak di halaman pertama.</small>
                                 @error('ticket_print_orientation') <br><small class="text-danger">{{ $message }}</small> @enderror
                             </div>
 
@@ -155,13 +163,6 @@
                                 <small class="text-muted">Contoh: H-7 sampai H+0. H-7 tetap Active, mulai H+1 status Expired.</small>
                                 @error('member_suspend_before_days') <br><small class="text-danger">{{ $message }}</small> @enderror
                                 @error('member_suspend_after_days') <br><small class="text-danger">{{ $message }}</small> @enderror
-                            </div>
-
-                            <div class="form-group mb-3">
-                                <label for="member_reactivation_admin_fee">Biaya Admin Renewal Baru <sup class="text-danger">(Rp)</sup></label>
-                                <input type="number" name="member_reactivation_admin_fee" id="member_reactivation_admin_fee" class="form-control" value="{{ $setting->member_reactivation_admin_fee ?? old('member_reactivation_admin_fee', 0) }}">
-                                <small class="text-muted">Dipakai saat member sudah lewat H+30 dari tanggal expired.</small>
-                                @error('member_reactivation_admin_fee') <br><small class="text-danger">{{ $message }}</small> @enderror
                             </div>
 
                             <div class="form-check mb-3 d-none">

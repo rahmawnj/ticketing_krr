@@ -361,7 +361,7 @@
             },
             {
                 data: 'tanggal',
-                name: 'tanggal'
+                name: 'created_at'
             },
             {
                 data: 'ticket_code',
@@ -369,11 +369,15 @@
             },
             {
         data: 'user_name',
-        name: 'user_name' // Harus sesuai dengan nama kolom di Controller
+        name: 'user_name', // Kolom turunan dari relasi, non-searchable agar tidak memicu SQL unknown column
+        searchable: false,
+        sortable: false
     },
             {
                 data: 'member_info',
-                name: 'member_info'
+                name: 'member_info',
+                searchable: false,
+                sortable: false
             },
             {
                 data: 'transaction_type_badge',
@@ -412,15 +416,21 @@
             },
             {
                 data: 'harga_ticket',
-                name: 'harga_ticket'
+                name: 'harga_ticket',
+                searchable: false,
+                sortable: false
             },
             {
                 data: 'status_ticket',
-                name: 'status_ticket'
+                name: 'status_ticket',
+                searchable: false,
+                sortable: false
             },
             {
                 data: 'action',
                 name: 'action',
+                searchable: false,
+                sortable: false
             },
         ]
     });

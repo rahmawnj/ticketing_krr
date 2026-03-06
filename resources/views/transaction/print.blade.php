@@ -46,14 +46,44 @@
 
 <body>
     @php
-        $ticketPrintMode = (string) ($ticketPrintOrientation ?? 'portrait');
-        $ticketPrintMode = in_array($ticketPrintMode, ['portrait', 'portrait_with_first_qr'], true)
-            ? $ticketPrintMode
-            : 'portrait';
-        $combineFirstTicketOnSummary = $ticketPrintMode === 'portrait_with_first_qr';
+        $ticketPrintModeRaw = (string) ($ticketPrintOrientation ?? 'without_summary');
+        if ($ticketPrintModeRaw === 'portrait') {
+            $ticketPrintModeRaw = 'with_summary';
+        } elseif ($ticketPrintModeRaw === 'portrait_with_first_qr') {
+            $ticketPrintModeRaw = 'without_summary';
+        }
+        $ticketPrintMode = in_array($ticketPrintModeRaw, ['with_summary', 'without_summary'], true)
+            ? $ticketPrintModeRaw
+            : 'without_summary';
+        $shouldPrintSummary = $ticketPrintMode === 'with_summary';
         $receiptDetails = $transaction->detail()->with('ticket')->get();
-        $jumlahJenis = $receiptDetails->count();
-        $jumlahTicket = (int) $receiptDetails->sum('qty');
+        $groupedSummaryItems = $receiptDetails
+            ->groupBy(function ($item) {
+                $ticketId = (int) ($item->ticket_id ?? 0);
+                $ticketName = trim((string) ($item->ticket->name ?? '-'));
+                return $ticketId . '|' . $ticketName;
+            })
+            ->map(function ($items) {
+                $first = $items->first();
+                $qty = (int) $items->sum(function ($item) {
+                    return max((int) ($item->qty ?? 1), 1);
+                });
+                $subtotalLine = (float) $items->sum(function ($item) {
+                    return ((float) ($item->total ?? 0)) + ((float) ($item->ppn ?? 0));
+                });
+                $unitPrice = $qty > 0 ? ($subtotalLine / $qty) : $subtotalLine;
+
+                return [
+                    'name' => (string) ($first->ticket->name ?? '-'),
+                    'qty' => $qty,
+                    'unit_price' => $unitPrice,
+                    'subtotal' => $subtotalLine,
+                ];
+            })
+            ->values();
+
+        $jumlahJenis = (int) $groupedSummaryItems->count();
+        $jumlahTicket = (int) $groupedSummaryItems->sum('qty');
         $subtotal = (float) $receiptDetails->sum('total') + (float) $receiptDetails->sum('ppn');
         $discount = ((float) $transaction->discount * $subtotal) / 100;
         $subtotalAfterDiscount = max(0, $subtotal - $discount);
@@ -67,18 +97,15 @@
         $transactionDateLabel = $transaction->created_at->format('d/m/Y');
         $transactionDateTimeLabel = $transaction->created_at->format('d/m/Y H:i:s');
         $printTickets = $tickets;
-        if ($combineFirstTicketOnSummary) {
-            $printTickets = collect($tickets)->unique('ticket_code')->values()->all();
-        }
     @endphp
 
-    @if(!$combineFirstTicketOnSummary)
+    @if($shouldPrintSummary)
     <div class="ticket-row" style="margin-top: 10px;">
         <div class="qr-code ticket-card ticket-portrait" style="max-width:80mm !important; margin: 0 auto 0 auto;">
             <div class="detail" style="font-size: 10pt; line-height: 18px; margin-top: 10px; margin-bottom: 10px;">
                 <div style="text-align:center; margin-bottom: 10px;">
                     <div style="font-weight: 900; font-size: 12pt; text-transform: uppercase; margin-bottom: 6px;">{{ $name }}</div>
-                    @if($use == 1)
+                    @if(!empty($logo))
                     <img src="{{ $logo }}" width="90" alt="The Logo" class="brand-image" style="opacity: .9; margin-bottom: 6px;">
                     @endif
                     <div style="margin: 6px 10px;"><hr style="border-style: dashed;"></div>
@@ -86,22 +113,21 @@
                     <div style="font-size: 9pt;">{{ $transactionDateTimeLabel }}</div>
                 </div>
                 <div style="display: flex;font-weight: 900; justify-content: space-between; margin-left: 10px; margin-right: 10px;">
+                    <span>Jumlah Jenis : </span>
+                    <span>{{ $jumlahJenis }}</span>
+                </div>
+                <div style="display: flex;font-weight: 900; justify-content: space-between; margin-left: 10px; margin-right: 10px;">
                     <span>Jumlah Ticket : </span>
                     <span>{{ $jumlahTicket }}</span>
                 </div>
                 <div style="margin: 6px 10px;">
                     <div style="font-weight: 900;">Rincian Pembelian:</div>
-                    @forelse($receiptDetails as $item)
-                    @php
-                    $lineQty = max((int) $item->qty, 1);
-                    $lineSubtotal = (float) $item->total + (float) $item->ppn;
-                    $lineUnitPrice = $lineSubtotal / $lineQty;
-                    @endphp
+                    @forelse($groupedSummaryItems as $item)
                     <div style="margin-top: 2px;">
-                        <div style="font-weight: 700;">{{ $item->ticket->name ?? '-' }}</div>
+                        <div style="font-weight: 700;">{{ $item['name'] }} x {{ $item['qty'] }}</div>
                         <div style="display: flex; justify-content: space-between; font-size: 9pt;">
-                            <span>{{ $lineQty }} x Rp. {{ number_format($lineUnitPrice, 0, ',', '.') }}</span>
-                            <span>Rp. {{ number_format($lineSubtotal, 0, ',', '.') }}</span>
+                            <span>{{ $item['qty'] }} x Rp. {{ number_format($item['unit_price'], 0, ',', '.') }}</span>
+                            <span>Rp. {{ number_format($item['subtotal'], 0, ',', '.') }}</span>
                         </div>
                     </div>
                     @empty
@@ -112,10 +138,6 @@
                 <div style="display: flex;font-weight: 900; justify-content: space-between; margin-left: 10px; margin-right: 10px;">
                     <span>Total Harga : </span>
                     <span>Rp. {{ number_format($subtotal, 0, ',', '.') }}</span>
-                </div>
-                <div style="display: flex;font-weight: 900; justify-content: space-between; margin-left: 10px; margin-right: 10px;">
-                    <span>Discount : </span>
-                    <span>Rp. {{ number_format($discount, 0, ',', '.') }}</span>
                 </div>
                 {{-- <div style="display: flex;font-weight: 900; justify-content: space-between; margin-left: 10px; margin-right: 10px;">
                     <span>PBJT {{ $ppn . '%' }} : </span>
@@ -133,11 +155,6 @@
                 <span>Kasir : </span>
                 <span>{{ $transaction->user->name ?? '-' }}</span>
             </div>
-            <div style="display: flex;font-weight: 900; justify-content: space-between; margin-left: 10px; margin-right: 10px;">
-                <span>Kembali : </span>
-                <span>Rp. {{ number_format($transaction->kembali, 0, ',', '.') }}</span>
-            </div>
-
             <hr style="border-style: dashed;">
             <p style="font-size:9pt;text-align: center;margin-bottom:8px; text-transform: uppercase;">{!! nl2br(e($ucapan)) !!}</p>
             <p style="font-size:9pt;text-align: center;margin-bottom:10px; text-transform: uppercase;">{!! nl2br(e($deskripsi)) !!}</p>
@@ -148,88 +165,11 @@
 
     @foreach($printTickets as $ticketIndex => $detail)
     <div class="ticket-row" style="margin-top: 10px;">
-        @if($combineFirstTicketOnSummary)
-        @php
-            $pageDetail = $receiptDetails->firstWhere('ticket_code', $detail['ticket_code']);
-            $pageQty = max((int) ($pageDetail->qty ?? $detail['qty'] ?? 1), 1);
-            $pageSubtotal = (float) ($pageDetail->total ?? 0) + (float) ($pageDetail->ppn ?? 0);
-            $pageUnitPrice = $pageQty > 0 ? ($pageSubtotal / $pageQty) : $pageSubtotal;
-            $pageDiscount = ((float) $transaction->discount * $pageSubtotal) / 100;
-            $pageDisplayPaid = max(0, $pageSubtotal - $pageDiscount);
-        @endphp
-        <div class="qr-code ticket-card ticket-portrait" style="max-width:80mm !important; margin: 0 auto 0 auto;">
-            <div class="detail" style="font-size: 10pt; line-height: 18px; margin-top: 10px; margin-bottom: 10px;">
-                <div style="text-align:center; margin-bottom: 10px;">
-                    <div style="font-weight: 900; font-size: 12pt; text-transform: uppercase; margin-bottom: 6px;">{{ $name }}</div>
-                    @if($use == 1)
-                    <img src="{{ $logo }}" width="90" alt="The Logo" class="brand-image" style="opacity: .9; margin-bottom: 6px;">
-                    @endif
-                    <div style="margin: 6px 10px;"><hr style="border-style: dashed;"></div>
-                    <div style="font-weight: 900; font-size: 10pt;">{{ $transaction->ticket_code }}</div>
-                    <div style="font-size: 9pt;">{{ $transactionDateTimeLabel }}</div>
-                </div>
-                <div style="display: flex;font-weight: 900; justify-content: space-between; margin-left: 10px; margin-right: 10px;">
-                    <span>Jumlah Ticket : </span>
-                    <span>{{ $pageQty }}</span>
-                </div>
-                <div style="margin: 6px 10px;">
-                    <div style="font-weight: 900;">Rincian Pembelian:</div>
-                    <div style="margin-top: 2px;">
-                        <div style="font-weight: 700;">{{ $detail["name"] }}</div>
-                        <div style="display: flex; justify-content: space-between; font-size: 9pt;">
-                            <span>{{ $pageQty }} x Rp. {{ number_format($pageUnitPrice, 0, ',', '.') }}</span>
-                            <span>Rp. {{ number_format($pageSubtotal, 0, ',', '.') }}</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div style="display: flex;font-weight: 900; justify-content: space-between; margin-left: 10px; margin-right: 10px;">
-                    <span>Total Harga : </span>
-                    <span>Rp. {{ number_format($pageSubtotal, 0, ',', '.') }}</span>
-                </div>
-                <div style="display: flex;font-weight: 900; justify-content: space-between; margin-left: 10px; margin-right: 10px;">
-                    <span>Discount : </span>
-                    <span>Rp. {{ number_format($pageDiscount, 0, ',', '.') }}</span>
-                </div>
-                <div style="display: flex;font-weight: 900; justify-content: space-between; margin-left: 10px; margin-right: 10px;">
-                    <span>Bayar : </span>
-                    <span>Rp. {{ number_format($pageDisplayPaid, 0, ',', '.') }}</span>
-                </div>
-                <div style="display: flex;font-weight: 900; justify-content: space-between; margin-left: 10px; margin-right: 10px;">
-                    <span>Metode : </span>
-                    <span>{{ strtoupper($transaction->metode ?? '-') }}</span>
-                </div>
-                <div style="display: flex;font-weight: 900; justify-content: space-between; margin-left: 10px; margin-right: 10px;">
-                    <span>Kasir : </span>
-                    <span>{{ $transaction->user->name ?? '-' }}</span>
-                </div>
-                <div style="display: flex;font-weight: 900; justify-content: space-between; margin-left: 10px; margin-right: 10px;">
-                    <span>Kembali : </span>
-                    <span>Rp. 0</span>
-                </div>
-
-                <hr style="border-style: dashed;">
-                <p style="text-align: center; margin-top: 15px; margin-bottom: 15px">
-                    {!! QrCode::size(110)->generate($detail["ticket_code"]) !!}
-                    <br>
-                    <span>{{ $detail["ticket_code"] }}</span>
-                </p>
-                <hr style="border-style: dashed;">
-                <p style="font-size:9pt;text-align: center;margin-bottom:8px; text-transform: uppercase;">{!! nl2br(e($ucapan)) !!}</p>
-                <p style="font-size:9pt;text-align: center;margin-bottom:10px; text-transform: uppercase;">{!! nl2br(e($deskripsi)) !!}</p>
-            </div>
-        </div>
-        @else
         <div class="qr-code ticket-card ticket-portrait" style="margin: 0 auto 0 auto;">
             <div class="detail" style="font-size: 10pt; line-height: 18px;">
                 <span style="display: block; text-align: center; font-weight: 900;">{{ $detail["name"] }}</span>
                 @if($print == 0)
                 <span style="display: block; text-align: center;">Rp. {{ $detail["harga"] }}</span>
-                @endif
-                @if(($printMode ?? 'per_qty') === 'per_ticket')
-                <span style="display: block; text-align: center; font-size: 9pt;">
-                    Jumlah Scan: {{ $detail["qty"] }}x
-                </span>
                 @endif
                 <span style="display: block; text-align: center; font-size: 8pt;">Tanggal: {{ $transactionDateLabel }}</span>
                 <span style="display: block; text-align: center;"></span>
@@ -245,7 +185,6 @@
             <p style="font-size:9pt;text-align: center;margin-bottom:8px; text-transform: uppercase;">{!! nl2br(e($ucapan)) !!}</p>
             <p style="font-size:9pt;text-align: center;margin-bottom:10px; text-transform: uppercase;">{!! nl2br(e($deskripsi)) !!}</p>
         </div>
-        @endif
     </div>
     @endforeach
 

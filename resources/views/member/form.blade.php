@@ -12,9 +12,6 @@
 @endpush
 
 @section('content')
-@php
-    $registrationAdminFee = max((int) \App\Models\Setting::valueOf('member_reactivation_admin_fee', 0), 0);
-@endphp
 <div class="panel panel-inverse">
     <div class="panel-heading">
         <h4 class="panel-title">{{ $title }}</h4>
@@ -65,22 +62,6 @@
                     <label for="duration" class="form-label">Durasi (Hari)</label>
                     <input type="text" name="" id="duration" class="form-control" disabled value="{{ $member->id != 0 && $member->membership_id != 0 ? $member->membership->duration_days : '' }}">
                 </div>
-
-                <div class="col-md-4">
-                    <label for="price" class="form-label">Harga Total (Rp.)</label>
-                    {{-- Di halaman edit, tampilkan harga member *saat ini* + PPN jika ada (INI DARI PHP, JIKA ADA NILAI) --}}
-                    @php
-                        $displayPrice = '';
-                        if ($member->id && $member->membership_id != 0) {
-                            $membershipPrice = (float) ($member->membership->price ?? 0);
-                            $ppnAmount = (int) ($member->membership->use_ppn ?? 0) === 1 ? (float) ($member->membership->ppn ?? 0) : 0;
-                            $totalDisplayPrice = $membershipPrice + $ppnAmount + $registrationAdminFee;
-                            // Format harga dari PHP untuk tampilan awal
-                            $displayPrice = number_format($totalDisplayPrice, 0, ',', '.');
-                        }
-                    @endphp
-                    <input type="text" name="" id="price" class="form-control" disabled value="{{ $displayPrice }}">
-                </div>
             </div>
 
             <div class="form-group row mb-3">
@@ -106,7 +87,36 @@
                 </div>
                 <div class="col-md-3">
                     <label for="price_admin" class="form-label">Biaya Admin (Rp.)</label>
-                    <input type="text" id="price_admin" class="form-control" disabled value="{{ number_format($registrationAdminFee, 0, ',', '.') }}">
+                    <input type="text" id="price_admin" class="form-control" disabled value="0">
+                </div>
+            </div>
+
+            <div class="form-group row mb-3">
+                <div class="col-md-4">
+                    <label for="admin_fee_master_id" class="form-label">Jenis Admin</label>
+                    <select name="admin_fee_master_id" id="admin_fee_master_id" class="form-control" data-old="{{ old('admin_fee_master_id') }}">
+                        <option value="">-- Pilih Jenis Admin --</option>
+                    </select>
+                    <small class="text-muted">Opsional, boleh dikosongkan.</small>
+                    @error('admin_fee_master_id')
+                    <br><small class="text-danger">{{ $message }}</small>
+                    @enderror
+                </div>
+            </div>
+
+            <div class="form-group row mb-3">
+                <div class="col-md-4">
+                    <label for="price" class="form-label">Harga Total (Rp.)</label>
+                    @php
+                        $displayPrice = '';
+                        if ($member->id && $member->membership_id != 0) {
+                            $membershipPrice = (float) ($member->membership->price ?? 0);
+                            $ppnAmount = (int) ($member->membership->use_ppn ?? 0) === 1 ? (float) ($member->membership->ppn ?? 0) : 0;
+                            $totalDisplayPrice = $membershipPrice + $ppnAmount;
+                            $displayPrice = number_format($totalDisplayPrice, 0, ',', '.');
+                        }
+                    @endphp
+                    <input type="text" name="" id="price" class="form-control" disabled value="{{ $displayPrice }}">
                 </div>
             </div>
 
@@ -277,6 +287,20 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
 <script>
+    function parseMoneyNumber(value) {
+        var raw = (value ?? '').toString().trim();
+        if (raw === '') {
+            return 0;
+        }
+
+        if (/^\d+(\.\d+)?$/.test(raw)) {
+            return Number(raw);
+        }
+
+        var digitsOnly = raw.replace(/[^\d]/g, '');
+        return digitsOnly === '' ? 0 : Number(digitsOnly);
+    }
+
     // Helper function to format number as Rupiah (simple version)
     function formatRupiah(angka) {
         var reverse = angka.toString().split('').reverse().join(''),
@@ -284,7 +308,7 @@
         ribuan = ribuan.join('.').split('').reverse().join('');
         return ribuan;
     }
-    var REGISTRATION_ADMIN_FEE = parseFloat("{{ $registrationAdminFee }}") || 0;
+    var ADMIN_FEE_OPTIONS = @json($adminFeeOptions ?? []);
 
     $("#rfid").on('keypress', function(e) {
         var keyCode = e.keyCode || e.which;
@@ -293,6 +317,39 @@
             return false;
         }
     })
+
+    function populateRegistrationAdminOptions() {
+        var $adminSelect = $('#admin_fee_master_id');
+        if (!$adminSelect.length) {
+            return;
+        }
+
+        var options = Array.isArray(ADMIN_FEE_OPTIONS) ? ADMIN_FEE_OPTIONS : [];
+        var oldValue = String($adminSelect.data('old') || '');
+        var currentValue = String($adminSelect.val() || '');
+        var targetValue = currentValue !== '' ? currentValue : oldValue;
+
+        $adminSelect.empty();
+        $adminSelect.append('<option value="" data-admin-fee="0">-- Pilih Jenis Admin --</option>');
+
+        options.forEach(function(item) {
+            var fee = parseMoneyNumber(item.admin_fee);
+            var label = (item.admin_type || '-') + ' (Rp ' + formatRupiah(Math.round(fee)) + ')';
+            var selected = String(item.id) === targetValue ? ' selected' : '';
+            $adminSelect.append('<option value="' + item.id + '" data-admin-fee="' + fee + '"' + selected + '>' + label + '</option>');
+        });
+
+        if (targetValue && !$adminSelect.val()) {
+            $adminSelect.val('');
+        }
+
+        $adminSelect.removeData('old');
+    }
+
+    function selectedRegistrationAdminFee() {
+        var selectedOption = $('#admin_fee_master_id option:selected');
+        return parseMoneyNumber(selectedOption.attr('data-admin-fee'));
+    }
 
     function calculateAndDisplayPrice() {
         var selectedOption = $('#membership').find('option:selected');
@@ -310,7 +367,7 @@
 
             // --- Kalkulasi Harga Total (Harga Dasar + PBJT + Admin Fee) ---
             var ppnAmount = usePpn ? ppnRate : 0;
-            var adminFee = REGISTRATION_ADMIN_FEE;
+            var adminFee = selectedRegistrationAdminFee();
             var totalPrice = basePrice + ppnAmount + adminFee;
 
             $('#duration').val(duration);
@@ -373,7 +430,7 @@
             $('#duration').val('');
             $('#price_base').val('');
             $('#price_ppn').val('');
-            $('#price_admin').val(formatRupiah(Math.round(REGISTRATION_ADMIN_FEE)));
+            $('#price_admin').val(formatRupiah(0));
             $('#price').val('');
             $('#tgl_expired').val('');
             if ("{{ $method }}" === "POST") {
@@ -393,6 +450,8 @@
         // Panggil fungsi kalkulasi saat halaman edit dimuat.
         // Ini akan memastikan harga tampil (jika dropdown tidak di-disable)
         // Jika disabled, harga sudah ditampilkan oleh PHP, tapi fungsi ini tetap aman.
+        populateRegistrationAdminOptions();
+
         if ($('#membership').val()) {
             calculateAndDisplayPrice();
         }
@@ -400,6 +459,11 @@
 
         // --- LOGIKA PERUBAHAN JENIS MEMBER (BERLAKU DI CREATE, dan di EDIT JIKA INPUT TIDAK DI-DISABLE) ---
         $('#membership').on('change', function() {
+            populateRegistrationAdminOptions();
+            calculateAndDisplayPrice();
+        });
+
+        $('#admin_fee_master_id').on('change', function() {
             calculateAndDisplayPrice();
         });
 

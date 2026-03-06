@@ -9,6 +9,7 @@ use App\Models\Setting;
 use App\Models\Membership;
 use App\Models\LimitMember;
 use App\Models\Transaction;
+use App\Models\MembershipAdminFee;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use App\Imports\MemberImport;
@@ -24,6 +25,8 @@ use Illuminate\Support\Facades\File;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Schema;
 use Yajra\DataTables\Facades\DataTables;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -188,11 +191,12 @@ class MemberController extends Controller
         $title = 'Create Member';
         $breadcrumbs = ['Master', 'Data Member', 'Create Member'];
         $memberships = Membership::whereIsActive(1)->get();
+        $adminFeeOptions = $this->adminFeeOptions();
         $member = new Member();
         $action = route('members.store');
         $method = 'POST';
 
-        return view('member.form', compact('title', 'breadcrumbs', 'memberships', 'member', 'action', 'method'));
+        return view('member.form', compact('title', 'breadcrumbs', 'memberships', 'adminFeeOptions', 'member', 'action', 'method'));
     }
 
 public function store(CreateMemberRequest $request)
@@ -305,10 +309,12 @@ public function store(CreateMemberRequest $request)
 
             $basePricePerMember = (float) $membership->price;
             $ppnAmount = $membership->use_ppn ? ((float) $membership->ppn) : 0;
-            $registrationAdminFee = max((int) Setting::valueOf('member_reactivation_admin_fee', 0), 0);
             $validatedPayment = $request->validate([
                 'metode' => ['required', Rule::in(PaymentMethod::coreValidationValues())],
+                'admin_fee_master_id' => 'nullable|integer',
             ]);
+            $resolvedAdminFee = $this->resolveSelectedAdminFee($validatedPayment['admin_fee_master_id'] ?? null);
+            $registrationAdminFee = $resolvedAdminFee['admin_fee'];
 
             $now = Carbon::now('Asia/Jakarta');
             $notrx = Transaction::nextNoTrxByType('registration', $now);
@@ -451,10 +457,11 @@ public function store(CreateMemberRequest $request)
         $title = 'Edit Member';
         $breadcrumbs = ['Master', 'Data Member', 'Edit Member'];
         $memberships = Membership::whereIsActive(1)->get();
+        $adminFeeOptions = $this->adminFeeOptions();
         $action = route('members.update', $member->id);
         $method = 'PUT';
 
-        return view('member.form', compact('title', 'breadcrumbs', 'memberships', 'member', 'action', 'method'));
+        return view('member.form', compact('title', 'breadcrumbs', 'memberships', 'adminFeeOptions', 'member', 'action', 'method'));
     }
 
 public function update(UpdateMemberRequest $request, Member $member)
@@ -473,7 +480,7 @@ public function update(UpdateMemberRequest $request, Member $member)
                 if ($member->membership_id != $newMembershipId) {
 
                     $is_membership_changed = true;
-                    $membership = $member->membership;
+                    $membership = Membership::find($newMembershipId);
 
                     if (!$membership) {
                          throw new \Exception("Jenis Member baru tidak valid.");
@@ -499,10 +506,12 @@ public function update(UpdateMemberRequest $request, Member $member)
                     $totalMembersRegistered = 1 + ($member->childs ? $member->childs->count() : 0);
                     $basePricePerMember = (float) $membership->price; // Harga dasar per member
                     $ppnAmount = $membership->use_ppn ? ((float) $membership->ppn) : 0;
-                    $registrationAdminFee = max((int) Setting::valueOf('member_reactivation_admin_fee', 0), 0);
                     $validatedPayment = $request->validate([
                         'metode' => ['required', Rule::in(PaymentMethod::coreValidationValues())],
+                        'admin_fee_master_id' => 'nullable|integer',
                     ]);
+                    $resolvedAdminFee = $this->resolveSelectedAdminFee($validatedPayment['admin_fee_master_id'] ?? null);
+                    $registrationAdminFee = $resolvedAdminFee['admin_fee'];
 
                     $now = Carbon::now('Asia/Jakarta');
                     $notrx = Transaction::nextNoTrxByType('registration', $now);
@@ -919,7 +928,7 @@ public function getRenewableMembers(Request $request)
     $setting = Setting::asObject();
     $suspendBeforeDays = max((int) ($setting->member_suspend_before_days ?? 7), 1);
     $suspendAfterDays = max((int) ($setting->member_suspend_after_days ?? 0), 0);
-    $reactivationAdminFee = max((int) ($setting->member_reactivation_admin_fee ?? 0), 0);
+    $adminFeeOptions = $this->adminFeeOptions();
 
     $data = $this->renewableMembersQuery($suspendBeforeDays);
 
@@ -965,14 +974,17 @@ public function getRenewableMembers(Request $request)
 
             return '<span class="badge bg-success">Active</span>';
         })
-        ->addColumn('action', function ($row) use ($suspendAfterDays, $reactivationAdminFee) {
+        ->addColumn('action', function ($row) use ($suspendAfterDays, $adminFeeOptions) {
             $today = Carbon::now('Asia/Jakarta')->startOfDay();
             $expiredAt = Carbon::parse($row->tgl_expired)->startOfDay();
             $daysAfterExpired = $today->greaterThan($expiredAt) ? $expiredAt->diffInDays($today) : 0;
             $isRenewalBaru = $daysAfterExpired > $suspendAfterDays;
 
+            $adminOptions = $adminFeeOptions;
+            $defaultAdminFee = 0;
+
             $grossPrice = 0;
-            $adminFee = $isRenewalBaru ? $reactivationAdminFee : 0;
+            $adminFee = $defaultAdminFee;
             if ($row->membership) {
                 $grossPrice = $row->membership->price + ($row->membership->use_ppn ? $row->membership->ppn : 0) + $adminFee;
             }
@@ -983,6 +995,7 @@ public function getRenewableMembers(Request $request)
             $formattedAdminFee = number_format($adminFee, 0, ',', '.');
             $formattedBasePrice = number_format($basePrice, 0, ',', '.');
             $formattedPpnPrice = number_format($ppnPrice, 0, ',', '.');
+            $adminOptionsJson = htmlspecialchars((string) json_encode($adminOptions, JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8');
             $buttonLabel = $isRenewalBaru ? 'Perpanjangan Baru' : 'Perpanjang';
             $buttonClass = $isRenewalBaru ? 'btn-warning text-dark' : 'btn-success';
             $renewalMode = $isRenewalBaru ? 'renewal_baru' : 'renewal';
@@ -1003,6 +1016,10 @@ public function getRenewableMembers(Request $request)
                         data-price-base="' . $formattedBasePrice . '"
                         data-price-ppn="' . $formattedPpnPrice . '"
                         data-price-admin="' . $formattedAdminFee . '"
+                        data-price-base-raw="' . (int) round($basePrice) . '"
+                        data-price-ppn-raw="' . (int) round($ppnPrice) . '"
+                        data-price-admin-raw="' . (int) round($adminFee) . '"
+                        data-admin-options="' . $adminOptionsJson . '"
                         data-renewal-mode="' . $renewalMode . '"
                         data-price="' . $formattedPrice . '">
                         <i class="fa fa-sync"></i> ' . $buttonLabel . '
@@ -1027,7 +1044,6 @@ public function downloadSingleRenewalNotice(Request $request, Member $member)
     $setting = Setting::asObject();
     $suspendBeforeDays = max((int) ($setting->member_suspend_before_days ?? 7), 1);
     $suspendAfterDays = max((int) ($setting->member_suspend_after_days ?? 0), 0);
-    $reactivationAdminFee = max((int) ($setting->member_reactivation_admin_fee ?? 0), 0);
 
     $member->loadMissing('membership');
     $expiredAt = Carbon::parse($member->tgl_expired)->startOfDay();
@@ -1037,7 +1053,7 @@ public function downloadSingleRenewalNotice(Request $request, Member $member)
         return redirect()->route('members.bulk_renew')->with('error', 'Member tidak valid untuk reminder perpanjangan.');
     }
 
-    $notices = $this->buildRenewalNoticeRows(collect([$member]), $suspendAfterDays, $reactivationAdminFee);
+    $notices = $this->buildRenewalNoticeRows(collect([$member]), $suspendAfterDays);
     if (empty($notices)) {
         return redirect()->route('members.bulk_renew')->with('error', 'Data reminder member tidak ditemukan.');
     }
@@ -1077,7 +1093,6 @@ public function downloadRenewalNotice(Request $request)
     $setting = Setting::asObject();
     $suspendBeforeDays = max((int) ($setting->member_suspend_before_days ?? 7), 1);
     $suspendAfterDays = max((int) ($setting->member_suspend_after_days ?? 0), 0);
-    $reactivationAdminFee = max((int) ($setting->member_reactivation_admin_fee ?? 0), 0);
 
     $query = $this->renewableMembersQuery($suspendBeforeDays);
 
@@ -1103,7 +1118,7 @@ public function downloadRenewalNotice(Request $request)
         return back()->with('error', 'Data member renewal tidak ditemukan.');
     }
 
-    $notices = $this->buildRenewalNoticeRows($members, $suspendAfterDays, $reactivationAdminFee);
+    $notices = $this->buildRenewalNoticeRows($members, $suspendAfterDays);
     $noticeContent = $this->renewalNoticeContent();
 
     $logoData = $this->resolveRenewalNoticeLogoData($setting);
@@ -1123,7 +1138,7 @@ public function downloadRenewalNotice(Request $request)
     ]);
 }
 
-private function buildRenewalNoticeRows($members, int $suspendAfterDays, int $reactivationAdminFee): array
+private function buildRenewalNoticeRows($members, int $suspendAfterDays): array
 {
     $today = Carbon::now('Asia/Jakarta')->startOfDay();
 
@@ -1131,14 +1146,14 @@ private function buildRenewalNoticeRows($members, int $suspendAfterDays, int $re
         ->filter(function ($member) {
             return $member && $member->membership_id != 0 && $member->membership;
         })
-        ->map(function ($member) use ($today, $suspendAfterDays, $reactivationAdminFee) {
+        ->map(function ($member) use ($today, $suspendAfterDays) {
             $expiredAt = Carbon::parse($member->tgl_expired)->startOfDay();
             $daysAfterExpired = $today->greaterThan($expiredAt) ? $expiredAt->diffInDays($today) : 0;
             $isRenewalBaru = $daysAfterExpired > $suspendAfterDays;
 
             $basePrice = (float) ($member->membership->price ?? 0);
             $ppnAmount = (int) ($member->membership->use_ppn ?? 0) === 1 ? (float) ($member->membership->ppn ?? 0) : 0;
-            $adminFee = $isRenewalBaru ? $reactivationAdminFee : 0;
+            $adminFee = 0;
             $totalPrice = $basePrice + $ppnAmount + $adminFee;
 
             return [
@@ -1203,11 +1218,15 @@ public function processBulkRenew(Request $request)
     $validatedPayment = $request->validate([
         'metode' => ['required', Rule::in(PaymentMethod::coreValidationValues())],
         'renewal_mode' => 'nullable|in:renewal,renewal_baru',
+        'admin_fee_master_id' => 'nullable|integer',
     ]);
 
-    $member_ids = $request->input('member_ids');
+    $memberIdsInput = $request->input('member_ids');
+    $memberId = is_array($memberIdsInput)
+        ? (int) ($memberIdsInput[0] ?? 0)
+        : (int) $memberIdsInput;
 
-    if (empty($member_ids)) {
+    if ($memberId <= 0) {
         return back()->with('error', 'Tidak ada member yang dipilih untuk diperpanjang.');
     }
 
@@ -1216,7 +1235,7 @@ public function processBulkRenew(Request $request)
         $successCount = 0;
         $firstParentMember = null;
 
-        $member = Member::with('membership')->where('id', $member_ids)->first();
+        $member = Member::with('membership')->where('id', $memberId)->first();
         if (!$member) {
             DB::rollBack();
             return back()->with('error', 'Member tidak ditemukan.');
@@ -1309,7 +1328,8 @@ public function processBulkRenew(Request $request)
             return back()->with('error', 'Semua member yang dipilih tidak valid untuk perpanjangan (bukan Parent atau tanpa Membership).');
         }
 
-        $adminFee = $isRenewalBaru ? max((int) Setting::valueOf('member_reactivation_admin_fee', 0), 0) : 0;
+        $resolvedAdminFee = $this->resolveSelectedAdminFee($validatedPayment['admin_fee_master_id'] ?? null);
+        $adminFee = $resolvedAdminFee['admin_fee'];
         $baseMembershipPrice = (float) ($member->membership->price ?? 0);
 
         $now = Carbon::now('Asia/Jakarta');
@@ -1369,6 +1389,54 @@ public function processBulkRenew(Request $request)
         return back()->with('error', 'Gagal memproses perpanjangan massal: ' . $th->getMessage());
     }
 }
+
+    private function adminFeeOptions(): array
+    {
+        if (!Schema::hasTable('membership_admin_fees')) {
+            return [];
+        }
+
+        return MembershipAdminFee::query()
+            ->orderBy('admin_type')
+            ->get(['id', 'admin_type', 'admin_fee'])
+            ->map(function (MembershipAdminFee $row) {
+                return [
+                    'id' => (int) $row->id,
+                    'admin_type' => (string) $row->admin_type,
+                    'admin_fee' => (int) $row->admin_fee,
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    private function resolveSelectedAdminFee(mixed $selectedAdminFeeMasterId): array
+    {
+        $selectedId = max((int) $selectedAdminFeeMasterId, 0);
+        if ($selectedId === 0 || !Schema::hasTable('membership_admin_fees')) {
+            return [
+                'admin_fee' => 0,
+                'admin_fee_master_id' => null,
+                'admin_type' => null,
+            ];
+        }
+
+        $adminFeeMaster = MembershipAdminFee::query()
+            ->whereKey($selectedId)
+            ->first();
+
+        if (!$adminFeeMaster) {
+            throw ValidationException::withMessages([
+                'admin_fee_master_id' => 'Jenis admin tidak valid.',
+            ]);
+        }
+
+        return [
+            'admin_fee' => max((int) ($adminFeeMaster->admin_fee ?? 0), 0),
+            'admin_fee_master_id' => (int) $adminFeeMaster->id,
+            'admin_type' => (string) ($adminFeeMaster->admin_type ?? ''),
+        ];
+    }
 
     private function enqueueWhatsappNotificationFromTransaction(Transaction $transaction, Member $member): void
     {

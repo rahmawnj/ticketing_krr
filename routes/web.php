@@ -7,6 +7,7 @@ use App\Http\Controllers\GateAccessController;
 use App\Http\Controllers\HistoryController;
 use App\Http\Controllers\HistoryMembershipController;
 use App\Http\Controllers\MemberController;
+use App\Http\Controllers\MembershipAdminFeeController;
 use App\Http\Controllers\MembershipController;
 use App\Http\Controllers\PenyewaanController;
 use App\Http\Controllers\PermissionController;
@@ -97,6 +98,11 @@ Route::middleware('auth')->group(function () {
 
     Route::get('memberships/get', [MembershipController::class, 'get'])->name('memberships.list');
     Route::resource('memberships', MembershipController::class);
+
+    Route::get('membership-admin-fees/get', [MembershipAdminFeeController::class, 'get'])->name('membership-admin-fees.list');
+    Route::resource('membership-admin-fees', MembershipAdminFeeController::class)
+        ->only(['index', 'store', 'show', 'update', 'destroy'])
+        ->parameters(['membership-admin-fees' => 'membershipAdminFee']);
 
     Route::get('transactions/get', [TransactionController::class, 'get'])->name('transactions.list');
     Route::get('transactions/export-daily', [TransactionController::class, 'exportDaily'])->name('transactions.export.daily');

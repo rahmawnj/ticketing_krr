@@ -20,9 +20,8 @@ class Setting extends Model
         'ppn' => 0,
         'member_suspend_before_days' => 7,
         'member_suspend_after_days' => 0,
-        'member_reactivation_admin_fee' => 0,
-        'print_mode' => 'per_qty',
-        'ticket_print_orientation' => 'portrait',
+        'ticket_code_mode' => 'unique',
+        'ticket_print_orientation' => 'without_summary',
         'dashboard_metric_mode' => 'amount',
         'whatsapp_enabled' => 0,
         'use_logo' => 0,
@@ -58,7 +57,6 @@ class Setting extends Model
         $merged['ppn'] = (int) $merged['ppn'];
         $merged['member_suspend_before_days'] = max((int) $merged['member_suspend_before_days'], 1);
         $merged['member_suspend_after_days'] = max((int) $merged['member_suspend_after_days'], 0);
-        $merged['member_reactivation_admin_fee'] = max((int) $merged['member_reactivation_admin_fee'], 0);
         $merged['whatsapp_enabled'] = (int) $merged['whatsapp_enabled'];
         $merged['use_logo'] = (int) $merged['use_logo'];
 

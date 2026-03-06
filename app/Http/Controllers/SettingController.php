@@ -49,9 +49,8 @@ class SettingController extends Controller
                 'ppn' => 'required|numeric',
                 'member_suspend_before_days' => 'required|integer|min:1',
                 'member_suspend_after_days' => 'required|integer|min:0',
-                'member_reactivation_admin_fee' => 'required|integer|min:0',
-                'print_mode' => 'required|in:per_qty,per_ticket',
-                'ticket_print_orientation' => 'required|in:portrait,portrait_with_first_qr',
+                'ticket_code_mode' => 'required|in:shared,unique',
+                'ticket_print_orientation' => 'required|in:with_summary,without_summary',
                 'dashboard_metric_mode' => 'required|in:amount,count',
                 'whatsapp_enabled' => 'nullable|boolean',
             ];

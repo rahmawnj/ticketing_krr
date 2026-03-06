@@ -300,44 +300,18 @@ class DetailTransactionController extends Controller
                 }
             }
 
-            $now = Carbon::now()->format('Y-m-d');
-            $lastTrx = optional(Transaction::whereDate('created_at', $now)->orderBy('no_trx', 'DESC')->first())->no_trx ?? 0;
             $tickets = [];
-            $idtrx = [];
             $print = $transaction->detail()->sum('qty') ?? 1;
-            $tipe = 'individual';
-
-            $totalHarga =  $transaction->detail()->sum('total');
+            $totalHarga = $transaction->detail()->sum('total');
             $firstTrx = $transaction->detail()->sum('qty');
 
             $discount = request('discount') ?? 0;
             $disc = request('discount') ? ($totalHarga * $discount) / 100 : 0;
             // $setting = Setting::first();
-
-
             $setting = Setting::asObject();
-            $printMode = $setting->print_mode ?? 'per_qty';
-
-            foreach ($transaction->detail as $detail) {
-                if ($printMode === 'per_ticket') {
-                    $tickets[] = [
-                        "name" => $detail->ticket->name,
-                        "harga" => number_format($detail->ticket->harga + $detail->ppn, 0, ',', '.'),
-                        "ticket_code" => $detail->ticket_code,
-                        "qty" => $detail->qty,
-                    ];
-                    continue;
-                }
-
-                for ($i = 1; $i <= $detail->qty; $i++) {
-                    $tickets[] = [
-                        "name" => $detail->ticket->name,
-                        "harga" => number_format($detail->ticket->harga + $detail->ppn, 0, ',', '.'),
-                        "ticket_code" => $detail->ticket_code,
-                        "qty" => $detail->qty,
-                    ];
-                }
-            }
+            $ticketCodeMode = in_array((string) ($setting->ticket_code_mode ?? 'unique'), ['shared', 'unique'], true)
+                ? (string) $setting->ticket_code_mode
+                : 'unique';
 
             $validatedPayment = $request->validate([
                 'metode' => ['required', Rule::in(PaymentMethod::coreValidationValues())],
@@ -415,16 +389,55 @@ class DetailTransactionController extends Controller
                 'ppn' => $totalPpn,
             ]);
 
+            DetailTransaction::applyTicketCodeMode($transaction, $ticketCodeMode);
+            $transaction->load(['detail.ticket']);
+            if ($ticketCodeMode === 'unique') {
+                $tickets = $transaction->detail->map(function ($detail) {
+                    return [
+                        'name' => $detail->ticket->name ?? '-',
+                        'harga' => number_format(((float) ($detail->total ?? 0)) + ((float) ($detail->ppn ?? 0)), 0, ',', '.'),
+                        'ticket_code' => (string) ($detail->ticket_code ?? '-'),
+                        'qty' => 1,
+                    ];
+                })->values()->all();
+            } else {
+                foreach ($transaction->detail as $detail) {
+                    $qty = max((int) ($detail->qty ?? 1), 1);
+                    $lineSubtotal = ((float) ($detail->total ?? 0)) + ((float) ($detail->ppn ?? 0));
+                    $lineUnitPrice = $qty > 0 ? ($lineSubtotal / $qty) : $lineSubtotal;
+                    for ($i = 1; $i <= $qty; $i++) {
+                        $tickets[] = [
+                            'name' => $detail->ticket->name ?? '-',
+                            'harga' => number_format($lineUnitPrice, 0, ',', '.'),
+                            'ticket_code' => (string) ($detail->ticket_code ?? '-'),
+                            'qty' => $qty,
+                        ];
+                    }
+                }
+            }
+
             DB::commit();
             $this->clearCartItems();
-            $logo = !empty($setting->logo) ? asset('/storage/' . $setting->logo) : 'data:image/png;base64,' . base64_encode(file_get_contents(public_path('/images/rio.png')));
+            $logo = null;
+            if (!empty($setting->logo)) {
+                $logoPath = public_path('storage/' . $setting->logo);
+                if (is_file($logoPath)) {
+                    $logo = asset('/storage/' . $setting->logo);
+                }
+            }
+            if ($logo === null) {
+                $fallbackLogoPath = public_path('/images/rio.png');
+                if (is_file($fallbackLogoPath)) {
+                    $logo = 'data:image/png;base64,' . base64_encode(file_get_contents($fallbackLogoPath));
+                }
+            }
             $ucapan = $setting->ucapan ?? 'Terima Kasih';
             $name = $setting->name ?? 'Ticketing';
             $deskripsi = $setting->deskripsi ?? 'qr code hanya berlaku satu kali';
-            $use = $setting->use_logo ?? false;
+            $use = $logo !== null ? 1 : 0;
 
-            $ticketPrintOrientation = $setting->ticket_print_orientation ?? 'portrait';
-            return view('transaction.print', compact('transaction', 'logo', 'ucapan', 'deskripsi', 'use', 'name', "tickets", 'print', 'printMode', 'ticketPrintOrientation'));
+            $ticketPrintOrientation = $setting->ticket_print_orientation ?? 'without_summary';
+            return view('transaction.print', compact('transaction', 'logo', 'ucapan', 'deskripsi', 'use', 'name', 'tickets', 'print', 'ticketPrintOrientation'));
             // $print = $this->print($transaction);
             // if ($print["status"] == "success") {
             //     return back()->with('success', "Transaction success");

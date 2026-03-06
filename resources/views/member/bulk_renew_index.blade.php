@@ -90,6 +90,7 @@
     @csrf
     <input type="hidden" name="member_ids[]" id="member-id-input">
     <input type="hidden" name="metode" id="renew-metode-input">
+    <input type="hidden" name="admin_fee_master_id" id="renew-admin-fee-master-id-input">
     <input type="hidden" name="renewal_mode" id="renewal-mode-input">
     <input type="hidden" name="nama_kartu" id="renew-nama-kartu-input">
     <input type="hidden" name="no_kartu" id="renew-no-kartu-input">
@@ -104,6 +105,10 @@
 <script src="{{ asset('/') }}plugins/sweetalert/dist/sweetalert.min.js"></script>
 
 <script>
+    function formatRupiahNumber(value) {
+        return new Intl.NumberFormat('id-ID').format(Number(value || 0));
+    }
+
     var table = $('#datatable-renew').DataTable({
         processing: true,
         serverSide: true,
@@ -131,17 +136,56 @@
         e.preventDefault();
         var memberId = $(this).data('id');
         var memberName = $(this).data('name');
-        var memberPrice = $(this).data('price'); // Harga Total
-        var memberBasePrice = $(this).data('price-base') || '0';
-        var memberPpnPrice = $(this).data('price-ppn') || '0';
-        var memberAdminPrice = $(this).data('price-admin') || '0';
+        var memberBasePriceRaw = parseInt($(this).attr('data-price-base-raw') || '0', 10) || 0;
+        var memberPpnPriceRaw = parseInt($(this).attr('data-price-ppn-raw') || '0', 10) || 0;
         var renewalMode = $(this).data('renewal-mode') || 'renewal';
         var isRenewalBaru = renewalMode === 'renewal_baru';
         var confirmTitle = isRenewalBaru ? "Konfirmasi Perpanjangan Baru" : "Konfirmasi Perpanjangan";
         var confirmButton = isRenewalBaru ? "Ya, Perpanjangan Baru!" : "Ya, Perpanjang!";
+        var adminOptionsRaw = $(this).attr('data-admin-options') || '[]';
+        var adminOptions = [];
+
+        try {
+            adminOptions = JSON.parse(adminOptionsRaw);
+            if (!Array.isArray(adminOptions)) {
+                adminOptions = [];
+            }
+        } catch (error) {
+            adminOptions = [];
+        }
+
         var paymentWrapper = document.createElement('div');
         paymentWrapper.style.display = 'grid';
         paymentWrapper.style.gap = '8px';
+
+        var summaryBox = document.createElement('div');
+        summaryBox.className = 'alert alert-info text-start mb-1';
+        summaryBox.id = 'renew-price-summary';
+        paymentWrapper.appendChild(summaryBox);
+
+        var adminLabel = document.createElement('label');
+        adminLabel.setAttribute('for', 'renew-admin-fee-swal');
+        adminLabel.textContent = 'Jenis Admin';
+        paymentWrapper.appendChild(adminLabel);
+
+        var adminSelect = document.createElement('select');
+        adminSelect.id = 'renew-admin-fee-swal';
+        adminSelect.className = 'swal-content__input';
+        paymentWrapper.appendChild(adminSelect);
+
+        var placeholderOption = document.createElement('option');
+        placeholderOption.value = '';
+        placeholderOption.textContent = '-- Pilih Jenis Admin --';
+        placeholderOption.setAttribute('data-fee', '0');
+        adminSelect.appendChild(placeholderOption);
+
+        adminOptions.forEach(function(item) {
+            var option = document.createElement('option');
+            option.value = item.id;
+            option.textContent = (item.admin_type || '-') + ' (Rp ' + formatRupiahNumber(item.admin_fee || 0) + ')';
+            option.setAttribute('data-fee', String(parseInt(item.admin_fee || 0, 10) || 0));
+            adminSelect.appendChild(option);
+        });
 
         var metodeLabel = document.createElement('label');
         metodeLabel.setAttribute('for', 'renew-metode-swal');
@@ -186,6 +230,24 @@
             metodeSelect.appendChild(option);
         });
 
+        function getSelectedAdminFee() {
+            var selectedOption = adminSelect.options[adminSelect.selectedIndex];
+            if (!selectedOption) {
+                return 0;
+            }
+            return parseInt(selectedOption.getAttribute('data-fee') || '0', 10) || 0;
+        }
+
+        function renderRenewSummary() {
+            var adminFee = getSelectedAdminFee();
+            var total = memberBasePriceRaw + memberPpnPriceRaw + adminFee;
+            summaryBox.innerHTML = ''
+                + 'Harga Dasar: <strong>Rp ' + formatRupiahNumber(memberBasePriceRaw) + '</strong><br>'
+                + 'PBJT: <strong>Rp ' + formatRupiahNumber(memberPpnPriceRaw) + '</strong><br>'
+                + 'Biaya Admin: <strong>Rp ' + formatRupiahNumber(adminFee) + '</strong><br>'
+                + 'Total: <strong>Rp ' + formatRupiahNumber(total) + '</strong>';
+        }
+
         function toggleRenewCardFields() {
             var isCardMethod = metodeSelect.value === 'debit' || metodeSelect.value === 'kredit';
             var displayMode = isCardMethod ? 'block' : 'none';
@@ -202,15 +264,13 @@
         }
 
         metodeSelect.addEventListener('change', toggleRenewCardFields);
+        adminSelect.addEventListener('change', renderRenewSummary);
         toggleRenewCardFields();
+        renderRenewSummary();
 
         swal({
             title: confirmTitle,
-            text: "Anda yakin ingin memperpanjang keanggotaan " + memberName +
-                  "(beserta submember-nya)?\n\nHarga Dasar: Rp " + memberBasePrice +
-                  "\nPBJT: Rp " + memberPpnPrice +
-                  "\nBiaya Admin: Rp " + memberAdminPrice +
-                  "\nTotal: Rp " + memberPrice,
+            text: "Anda yakin ingin memperpanjang keanggotaan " + memberName + " (beserta submember-nya)?",
             content: paymentWrapper,
             icon: "warning",
             buttons: ["Batal", confirmButton],
@@ -219,6 +279,7 @@
         .then((willRenew) => {
             if (willRenew) {
                 var selectedMetode = (metodeSelect.value || '').trim();
+                var selectedAdminFeeMasterId = (adminSelect.value || '').trim();
                 var isCardMethod = selectedMetode === 'debit' || selectedMetode === 'kredit';
                 var namaKartu = (namaKartuInput.value || '').trim();
                 var noKartu = (noKartuInput.value || '').trim();
@@ -232,6 +293,7 @@
                 // Set ID member ke form tersembunyi
                 $('#member-id-input').val(memberId);
                 $('#renew-metode-input').val(selectedMetode);
+                $('#renew-admin-fee-master-id-input').val(selectedAdminFeeMasterId);
                 $('#renewal-mode-input').val(renewalMode);
                 $('#renew-nama-kartu-input').val(isCardMethod ? namaKartu : '');
                 $('#renew-no-kartu-input').val(isCardMethod ? noKartu : '');
