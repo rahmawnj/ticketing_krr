@@ -65,7 +65,7 @@
             </div>
 
             <div class="form-group row mb-3">
-                <div class="col-md-3">
+                <div class="col-md-6 col-lg-3">
                     <label for="metode" class="form-label"><sup class="text-danger">*</sup>Metode Pembayaran</label>
                     <select name="metode" id="metode" class="form-control">
                         <option value="">-- Pilih Metode --</option>
@@ -77,22 +77,8 @@
                     <small class="text-danger">{{ $message }}</small>
                     @enderror
                 </div>
-                <div class="col-md-3">
-                    <label for="price_base" class="form-label">Harga Dasar (Rp.)</label>
-                    <input type="text" id="price_base" class="form-control" disabled value="">
-                </div>
-                <div class="col-md-3">
-                    <label for="price_ppn" class="form-label">PBJT (Rp.)</label>
-                    <input type="text" id="price_ppn" class="form-control" disabled value="">
-                </div>
-                <div class="col-md-3">
-                    <label for="price_admin" class="form-label">Biaya Admin (Rp.)</label>
-                    <input type="text" id="price_admin" class="form-control" disabled value="0">
-                </div>
-            </div>
 
-            <div class="form-group row mb-3">
-                <div class="col-md-4">
+                <div class="col-md-6 col-lg-3">
                     <label for="admin_fee_master_id" class="form-label">Jenis Admin</label>
                     <select name="admin_fee_master_id" id="admin_fee_master_id" class="form-control" data-old="{{ old('admin_fee_master_id') }}">
                         <option value="">-- Pilih Jenis Admin --</option>
@@ -101,6 +87,21 @@
                     @error('admin_fee_master_id')
                     <br><small class="text-danger">{{ $message }}</small>
                     @enderror
+                </div>
+
+                <div class="col-md-4 col-lg-2">
+                    <label for="price_base" class="form-label">Harga Dasar (Rp.)</label>
+                    <input type="text" id="price_base" class="form-control" disabled value="">
+                </div>
+
+                <div class="col-md-4 col-lg-2">
+                    <label for="price_ppn" class="form-label">PBJT (Rp.)</label>
+                    <input type="text" id="price_ppn" class="form-control" disabled value="">
+                </div>
+
+                <div class="col-md-4 col-lg-2">
+                    <label for="price_admin" class="form-label">Biaya Admin (Rp.)</label>
+                    <input type="text" id="price_admin" class="form-control" disabled value="0">
                 </div>
             </div>
 

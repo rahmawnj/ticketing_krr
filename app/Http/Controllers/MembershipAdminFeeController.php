@@ -17,8 +17,8 @@ class MembershipAdminFeeController extends Controller
 
     public function index()
     {
-        $title = 'Master Jenis Admin';
-        $breadcrumbs = ['Master', 'Master Jenis Admin'];
+        $title = 'Jenis Admin';
+        $breadcrumbs = ['Master', 'Jenis Admin'];
 
         return view('membership-admin-fees.index', compact('title', 'breadcrumbs'));
     }

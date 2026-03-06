@@ -144,6 +144,15 @@
                                 </a>
                                 @endcan
                             </div>
+
+                            <div class="menu-item {{ request()->routeIs('membership-admin-fees.*') ? 'active' : '' }}">
+                                @can('sewa-access')
+                                <a href="{{ route('membership-admin-fees.index') }}" class="menu-link">
+                                    <div class="menu-text">Jenis Admin</div>
+                                </a>
+                                @endcan
+                            </div>
+
                             <div class="menu-item {{ request()->routeIs('sewa.*') ? 'active' : '' }}">
                                 @can('sewa-access')
                                 <a href="{{ route('sewa.index') }}" class="menu-link">
@@ -160,13 +169,6 @@
                                 @endcan
                             </div>
 
-                            <div class="menu-item {{ request()->routeIs('membership-admin-fees.*') ? 'active' : '' }}">
-                                @can('sewa-access')
-                                <a href="{{ route('membership-admin-fees.index') }}" class="menu-link">
-                                    <div class="menu-text">Master Jenis Admin</div>
-                                </a>
-                                @endcan
-                            </div>
                         </div>
                     </div>
                     @endcan
