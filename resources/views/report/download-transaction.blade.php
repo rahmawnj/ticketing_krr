@@ -42,7 +42,7 @@
     // Query Dasar Transaksi
     $baseQuery = App\Models\Transaction::where('is_active', 1)->whereBetween('created_at', [$from, $to]);
     if ($kasir && $kasir != 'all') {
-        $baseQuery->where('user_id', $kasir);
+        $baseQuery->where('transactions.user_id', $kasir);
     }
 
     $idTrxAll = $baseQuery->pluck('id');

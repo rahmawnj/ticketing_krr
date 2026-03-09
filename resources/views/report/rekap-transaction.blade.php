@@ -106,7 +106,7 @@
                     @php
     $queryTrxTicket = App\Models\Transaction::where(['is_active' => 1, 'transaction_type' => 'ticket'])->whereBetween('created_at', [$from, $to]);
     if (request('kasir') != 'all' && request('kasir')) {
-        $queryTrxTicket->where('user_id', request('kasir'));
+        $queryTrxTicket->where('transactions.user_id', request('kasir'));
     }
     $idTrxTicket = $queryTrxTicket->pluck('id');
     $totalQtyTicket = 0;
@@ -263,7 +263,7 @@
                         @php
                             $queryTrxRenewal = App\Models\Transaction::where(['is_active' => 1, 'transaction_type' => 'renewal', 'ticket_id' => $membership->id])->whereBetween('created_at', [$from, $to]);
                             if (request('kasir') != 'all' && request('kasir')) {
-                                $queryTrxRenewal->where('user_id', request('kasir'));
+                                $queryTrxRenewal->where('transactions.user_id', request('kasir'));
                             }
                             $qtyRenewal = $queryTrxRenewal->count();
                             $totalPerRenewal = $queryTrxRenewal->sum(\DB::raw('(bayar - kembali) + ppn + admin_fee'));
@@ -312,7 +312,7 @@
                         @php
                             $queryTrxRegistration = App\Models\Transaction::where(['is_active' => 1, 'transaction_type' => 'registration', 'ticket_id' => $membership->id])->whereBetween('created_at', [$from, $to]);
                             if (request('kasir') != 'all' && request('kasir')) {
-                                $queryTrxRegistration->where('user_id', request('kasir'));
+                                $queryTrxRegistration->where('transactions.user_id', request('kasir'));
                             }
                             $qtyRegistration = $queryTrxRegistration->count();
                             $totalPerRegistration = $queryTrxRegistration->sum(\DB::raw('(bayar - kembali) + ppn + admin_fee'));
@@ -365,7 +365,7 @@
                                 ->whereIn('ticket_id', $rentalPenyewaanIds)
                                 ->whereBetween('transactions.created_at', [$from, $to]);
                             if (request('kasir') != 'all' && request('kasir')) {
-                                $queryTrxRental->where('user_id', request('kasir'));
+                                $queryTrxRental->where('transactions.user_id', request('kasir'));
                             }
                             $qtyRental = (clone $queryTrxRental)
                                 ->leftJoin('penyewaans as p', 'p.id', '=', 'transactions.ticket_id')
@@ -405,7 +405,7 @@
                             ->whereBetween('created_at', [$from, $to])
                             ->whereNotIn('transaction_type', ['ticket', 'renewal', 'registration', 'rental']);
                         if (request('kasir') != 'all' && request('kasir')) {
-                            $queryOtherTypes->where('user_id', request('kasir'));
+                            $queryOtherTypes->where('transactions.user_id', request('kasir'));
                         }
                         $otherTypeRows = $queryOtherTypes
                             ->select(
@@ -472,7 +472,7 @@
         @php
             $queryTrxAll = App\Models\Transaction::where(['is_active' => 1])->whereBetween('created_at', [$from, $to]);
             if (request('kasir') != 'all' && request('kasir')) {
-                $queryTrxAll->where('user_id', request('kasir'));
+                $queryTrxAll->where('transactions.user_id', request('kasir'));
             }
             $idTrxAll = $queryTrxAll->pluck('id');
 
