@@ -96,6 +96,11 @@
         }
         $transactionDateLabel = $transaction->created_at->format('d/m/Y');
         $transactionDateTimeLabel = $transaction->created_at->format('d/m/Y H:i:s');
+        $paymentLabel = \App\Support\PaymentMethod::displayLabelUpper($transaction->metode ?? null);
+        $kasirName = $transaction->user->name ?? '-';
+        $cardName = trim((string) ($transaction->nama_kartu ?? ''));
+        $cardNumber = trim((string) ($transaction->no_kartu ?? ''));
+        $bankName = trim((string) ($transaction->bank ?? ''));
         $printTickets = $tickets;
     @endphp
 
@@ -148,12 +153,34 @@
                 <span>Rp. {{ number_format($displayPaid, 0, ',', '.') }}</span>
             </div>
             <div style="display: flex;font-weight: 900; justify-content: space-between; margin-left: 10px; margin-right: 10px;">
-                <span>Metode : </span>
-                <span>{{ strtoupper($transaction->metode ?? '-') }}</span>
+                <span>Pembayaran : </span>
+                <span>{{ $paymentLabel }}</span>
             </div>
+            @if($cardName !== '' || $cardNumber !== '' || $bankName !== '')
+            <div style="font-size: 8.5pt; margin-left: 10px; margin-right: 10px;">
+                @if($cardName !== '')
+                <div style="display: flex; justify-content: space-between;">
+                    <span>Nama Kartu</span>
+                    <span>{{ $cardName }}</span>
+                </div>
+                @endif
+                @if($cardNumber !== '')
+                <div style="display: flex; justify-content: space-between;">
+                    <span>No Kartu</span>
+                    <span>{{ $cardNumber }}</span>
+                </div>
+                @endif
+                @if($bankName !== '')
+                <div style="display: flex; justify-content: space-between;">
+                    <span>Bank</span>
+                    <span>{{ $bankName }}</span>
+                </div>
+                @endif
+            </div>
+            @endif
             <div style="display: flex;font-weight: 900; justify-content: space-between; margin-left: 10px; margin-right: 10px;">
                 <span>Kasir : </span>
-                <span>{{ $transaction->user->name ?? '-' }}</span>
+                <span>{{ $kasirName }}</span>
             </div>
             <hr style="border-style: dashed;">
             <p style="font-size:9pt;text-align: center;margin-bottom:8px; text-transform: uppercase;">{!! nl2br(e($ucapan)) !!}</p>
@@ -172,7 +199,19 @@
                 <span style="display: block; text-align: center;">Rp. {{ $detail["harga"] }}</span>
                 @endif
                 <span style="display: block; text-align: center; font-size: 8pt;">Tanggal: {{ $transactionDateLabel }}</span>
-                <span style="display: block; text-align: center;"></span>
+                <span style="display: block; text-align: center; font-size: 8pt;">Pembayaran: {{ $paymentLabel }}</span>
+                <span style="display: block; text-align: center; font-size: 8pt;">Kasir: {{ $kasirName }}</span>
+                @if($cardName !== '' || $cardNumber !== '' || $bankName !== '')
+                    @if($cardName !== '')
+                    <span style="display: block; text-align: center; font-size: 7.5pt;">Nama Kartu: {{ $cardName }}</span>
+                    @endif
+                    @if($cardNumber !== '')
+                    <span style="display: block; text-align: center; font-size: 7.5pt;">No Kartu: {{ $cardNumber }}</span>
+                    @endif
+                    @if($bankName !== '')
+                    <span style="display: block; text-align: center; font-size: 7.5pt;">Bank: {{ $bankName }}</span>
+                    @endif
+                @endif
             </div>
             <hr style="border-style: dashed;">
             <p style="text-align: center; margin-top: 15px; margin-bottom: 15px">

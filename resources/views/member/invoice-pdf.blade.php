@@ -129,7 +129,7 @@
             @endif
             <tr>
                 <td class="label">Metode</td>
-                <td class="value">{{ strtoupper($transaction->metode ?? '-') }}</td>
+                <td class="value">{{ \App\Support\PaymentMethod::displayLabelUpper($transaction->metode ?? null) }}</td>
             </tr>
             <tr>
                 <td class="label">Total Bayar</td>

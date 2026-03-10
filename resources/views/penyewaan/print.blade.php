@@ -53,6 +53,11 @@ date_default_timezone_set('Asia/Jakarta')
         $qty = max((int) ($penyewaan->qty ?? 0), 1);
         $lineSubtotal = (float) ($penyewaan->jumlah ?? 0);
         $lineUnitPrice = $lineSubtotal / $qty;
+        $paymentLabel = \App\Support\PaymentMethod::displayLabelUpper($penyewaan->metode ?? null);
+        $kasirName = $penyewaan->user->name ?? '-';
+        $cardName = trim((string) ($penyewaan->nama_kartu ?? ''));
+        $cardNumber = trim((string) ($penyewaan->no_kartu ?? ''));
+        $bankName = trim((string) ($penyewaan->bank ?? ''));
     @endphp
     <div class="ticket-row" style="margin-top: 10px;">
         <div class="qr-code ticket-card ticket-portrait" style="margin: 0 auto 0 auto;">
@@ -98,8 +103,34 @@ date_default_timezone_set('Asia/Jakarta')
                     <span>Rp. {{ number_format($penyewaan->jumlah, 0 , ',', '.') }}</span>
                 </div>
                 <div style="display: flex;font-weight: 900; justify-content: space-between; margin-left: 10px; margin-right: 10px;">
-                    <span>Metode : </span>
-                    <span>{{ strtoupper($penyewaan->metode ?? '-') }}</span>
+                    <span>Pembayaran : </span>
+                    <span>{{ $paymentLabel }}</span>
+                </div>
+                @if($cardName !== '' || $cardNumber !== '' || $bankName !== '')
+                <div style="font-size: 8.5pt; margin-left: 10px; margin-right: 10px;">
+                    @if($cardName !== '')
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>Nama Kartu</span>
+                        <span>{{ $cardName }}</span>
+                    </div>
+                    @endif
+                    @if($cardNumber !== '')
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>No Kartu</span>
+                        <span>{{ $cardNumber }}</span>
+                    </div>
+                    @endif
+                    @if($bankName !== '')
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>Bank</span>
+                        <span>{{ $bankName }}</span>
+                    </div>
+                    @endif
+                </div>
+                @endif
+                <div style="display: flex;font-weight: 900; justify-content: space-between; margin-left: 10px; margin-right: 10px;">
+                    <span>Kasir : </span>
+                    <span>{{ $kasirName }}</span>
                 </div>
                 <br>
                 @if(!empty($penyewaan->keterangan))

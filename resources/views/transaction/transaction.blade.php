@@ -22,6 +22,11 @@ date_default_timezone_set('Asia/Jakarta')
     $jumlahTicket = (int) $receiptDetails->sum('qty');
     $subtotal = (float) $receiptDetails->sum('total') + (float) $receiptDetails->sum('ppn');
     $discount = ((float) $transaction->discount * $subtotal) / 100;
+        $paymentLabel = \App\Support\PaymentMethod::displayLabelUpper($transaction->metode ?? null);
+        $kasirName = $transaction->user->name ?? '-';
+        $cardName = trim((string) ($transaction->nama_kartu ?? ''));
+        $cardNumber = trim((string) ($transaction->no_kartu ?? ''));
+        $bankName = trim((string) ($transaction->bank ?? ''));
     @endphp
     <div class="ticket-row" style="margin-top: 10px;">
         <div class="qr-code" style="max-width:80mm !important;  margin: 0 auto 0 auto; vertical-align: top; border-style: solid;border-width: 1px;">
@@ -70,8 +75,38 @@ date_default_timezone_set('Asia/Jakarta')
                     <span>Rp. {{ number_format($transaction->bayar, 0, ',', '.') }}</span>
                 </div>
                 <div style="display: flex;font-weight: 900; justify-content: space-between; margin-left: 10px; margin-right: 10px;">
+                    <span>Pembayaran : </span>
+                    <span>{{ $paymentLabel }}</span>
+                </div>
+                @if($cardName !== '' || $cardNumber !== '' || $bankName !== '')
+                <div style="font-size: 8.5pt; margin-left: 10px; margin-right: 10px;">
+                    @if($cardName !== '')
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>Nama Kartu</span>
+                        <span>{{ $cardName }}</span>
+                    </div>
+                    @endif
+                    @if($cardNumber !== '')
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>No Kartu</span>
+                        <span>{{ $cardNumber }}</span>
+                    </div>
+                    @endif
+                    @if($bankName !== '')
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>Bank</span>
+                        <span>{{ $bankName }}</span>
+                    </div>
+                    @endif
+                </div>
+                @endif
+                <div style="display: flex;font-weight: 900; justify-content: space-between; margin-left: 10px; margin-right: 10px;">
                     <span>Kembali : </span>
                     <span>Rp. {{ number_format($transaction->kembali, 0, ',', '.') }}</span>
+                </div>
+                <div style="display: flex;font-weight: 900; justify-content: space-between; margin-left: 10px; margin-right: 10px;">
+                    <span>Kasir : </span>
+                    <span>{{ $kasirName }}</span>
                 </div>
                 <hr style="border-style: dashed;">
                 <p style="font-size:9pt;text-align: center;margin-bottom:10px; text-transform: uppercase;">*terima kasih*</p>

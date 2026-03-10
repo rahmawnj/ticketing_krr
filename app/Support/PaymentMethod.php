@@ -27,7 +27,7 @@ class PaymentMethod
         self::DEBIT => 'Debit',
         self::KREDIT => 'Kredit',
         self::TRANSFER => 'Transfer',
-        self::LAIN_LAIN => 'Lain-lain',
+        self::LAIN_LAIN => 'Lainnya',
     ];
 
     private const ALIASES = [

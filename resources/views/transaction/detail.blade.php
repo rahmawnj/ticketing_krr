@@ -16,12 +16,32 @@ date_default_timezone_set('Asia/Jakarta')
 </head>
 
 <body>
+    @php
+        $transaction = $detail->transaction;
+        $paymentLabel = \App\Support\PaymentMethod::displayLabelUpper($transaction->metode ?? null);
+        $kasirName = $transaction?->user?->name ?? '-';
+        $cardName = trim((string) ($transaction->nama_kartu ?? ''));
+        $cardNumber = trim((string) ($transaction->no_kartu ?? ''));
+        $bankName = trim((string) ($transaction->bank ?? ''));
+    @endphp
     <div class="ticket-row" style="margin-top: 10px;">
         <div class="qr-code" style="max-width:80mm !important;  margin: 0 auto 0 auto; vertical-align: top; border-style: solid;border-width: 1px;">
             <div class="detail" style="font-size: 10pt; line-height: 18px;">
                 <span style="display: block; text-align: center; font-weight: 900;">{{ $detail->ticket->name }}</span>
                 <span style="display: block; text-align: center;">Rp. {{ number_format($detail->ticket->harga, 0, ',', '.') }}</span>
-                <span style="display: block; text-align: center;"></span>
+                <span style="display: block; text-align: center; font-size: 8pt;">Pembayaran: {{ $paymentLabel }}</span>
+                <span style="display: block; text-align: center; font-size: 8pt;">Kasir: {{ $kasirName }}</span>
+                @if($cardName !== '' || $cardNumber !== '' || $bankName !== '')
+                    @if($cardName !== '')
+                    <span style="display: block; text-align: center; font-size: 7.5pt;">Nama Kartu: {{ $cardName }}</span>
+                    @endif
+                    @if($cardNumber !== '')
+                    <span style="display: block; text-align: center; font-size: 7.5pt;">No Kartu: {{ $cardNumber }}</span>
+                    @endif
+                    @if($bankName !== '')
+                    <span style="display: block; text-align: center; font-size: 7.5pt;">Bank: {{ $bankName }}</span>
+                    @endif
+                @endif
             </div>
             <!-- <p style="font-size:8pt;text-align: center;margin-top:5px">RIO WATERPARK " Tiket berlaku satu kali masuk "</p> -->
             <hr style="border-style: dashed;">
