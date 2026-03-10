@@ -54,10 +54,15 @@ date_default_timezone_set('Asia/Jakarta')
         $lineSubtotal = (float) ($penyewaan->jumlah ?? 0);
         $lineUnitPrice = $lineSubtotal / $qty;
         $paymentLabel = \App\Support\PaymentMethod::displayLabelUpper($penyewaan->metode ?? null);
-        $kasirName = $penyewaan->user->name ?? '-';
-        $cardName = trim((string) ($penyewaan->nama_kartu ?? ''));
-        $cardNumber = trim((string) ($penyewaan->no_kartu ?? ''));
-        $bankName = trim((string) ($penyewaan->bank ?? ''));
+        $methodNormalized = \App\Support\PaymentMethod::normalize($penyewaan->metode ?? null);
+        $kasirName = $penyewaan->user->name ?? ($transaction->user->name ?? '-');
+        $cardName = trim((string) ($transaction->nama_kartu ?? $penyewaan->nama_kartu ?? ''));
+        $cardNumber = trim((string) ($transaction->no_kartu ?? $penyewaan->no_kartu ?? ''));
+        $bankName = trim((string) ($transaction->bank ?? $penyewaan->bank ?? ''));
+        $isCardMethod = in_array($methodNormalized, ['debit', 'kredit'], true);
+        $cardNameDisplay = $isCardMethod ? ($cardName !== '' ? $cardName : '-') : '';
+        $cardNumberDisplay = $isCardMethod ? ($cardNumber !== '' ? $cardNumber : '-') : '';
+        $bankDisplay = $isCardMethod ? ($bankName !== '' ? $bankName : '-') : '';
     @endphp
     <div class="ticket-row" style="margin-top: 10px;">
         <div class="qr-code ticket-card ticket-portrait" style="margin: 0 auto 0 auto;">
@@ -106,26 +111,20 @@ date_default_timezone_set('Asia/Jakarta')
                     <span>Pembayaran : </span>
                     <span>{{ $paymentLabel }}</span>
                 </div>
-                @if($cardName !== '' || $cardNumber !== '' || $bankName !== '')
+                @if($isCardMethod)
                 <div style="font-size: 8.5pt; margin-left: 10px; margin-right: 10px;">
-                    @if($cardName !== '')
                     <div style="display: flex; justify-content: space-between;">
                         <span>Nama Kartu</span>
-                        <span>{{ $cardName }}</span>
+                        <span>{{ $cardNameDisplay }}</span>
                     </div>
-                    @endif
-                    @if($cardNumber !== '')
                     <div style="display: flex; justify-content: space-between;">
                         <span>No Kartu</span>
-                        <span>{{ $cardNumber }}</span>
+                        <span>{{ $cardNumberDisplay }}</span>
                     </div>
-                    @endif
-                    @if($bankName !== '')
                     <div style="display: flex; justify-content: space-between;">
                         <span>Bank</span>
-                        <span>{{ $bankName }}</span>
+                        <span>{{ $bankDisplay }}</span>
                     </div>
-                    @endif
                 </div>
                 @endif
                 <div style="display: flex;font-weight: 900; justify-content: space-between; margin-left: 10px; margin-right: 10px;">
