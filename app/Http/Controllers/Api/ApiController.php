@@ -51,11 +51,21 @@ class ApiController extends Controller
     {
 
         $transScanned = DetailTransaction::where('ticket_code', $ticket)
-            ->select(['qty', 'scanned', 'status'])->first();
+            ->select(['id', 'transaction_id', 'qty', 'scanned', 'status'])
+            ->with(['transaction:id,created_at,transaction_type'])
+            ->first();
 
         if (!$transScanned) {
             return response()->json([
                 "status" => "Not found"
+            ]);
+        }
+
+        if (!$this->isTicketScanDateValid($transScanned->transaction)) {
+            return response()->json([
+                "status" => "close",
+                "message" => "Ticket hanya berlaku di hari pembelian.",
+                "count" => 0
             ]);
         }
 
@@ -89,7 +99,7 @@ class ApiController extends Controller
     public function checkGroupTicket(Request $request, $ticket)
     {
         $transScanned = Transaction::where('ticket_code', $ticket)->where('tipe', 'group')
-            ->select(['amount', 'amount_scanned', 'status'])->first();
+            ->select(['id', 'amount', 'amount_scanned', 'status', 'created_at', 'transaction_type'])->first();
 
         Transaction::where('ticket_code', $ticket)
             ->update([
@@ -102,6 +112,13 @@ class ApiController extends Controller
             ]);
         }
 
+        if (!$this->isTicketScanDateValid($transScanned)) {
+            return response()->json([
+                "status" => "close",
+                "message" => "Ticket hanya berlaku di hari pembelian.",
+                "count" => 0
+            ]);
+        }
 
         if ($transScanned->status == "closed") {
             return response()->json([
@@ -143,6 +160,13 @@ if (empty($request->ticket)) {
     }
         if ($transScanned) {
             $invoice = Transaction::where('id', $transScanned->transaction_id)->first();
+            if (!$this->isTicketScanDateValid($invoice)) {
+                return response()->json([
+                    "status" => "close",
+                    "message" => "Ticket hanya berlaku di hari pembelian.",
+                    "count" => 0
+                ]);
+            }
 
             DetailTransaction::where('ticket_code', $request->ticket)
                 ->update([
@@ -381,5 +405,21 @@ if (empty($request->ticket)) {
                 ]
             ]);
         }
+    }
+
+    private function isTicketScanDateValid(?Transaction $transaction): bool
+    {
+        if (!$transaction) {
+            return false;
+        }
+
+        if (($transaction->transaction_type ?? '') !== 'ticket') {
+            return true;
+        }
+
+        $today = Carbon::now('Asia/Jakarta')->toDateString();
+        $ticketDate = Carbon::parse($transaction->created_at)->timezone('Asia/Jakarta')->toDateString();
+
+        return $ticketDate === $today;
     }
 }

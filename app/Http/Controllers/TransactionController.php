@@ -431,17 +431,21 @@ class TransactionController extends Controller
                 ? $transaction->detail
                 : $transaction->detail()->with('ticket')->get();
 
-            $lines = $details
-                ->map(function ($detail) {
-                    $name = trim((string) ($detail->ticket->name ?? 'Ticket'));
-                    $qty = max((int) ($detail->qty ?? 1), 1);
+            $summary = $details
+                ->groupBy(function ($detail) {
+                    return trim((string) ($detail->ticket->name ?? 'Ticket'));
+                })
+                ->map(function ($items, $name) {
+                    $totalQty = (int) $items->sum(function ($detail) {
+                        return max((int) ($detail->qty ?? 1), 1);
+                    });
 
-                    return $qty > 1 ? ($name . ' x' . $qty) : $name;
+                    return $totalQty > 1 ? ($name . ' x' . $totalQty) : $name;
                 })
                 ->filter()
                 ->values();
 
-            return $lines->isNotEmpty() ? $lines->implode(', ') : '-';
+            return $summary->isNotEmpty() ? $summary->implode(', ') : '-';
         }
 
         if (in_array($transaction->transaction_type, ['registration', 'renewal'], true)) {
