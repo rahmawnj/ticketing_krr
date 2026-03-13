@@ -85,6 +85,7 @@
                 display: flex;
                 align-items: center;
                 gap: 14px;
+                justify-content: center;
             }
             .toggle-label {
                 font-weight: 600;
@@ -147,6 +148,13 @@
             }
             .status.suspended {
                 color: #b42318;
+            }
+            .toggle-stack {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 10px;
+                text-align: center;
             }
             .pin-grid {
                 display: grid;
@@ -214,20 +222,20 @@
                 @else
                     <form id="secret-setting-form" method="post" action="{{ route('secret-setting.store') }}">
                         @csrf
-                        <div class="row toggle">
-                            <span class="toggle-label inactive">Nonaktif</span>
-                            <label class="switch" for="site_active">
-                                <input type="checkbox" id="site_active" {{ $isSuspended ? '' : 'checked' }}>
-                                <span class="slider"></span>
-                            </label>
-                            <span class="toggle-label active">Aktif</span>
-                            <input type="hidden" name="site_suspended" id="site_suspended" value="1" {{ $isSuspended ? '' : 'disabled' }}>
-                            <div>
-                                <div class="status {{ $isSuspended ? 'suspended' : 'active' }}">
-                                    Website sedang {{ $isSuspended ? 'Nonaktif' : 'Aktif' }}
-                                </div>
-                                <div class="autohint">Sentuh toggle untuk mengubah. Tersimpan otomatis.</div>
+                        <div class="row toggle-stack">
+                            <div class="status {{ $isSuspended ? 'suspended' : 'active' }}">
+                                Website sedang {{ $isSuspended ? 'Nonaktif' : 'Aktif' }}
                             </div>
+                            <div class="toggle">
+                                <span class="toggle-label inactive">Nonaktif</span>
+                                <label class="switch" for="site_active">
+                                    <input type="checkbox" id="site_active" {{ $isSuspended ? '' : 'checked' }}>
+                                    <span class="slider"></span>
+                                </label>
+                                <span class="toggle-label active">Aktif</span>
+                            </div>
+                            <input type="hidden" name="site_suspended" id="site_suspended" value="1" {{ $isSuspended ? '' : 'disabled' }}>
+                            <div class="autohint">Sentuh toggle untuk mengubah. Tersimpan otomatis.</div>
                         </div>
                     </form>
                 @endif
