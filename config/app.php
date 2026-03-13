@@ -56,6 +56,8 @@ return [
 
     'asset_url' => env('ASSET_URL', null),
 
+    'secret_setting_pin' => env('SECRET_SETTING_PIN', '1250'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone

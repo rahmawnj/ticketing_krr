@@ -25,6 +25,7 @@ class Setting extends Model
         'dashboard_metric_mode' => 'amount',
         'whatsapp_enabled' => 0,
         'use_logo' => 0,
+        'site_suspended' => 0,
         'renewal_notice_club_name' => 'Sport Club Anwa Puri',
         'renewal_notice_bank_account' => 'TRANSFER BANK: BCA 0289011155 A/N PT KARTUNINDO PERKASA ABADI',
         'renewal_notice_admin_phone' => '0821 2222 9358',
@@ -59,6 +60,7 @@ class Setting extends Model
         $merged['member_suspend_after_days'] = max((int) $merged['member_suspend_after_days'], 0);
         $merged['whatsapp_enabled'] = (int) $merged['whatsapp_enabled'];
         $merged['use_logo'] = (int) $merged['use_logo'];
+        $merged['site_suspended'] = (int) $merged['site_suspended'];
 
         return $merged;
     }

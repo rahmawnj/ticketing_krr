@@ -14,6 +14,7 @@ use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SettingController;
+use App\Http\Controllers\SecretSettingController;
 use App\Http\Controllers\SewaController;
 use App\Http\Controllers\TerusanController;
 use App\Http\Controllers\TicketController;
@@ -52,6 +53,10 @@ Route::get('/storage/{filename}', function ($filename) {
 Route::get('/', function () {
     return view('auth.login');
 })->middleware('guest');
+
+Route::get('secret-setting', [SecretSettingController::class, 'index'])->name('secret-setting.index');
+Route::post('secret-setting/unlock', [SecretSettingController::class, 'unlock'])->name('secret-setting.unlock');
+Route::post('secret-setting', [SecretSettingController::class, 'store'])->name('secret-setting.store');
 
 Auth::routes();
 
