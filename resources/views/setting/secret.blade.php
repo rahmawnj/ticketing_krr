@@ -111,7 +111,7 @@
                 position: absolute;
                 cursor: pointer;
                 inset: 0;
-                background-color: #cbd2d9;
+                background-color: #e12d39;
                 transition: 0.25s ease;
                 border-radius: 999px;
             }
@@ -128,7 +128,7 @@
                 box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
             }
             .switch input:checked + .slider {
-                background-color: #e12d39;
+                background-color: #1f7a1f;
             }
             .switch input:checked + .slider:before {
                 transform: translateX(24px);
@@ -137,6 +137,7 @@
                 font-size: 13px;
                 color: #6b7280;
                 margin-top: 6px;
+                text-align: center;
             }
             .status {
                 font-weight: 600;
@@ -146,6 +147,38 @@
             }
             .status.suspended {
                 color: #b42318;
+            }
+            .pin-grid {
+                display: grid;
+                grid-template-columns: repeat(4, 56px);
+                gap: 12px;
+                justify-content: center;
+                margin: 0 auto;
+            }
+            .pin-row {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+            }
+            .pin-row label {
+                text-align: center;
+            }
+            .pin-input {
+                width: 56px;
+                height: 56px;
+                padding: 0;
+                text-align: center;
+                font-size: 20px;
+                line-height: 1;
+                border-radius: 10px;
+                border: 1px solid #cbd2d9;
+                box-sizing: border-box;
+            }
+            .pin-input:focus {
+                outline: none;
+                border-color: #0f62fe;
+                box-shadow: 0 0 0 3px rgba(15, 98, 254, 0.15);
             }
         </style>
     </head>
@@ -166,22 +199,29 @@
                 @if (!$isUnlocked)
                     <form method="post" action="{{ route('secret-setting.unlock') }}">
                         @csrf
-                        <div class="row">
-                            <label for="pin">Masukkan PIN</label>
-                            <input type="password" name="pin" id="pin" placeholder="PIN rahasia" required>
+                        <div class="row pin-row">
+                            <label for="pin_digit_1">Masukkan PIN</label>
+                            <div class="pin-grid" role="group" aria-label="Masukkan 4 digit PIN">
+                                <input class="pin-input" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" id="pin_digit_1" autocomplete="one-time-code" required>
+                                <input class="pin-input" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" id="pin_digit_2" required>
+                                <input class="pin-input" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" id="pin_digit_3" required>
+                                <input class="pin-input" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" id="pin_digit_4" required>
+                            </div>
+                            <input type="hidden" name="pin" id="pin" required>
+                            <div class="autohint">Isi 4 digit, form akan terkirim otomatis.</div>
                         </div>
-                        <button type="submit" class="btn btn-primary">Buka Akses</button>
                     </form>
                 @else
                     <form id="secret-setting-form" method="post" action="{{ route('secret-setting.store') }}">
                         @csrf
                         <div class="row toggle">
-                            <span class="toggle-label active">Aktif</span>
-                            <label class="switch" for="site_suspended">
-                                <input type="checkbox" id="site_suspended" name="site_suspended" value="1" {{ $isSuspended ? 'checked' : '' }}>
+                            <span class="toggle-label inactive">Nonaktif</span>
+                            <label class="switch" for="site_active">
+                                <input type="checkbox" id="site_active" {{ $isSuspended ? '' : 'checked' }}>
                                 <span class="slider"></span>
                             </label>
-                            <span class="toggle-label inactive">Nonaktif</span>
+                            <span class="toggle-label active">Aktif</span>
+                            <input type="hidden" name="site_suspended" id="site_suspended" value="1" {{ $isSuspended ? '' : 'disabled' }}>
                             <div>
                                 <div class="status {{ $isSuspended ? 'suspended' : 'active' }}">
                                     Website sedang {{ $isSuspended ? 'Nonaktif' : 'Aktif' }}
@@ -195,21 +235,91 @@
         </div>
         <script src="{{ asset('/') }}plugins/sweetalert/dist/sweetalert.min.js"></script>
         <script>
-            const toggle = document.getElementById('site_suspended');
+            const pinInputs = Array.from(document.querySelectorAll('.pin-input'));
+            const pinField = document.getElementById('pin');
+            const unlockForm = pinField ? pinField.closest('form') : null;
+
+            if (pinInputs.length && pinField && unlockForm) {
+                let isSubmitting = false;
+
+                const updatePinAndSubmit = () => {
+                    const pinValue = pinInputs.map((input) => input.value).join('');
+                    pinField.value = pinValue;
+
+                    if (pinValue.length === 4 && /^\d{4}$/.test(pinValue) && !isSubmitting) {
+                        isSubmitting = true;
+                        unlockForm.submit();
+                    }
+                };
+
+                pinInputs.forEach((input, index) => {
+                    input.addEventListener('input', (event) => {
+                        const digit = event.target.value.replace(/\D/g, '').slice(-1);
+                        event.target.value = digit;
+
+                        if (digit && pinInputs[index + 1]) {
+                            pinInputs[index + 1].focus();
+                        }
+
+                        updatePinAndSubmit();
+                    });
+
+                    input.addEventListener('keydown', (event) => {
+                        if (event.key === 'Backspace' && !event.target.value && pinInputs[index - 1]) {
+                            pinInputs[index - 1].focus();
+                        }
+                    });
+
+                    input.addEventListener('paste', (event) => {
+                        event.preventDefault();
+                        const pasted = (event.clipboardData || window.clipboardData).getData('text');
+                        const digits = pasted.replace(/\D/g, '').slice(0, 4).split('');
+
+                        if (!digits.length) {
+                            return;
+                        }
+
+                        let cursor = index;
+                        digits.forEach((digit) => {
+                            if (pinInputs[cursor]) {
+                                pinInputs[cursor].value = digit;
+                                cursor += 1;
+                            }
+                        });
+
+                        if (pinInputs[Math.min(cursor, pinInputs.length - 1)]) {
+                            pinInputs[Math.min(cursor, pinInputs.length - 1)].focus();
+                        }
+
+                        updatePinAndSubmit();
+                    });
+                });
+
+                pinInputs[0].focus();
+            }
+
+            const toggle = document.getElementById('site_active');
+            const suspendedField = document.getElementById('site_suspended');
             const form = document.getElementById('secret-setting-form');
 
-            if (toggle && form) {
+            if (toggle && form && suspendedField) {
                 let lastState = toggle.checked;
+                const syncSuspendedField = (isActive) => {
+                    suspendedField.disabled = isActive;
+                };
+
+                syncSuspendedField(toggle.checked);
 
                 toggle.addEventListener('change', () => {
-                    const nextState = toggle.checked;
-                    const title = nextState ? 'Nonaktifkan website?' : 'Aktifkan website?';
-                    const text = nextState
-                        ? 'Website akan menampilkan halaman nonaktif untuk semua user.'
-                        : 'Website akan kembali aktif dan bisa diakses.';
-                    const confirmText = nextState ? 'Nonaktifkan' : 'Aktifkan';
+                    const isActive = toggle.checked;
+                    const title = isActive ? 'Aktifkan website?' : 'Nonaktifkan website?';
+                    const text = isActive
+                        ? 'Website akan kembali aktif dan bisa diakses.'
+                        : 'Website akan menampilkan halaman nonaktif untuk semua user.';
+                    const confirmText = isActive ? 'Aktifkan' : 'Nonaktifkan';
 
                     if (typeof swal !== 'function') {
+                        syncSuspendedField(isActive);
                         form.submit();
                         return;
                     }
@@ -217,7 +327,7 @@
                     swal({
                         title: title,
                         text: text,
-                        icon: nextState ? 'warning' : 'info',
+                        icon: isActive ? 'info' : 'warning',
                         buttons: {
                             cancel: 'Batal',
                             confirm: {
@@ -226,12 +336,14 @@
                                 closeModal: true,
                             }
                         },
-                        dangerMode: nextState,
+                        dangerMode: !isActive,
                     }).then((willProceed) => {
                         if (willProceed) {
+                            syncSuspendedField(isActive);
                             form.submit();
                         } else {
                             toggle.checked = lastState;
+                            syncSuspendedField(lastState);
                         }
                     });
                 });
