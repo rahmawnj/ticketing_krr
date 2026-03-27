@@ -170,6 +170,33 @@ Route::middleware('auth')->group(function () {
 
     Route::get('setting', [SettingController::class, 'index'])->name('setting.index');
     Route::post('setting', [SettingController::class, 'store'])->name('setting.store');
+
+    Route::middleware('permission:management-access')->get('maintenance/clear-caches', function () {
+        $commands = [
+            'permission:cache-reset',
+            'optimize:clear',
+            'view:clear',
+            'config:clear',
+            'route:clear',
+        ];
+
+        $results = [];
+
+        foreach ($commands as $command) {
+            $exitCode = Artisan::call($command);
+            $results[] = [
+                'command' => $command,
+                'exit_code' => $exitCode,
+                'output' => trim((string) Artisan::output()),
+            ];
+        }
+
+        return response()->json([
+            'status' => 'ok',
+            'message' => 'Cache maintenance selesai dijalankan.',
+            'results' => $results,
+        ]);
+    })->name('maintenance.clear-caches');
 });
 
 Route::get('/detail-group', [ApiController::class, 'detailGroup']);
@@ -179,10 +206,8 @@ Route::get('/welcome-member', function () {
 
 Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
 
-Route::get('reset', function () {
-    Artisan::call('config:clear');
-    Artisan::call('cache:clear');
-    Artisan::call('optimize:clear');
+Route::middleware(['auth', 'permission:management-access'])->get('reset', function () {
+    return redirect()->route('maintenance.clear-caches');
 });
 
 Route::get('test-print', [DetailTransactionController::class, 'testPrint']);
