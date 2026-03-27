@@ -61,7 +61,7 @@ date_default_timezone_set('Asia/Jakarta')
         $isCardMethod = in_array($methodNormalized, ['debit', 'kredit'], true);
         $cardNumberDisplay = $isCardMethod ? ($cardNumber !== '' ? $cardNumber : '-') : '';
         $bankDisplay = $isCardMethod ? ($bankName !== '' ? $bankName : '-') : '';
-        $hasTimeRange = (int) ($penyewaan->sewa->use_time ?? 0) === 1 || filled($penyewaan->start_time) || filled($penyewaan->end_time);
+        $hasTimeRange = true;
         $startTimeDisplay = filled($penyewaan->start_time)
             ? substr((string) $penyewaan->start_time, 0, 5)
             : ($hasTimeRange ? $penyewaan->created_at->format('H:i') : '');
@@ -97,15 +97,7 @@ date_default_timezone_set('Asia/Jakarta')
                 @if($hasTimeRange)
                 <div style="display: flex;font-weight: 900; justify-content: space-between; margin-left: 10px; margin-right: 10px;">
                     <span>Waktu Sewa : </span>
-                    <span>
-                        @if($startTimeDisplay !== '' && $endTimeDisplay !== '')
-                            {{ $startTimeDisplay }} - {{ $endTimeDisplay }}
-                        @elseif($startTimeDisplay !== '')
-                            {{ $startTimeDisplay }}
-                        @else
-                            -
-                        @endif
-                    </span>
+                    <span>{{ $startTimeDisplay !== '' ? $startTimeDisplay : '-' }} - {{ $endTimeDisplay !== '' ? $endTimeDisplay : '-' }}</span>
                 </div>
                 @endif
                 <div style="margin: 6px 10px;">

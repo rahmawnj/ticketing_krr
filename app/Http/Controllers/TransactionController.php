@@ -475,16 +475,32 @@ class TransactionController extends Controller
             }
 
             if (!array_key_exists($rentalId, $rentalCache)) {
-                $rentalCache[$rentalId] = (string) (Penyewaan::query()
-                    ->with('sewa:id,name')
+                $rentalCache[$rentalId] = Penyewaan::query()
+                    ->with('sewa:id,name,use_time')
                     ->whereKey($rentalId)
-                    ->first()?->sewa?->name ?? '-');
+                    ->first();
             }
 
-            $name = $rentalCache[$rentalId] ?: '-';
+            $penyewaan = $rentalCache[$rentalId];
+            $name = (string) ($penyewaan?->sewa?->name ?? '-');
             $qty = max((int) ($transaction->amount ?? 1), 1);
+            $hasTimeRange = $penyewaan !== null;
+            $startTimeDisplay = filled($penyewaan?->start_time)
+                ? substr((string) $penyewaan->start_time, 0, 5)
+                : (($hasTimeRange && $penyewaan?->created_at)
+                    ? $penyewaan->created_at->timezone('Asia/Jakarta')->format('H:i')
+                    : '');
+            $endTimeDisplay = filled($penyewaan?->end_time)
+                ? substr((string) $penyewaan->end_time, 0, 5)
+                : '';
+            $description = $qty > 1 ? ($name . ' x' . $qty) : $name;
 
-            return $qty > 1 ? ($name . ' x' . $qty) : $name;
+            if ($startTimeDisplay !== '' || $endTimeDisplay !== '') {
+                $description .= ' | Start: ' . ($startTimeDisplay !== '' ? $startTimeDisplay : '-');
+                $description .= ' | End: ' . ($endTimeDisplay !== '' ? $endTimeDisplay : '-');
+            }
+
+            return $description;
         }
 
         return '-';

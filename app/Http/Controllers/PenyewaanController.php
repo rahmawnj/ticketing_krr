@@ -108,10 +108,11 @@ public function store(Request $request)
 
         $ticketData = Sewa::findOrFail($request->ticket);
         $qty = (int) $request->qty;
+        $usesTime = (int) ($ticketData->use_time ?? 0) === 1;
         $startTime = $request->start_time ?: Carbon::now('Asia/Jakarta')->format('H:i');
-        $endTime = $request->end_time;
+        $endTime = $usesTime ? $request->end_time : null;
 
-        if ((int) ($ticketData->use_time ?? 0) === 1) {
+        if ($usesTime) {
             $jamSewa = (float) $request->input('jam', 0);
             if ($jamSewa <= 0) {
                 DB::rollBack();

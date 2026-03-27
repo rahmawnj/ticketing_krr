@@ -152,21 +152,30 @@
                         </div>
 
                         <div class="col-md-6">
+                            <div class="form-group mb-3 schedule-fields d-none">
+                                <div class="input-group">
+                                    <input type="hidden" name="start_time" id="start_time" value="">
+                                    <input type="hidden" name="end_time" id="end_time" value="">
+                                </div>
+                                <small class="text-muted">Start Time dan End Time tersimpan otomatis.</small>
+                                <div class="mt-2">
+                                    <label for="start_time_preview" class="form-label mb-1">Start Time (Otomatis)</label>
+                                    <input type="text" id="start_time_preview" class="form-control" value="" readonly placeholder="--:--">
+                                </div>
+                                <div class="mt-2">
+                                    <label for="end_time_preview" class="form-label mb-1">End Time (Otomatis)</label>
+                                    <input type="text" id="end_time_preview" class="form-control" value="" readonly placeholder="--:--">
+                                </div>
+                            </div>
                             <div class="form-group mb-3 time-fields d-none">
                                 <label for="jam">Jam Sewa</label>
                                 <div class="input-group">
                                     <input type="number" name="jam" id="jam" class="form-control" value="1" min="1" step="1">
                                     <span class="input-group-text">Jam</span>
                                 </div>
-                                <small class="text-muted">End Time tersimpan otomatis.</small>
-                                <input type="hidden" name="end_time" id="end_time" value="">
                                 @error('jam')
                                 <small class="text-danger">{{ $message }}</small>
                                 @enderror
-                                <div class="mt-2">
-                                    <label for="end_time_preview" class="form-label mb-1">End Time (Otomatis)</label>
-                                    <input type="text" id="end_time_preview" class="form-control" value="" readonly placeholder="--:--">
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -277,15 +286,35 @@
 
         function toggleTimeFields() {
             let selectedOption = $("#ticket").find('option:selected');
+            let hasSelectedTicket = !!selectedOption.val();
             let useTime = selectedOption.attr("data-use-time") == '1';
+            if (hasSelectedTicket) {
+                $(".schedule-fields").removeClass('d-none');
+                calculateEndTimeFromJam();
+            } else {
+                $(".schedule-fields").addClass('d-none');
+                $("#start_time").val('');
+                $("#end_time").val('');
+                $("#start_time_preview").val('');
+                $("#end_time_preview").val('');
+            }
+
             if (useTime) {
                 $(".time-fields").removeClass('d-none');
                 calculateEndTimeFromJam();
             } else {
                 $(".time-fields").addClass('d-none');
-                $("#end_time").val('');
                 $("#jam").val(1);
-                $("#end_time_preview").val('');
+                if (hasSelectedTicket) {
+                    let now = new Date();
+                    let hh = String(now.getHours()).padStart(2, '0');
+                    let mm = String(now.getMinutes()).padStart(2, '0');
+                    let startTimeValue = `${hh}:${mm}`;
+                    $("#start_time").val(startTimeValue);
+                    $("#end_time").val('');
+                    $("#start_time_preview").val(startTimeValue);
+                    $("#end_time_preview").val('-');
+                }
             }
         }
 
@@ -293,26 +322,54 @@
             let selectedOption = $("#ticket").find('option:selected');
             let useTime = selectedOption.attr("data-use-time") == '1';
             if (!useTime) {
-                $("#end_time").val('');
-                $("#end_time_preview").val('');
+                if (selectedOption.val()) {
+                    let now = new Date();
+                    let hh = String(now.getHours()).padStart(2, '0');
+                    let mm = String(now.getMinutes()).padStart(2, '0');
+                    let startTimeValue = `${hh}:${mm}`;
+                    $("#start_time").val(startTimeValue);
+                    $("#end_time").val('');
+                    $("#start_time_preview").val(startTimeValue);
+                    $("#end_time_preview").val('-');
+                } else {
+                    $("#start_time").val('');
+                    $("#end_time").val('');
+                    $("#start_time_preview").val('');
+                    $("#end_time_preview").val('');
+                }
                 return;
             }
 
             let jam = parseFloat($("#jam").val()) || 0;
             if (jam <= 0) {
+                $("#start_time").val('');
                 $("#end_time").val('');
+                $("#start_time_preview").val('');
                 $("#end_time_preview").val('');
                 return;
             }
 
-            let now = new Date();
+            let startTimeValue = $("#start_time").val();
+            let startDate = new Date();
+            if (startTimeValue) {
+                let parts = startTimeValue.split(':');
+                if (parts.length === 2) {
+                    startDate.setHours(parseInt(parts[0], 10) || 0, parseInt(parts[1], 10) || 0, 0, 0);
+                }
+            } else {
+                let startHh = String(startDate.getHours()).padStart(2, '0');
+                let startMm = String(startDate.getMinutes()).padStart(2, '0');
+                startTimeValue = `${startHh}:${startMm}`;
+            }
             let minutesToAdd = Math.round(jam * 60);
-            let endDate = new Date(now.getTime() + (minutesToAdd * 60000));
+            let endDate = new Date(startDate.getTime() + (minutesToAdd * 60000));
             let hh = String(endDate.getHours()).padStart(2, '0');
             let mm = String(endDate.getMinutes()).padStart(2, '0');
             let endTimeValue = `${hh}:${mm}`;
 
+            $("#start_time").val(startTimeValue);
             $("#end_time").val(endTimeValue);
+            $("#start_time_preview").val(startTimeValue);
             $("#end_time_preview").val(endTimeValue);
         }
 
