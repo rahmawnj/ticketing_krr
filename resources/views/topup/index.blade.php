@@ -140,11 +140,13 @@
             },
             {
                 data: 'tanggal',
-                name: 'tanggal'
+                name: 'created_at'
             },
             {
                 data: 'member',
-                name: 'member'
+                name: 'member',
+                searchable: false,
+                sortable: false
             },
             {
                 data: 'jumlah',

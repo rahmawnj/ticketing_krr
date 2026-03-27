@@ -219,13 +219,13 @@
             },
             {
                 data: 'tanggal',
-                name: 'tanggal'
+                name: 'transactions.created_at'
             },
             { data: 'kasir', name: 'user.name' },
-            { data: 'transaction_type_label', name: 'transaction_type' },
+            { data: 'transaction_type_label', name: 'transactions.transaction_type' },
             {
                 data: 'ticket_code',
-                name: 'ticket_code'
+                name: 'transactions.ticket_code'
             },
             {
                 data: 'keterangan_produk',
@@ -235,31 +235,35 @@
             },
             {
                 data: 'metode',
-                name: 'metode'
+                name: 'transactions.metode'
             },
             {
                 data: 'amount',
-                name: 'amount',
+                name: 'transactions.amount',
             },
             {
                 data: 'harga',
-                name: 'harga'
+                name: 'harga',
+                searchable: false,
+                orderable: false
             },
             {
                 data: 'harga_ticket',
                 name: 'harga_ticket',
+                searchable: false,
+                orderable: false
             },
             {
                 data: 'ppn',
-                name: 'ppn'
+                name: 'transactions.ppn'
             },
             {
                 data: 'admin_fee',
-                name: 'admin_fee'
+                name: 'transactions.admin_fee'
             },
             {
                 data: 'discount',
-                name: 'discount',
+                name: 'transactions.discount',
             },
         ]
     });
