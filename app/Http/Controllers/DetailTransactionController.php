@@ -354,7 +354,6 @@ class DetailTransactionController extends Controller
 
             if ($isCardMethod) {
                 $request->validate([
-                    'nama_kartu' => 'required|string|max:100',
                     'no_kartu' => 'required|string|max:100',
                     'bank' => 'required|string|max:100',
                 ]);
@@ -383,7 +382,7 @@ class DetailTransactionController extends Controller
                 'transaction_type' => 'ticket',
                 'kembali' => $kembaliInput,
                 'metode' => $metode,
-                'nama_kartu' => $isCardMethod ? $request->nama_kartu : null,
+                'nama_kartu' => null,
                 'no_kartu' => $isCardMethod ? $request->no_kartu : null,
                 'bank' => $isCardMethod ? $request->bank : null,
                 'ppn' => $totalPpn,

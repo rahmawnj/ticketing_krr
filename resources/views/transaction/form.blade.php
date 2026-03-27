@@ -58,11 +58,6 @@
             </div>
 
             <div class="form-group mb-3 card-fields d-none">
-                <label for="nama_kartu">Nama Pemilik Kartu</label>
-                <input type="text" name="nama_kartu" id="nama_kartu" class="form-control" value="">
-            </div>
-
-            <div class="form-group mb-3 card-fields d-none">
                 <label for="no_kartu">No Kartu</label>
                 <input type="text" name="no_kartu" id="no_kartu" class="form-control" value="">
             </div>
@@ -306,12 +301,12 @@
 
             if (isCardMethod) {
                 $(".card-fields").removeClass('d-none');
-                $("#nama_kartu, #no_kartu, #bank").attr('required', 'required');
+                $("#no_kartu, #bank").attr('required', 'required');
                 return;
             }
 
             $(".card-fields").addClass('d-none');
-            $("#nama_kartu, #no_kartu, #bank").removeAttr('required').val('');
+            $("#no_kartu, #bank").removeAttr('required').val('');
         }
 
         $("#metode").on('change', toggleCardFields);

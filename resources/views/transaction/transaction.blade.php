@@ -22,11 +22,10 @@ date_default_timezone_set('Asia/Jakarta')
     $jumlahTicket = (int) $receiptDetails->sum('qty');
     $subtotal = (float) $receiptDetails->sum('total') + (float) $receiptDetails->sum('ppn');
     $discount = ((float) $transaction->discount * $subtotal) / 100;
-        $paymentLabel = \App\Support\PaymentMethod::displayLabelUpper($transaction->metode ?? null);
-        $kasirName = $transaction->user->name ?? '-';
-        $cardName = trim((string) ($transaction->nama_kartu ?? ''));
-        $cardNumber = trim((string) ($transaction->no_kartu ?? ''));
-        $bankName = trim((string) ($transaction->bank ?? ''));
+    $paymentLabel = \App\Support\PaymentMethod::displayLabelUpper($transaction->metode ?? null);
+    $kasirName = $transaction->user->name ?? '-';
+    $cardNumber = trim((string) ($transaction->no_kartu ?? ''));
+    $bankName = trim((string) ($transaction->bank ?? ''));
     @endphp
     <div class="ticket-row" style="margin-top: 10px;">
         <div class="qr-code" style="max-width:80mm !important;  margin: 0 auto 0 auto; vertical-align: top; border-style: solid;border-width: 1px;">
@@ -78,14 +77,8 @@ date_default_timezone_set('Asia/Jakarta')
                     <span>Pembayaran : </span>
                     <span>{{ $paymentLabel }}</span>
                 </div>
-                @if($cardName !== '' || $cardNumber !== '' || $bankName !== '')
+                @if($cardNumber !== '' || $bankName !== '')
                 <div style="font-size: 8.5pt; margin-left: 10px; margin-right: 10px;">
-                    @if($cardName !== '')
-                    <div style="display: flex; justify-content: space-between;">
-                        <span>Nama Kartu</span>
-                        <span>{{ $cardName }}</span>
-                    </div>
-                    @endif
                     @if($cardNumber !== '')
                     <div style="display: flex; justify-content: space-between;">
                         <span>No Kartu</span>

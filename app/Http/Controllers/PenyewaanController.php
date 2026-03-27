@@ -91,7 +91,6 @@ public function store(Request $request)
             'kembali' => 'nullable|string',
             // Validasi RFID jika metode tap
             'name' => 'nullable|string',
-            'nama_kartu' => 'nullable|string|max:100',
             'no_kartu' => 'nullable|string|max:100',
             'bank' => 'nullable|string|max:100',
         ]);
@@ -102,7 +101,6 @@ public function store(Request $request)
         $isCardMethod = in_array($metode, ['debit', 'kredit'], true);
         if ($isCardMethod) {
             $request->validate([
-                'nama_kartu' => 'required|string|max:100',
                 'no_kartu' => 'required|string|max:100',
                 'bank' => 'required|string|max:100',
             ]);
@@ -209,7 +207,7 @@ public function store(Request $request)
             'transaction_type' => 'rental',
             'tipe' => 'individual',
                 'metode' => $metode,
-            'nama_kartu' => $isCardMethod ? $request->nama_kartu : null,
+            'nama_kartu' => null,
             'no_kartu' => $isCardMethod ? $request->no_kartu : null,
             'bank' => $isCardMethod ? $request->bank : null,
             'amount' => $request->qty,       // qty item
@@ -252,7 +250,7 @@ public function store(Request $request)
             'transaction_type' => 'rental',
             'tipe' => 'individual',
                 'metode' => $metode,
-            'nama_kartu' => $isCardMethod ? $request->nama_kartu : null,
+            'nama_kartu' => null,
             'no_kartu' => $isCardMethod ? $request->no_kartu : null,
             'bank' => $isCardMethod ? $request->bank : null,
             'amount' => $request->qty,       // qty item

@@ -16,7 +16,7 @@ class PermissionSeeder extends Seeder
      */
     public function run()
     {
-        $permissions = ["Master Access", "User Access", "Ticket Access", "Sewa Access", "Member Access", "Transaction Access", "Penyewaan Access", 'Topup Access', "Report Access", "Report Transaction Access", "Report Penyewaan Access", "Transaction Delete", "Penyewaan Delete", "Topup Delete", "Management Access"];
+        $permissions = ["Master Access", "User Access", "Ticket Access", "Sewa Access", "Member Access", "Member Edit", "Member Delete", "Transaction Access", "Penyewaan Access", 'Topup Access', "Report Access", "Report Transaction Access", "Report Penyewaan Access", "Transaction Delete", "Penyewaan Delete", "Topup Delete", "Management Access"];
 
         $perm = [];
 

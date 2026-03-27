@@ -122,21 +122,14 @@
             </div>
 
             <div class="form-group row mb-3">
-                <div class="col-md-4 payment-card-fields d-none">
-                    <label for="nama_kartu" class="form-label"><sup class="text-danger">*</sup>Nama Rekening / Pemilik Kartu</label>
-                    <input type="text" name="nama_kartu" id="nama_kartu" class="form-control" value="{{ old('nama_kartu') }}" placeholder="Nama pemilik rekening">
-                    @error('nama_kartu')
-                    <small class="text-danger">{{ $message }}</small>
-                    @enderror
-                </div>
-                <div class="col-md-4 payment-card-fields d-none">
+                <div class="col-md-6 payment-card-fields d-none">
                     <label for="no_kartu" class="form-label"><sup class="text-danger">*</sup>No Kartu / No Rekening</label>
                     <input type="text" name="no_kartu" id="no_kartu" class="form-control" value="{{ old('no_kartu') }}" placeholder="No kartu atau rekening">
                     @error('no_kartu')
                     <small class="text-danger">{{ $message }}</small>
                     @enderror
                 </div>
-                <div class="col-md-4 payment-card-fields d-none">
+                <div class="col-md-6 payment-card-fields d-none">
                     <label for="bank" class="form-label"><sup class="text-danger">*</sup>Bank</label>
                     <input type="text" name="bank" id="bank" class="form-control" value="{{ old('bank') }}" placeholder="Contoh: BCA">
                     @error('bank')
@@ -474,12 +467,12 @@
 
             if (isCardMethod) {
                 $('.payment-card-fields').removeClass('d-none');
-                $('#nama_kartu, #no_kartu, #bank').attr('required', 'required');
+                $('#no_kartu, #bank').attr('required', 'required');
                 return;
             }
 
             $('.payment-card-fields').addClass('d-none');
-            $('#nama_kartu, #no_kartu, #bank').removeAttr('required').val('');
+            $('#no_kartu, #bank').removeAttr('required').val('');
         }
 
         if ($('#metode').length) {

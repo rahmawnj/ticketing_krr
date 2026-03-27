@@ -56,13 +56,18 @@ date_default_timezone_set('Asia/Jakarta')
         $paymentLabel = \App\Support\PaymentMethod::displayLabelUpper($penyewaan->metode ?? null);
         $methodNormalized = \App\Support\PaymentMethod::normalize($penyewaan->metode ?? null);
         $kasirName = $penyewaan->user->name ?? ($transaction->user->name ?? '-');
-        $cardName = trim((string) ($transaction->nama_kartu ?? $penyewaan->nama_kartu ?? ''));
         $cardNumber = trim((string) ($transaction->no_kartu ?? $penyewaan->no_kartu ?? ''));
         $bankName = trim((string) ($transaction->bank ?? $penyewaan->bank ?? ''));
         $isCardMethod = in_array($methodNormalized, ['debit', 'kredit'], true);
-        $cardNameDisplay = $isCardMethod ? ($cardName !== '' ? $cardName : '-') : '';
         $cardNumberDisplay = $isCardMethod ? ($cardNumber !== '' ? $cardNumber : '-') : '';
         $bankDisplay = $isCardMethod ? ($bankName !== '' ? $bankName : '-') : '';
+        $hasTimeRange = (int) ($penyewaan->sewa->use_time ?? 0) === 1 || filled($penyewaan->start_time) || filled($penyewaan->end_time);
+        $startTimeDisplay = filled($penyewaan->start_time)
+            ? substr((string) $penyewaan->start_time, 0, 5)
+            : ($hasTimeRange ? $penyewaan->created_at->format('H:i') : '');
+        $endTimeDisplay = filled($penyewaan->end_time)
+            ? substr((string) $penyewaan->end_time, 0, 5)
+            : '';
     @endphp
     <div class="ticket-row" style="margin-top: 10px;">
         <div class="qr-code ticket-card ticket-portrait" style="margin: 0 auto 0 auto;">
@@ -89,6 +94,20 @@ date_default_timezone_set('Asia/Jakarta')
                     <span>No Transaksi : </span>
                     <span>{{ $transaction->ticket_code ?? '-' }}</span>
                 </div>
+                @if($hasTimeRange)
+                <div style="display: flex;font-weight: 900; justify-content: space-between; margin-left: 10px; margin-right: 10px;">
+                    <span>Waktu Sewa : </span>
+                    <span>
+                        @if($startTimeDisplay !== '' && $endTimeDisplay !== '')
+                            {{ $startTimeDisplay }} - {{ $endTimeDisplay }}
+                        @elseif($startTimeDisplay !== '')
+                            {{ $startTimeDisplay }}
+                        @else
+                            -
+                        @endif
+                    </span>
+                </div>
+                @endif
                 <div style="margin: 6px 10px;">
                     <div style="font-weight: 900;">Rincian Pembelian:</div>
                     <div style="margin-top: 2px;">
@@ -113,10 +132,6 @@ date_default_timezone_set('Asia/Jakarta')
                 </div>
                 @if($isCardMethod)
                 <div style="font-size: 8.5pt; margin-left: 10px; margin-right: 10px;">
-                    <div style="display: flex; justify-content: space-between;">
-                        <span>Nama Kartu</span>
-                        <span>{{ $cardNameDisplay }}</span>
-                    </div>
                     <div style="display: flex; justify-content: space-between;">
                         <span>No Kartu</span>
                         <span>{{ $cardNumberDisplay }}</span>

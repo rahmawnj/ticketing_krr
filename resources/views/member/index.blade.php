@@ -215,6 +215,7 @@
         processing: true,
         serverSide: true,
         responsive: true,
+        order: [],
         // Mengirim data tambahan, yaitu 'filter'
         ajax: {
             url: "{{ route('members.list') }}",

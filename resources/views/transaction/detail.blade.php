@@ -20,7 +20,6 @@ date_default_timezone_set('Asia/Jakarta')
         $transaction = $detail->transaction;
         $paymentLabel = \App\Support\PaymentMethod::displayLabelUpper($transaction->metode ?? null);
         $kasirName = $transaction?->user?->name ?? '-';
-        $cardName = trim((string) ($transaction->nama_kartu ?? ''));
         $cardNumber = trim((string) ($transaction->no_kartu ?? ''));
         $bankName = trim((string) ($transaction->bank ?? ''));
     @endphp
@@ -31,10 +30,7 @@ date_default_timezone_set('Asia/Jakarta')
                 <span style="display: block; text-align: center;">Rp. {{ number_format($detail->ticket->harga, 0, ',', '.') }}</span>
                 <span style="display: block; text-align: center; font-size: 8pt;">Pembayaran: {{ $paymentLabel }}</span>
                 <span style="display: block; text-align: center; font-size: 8pt;">Kasir: {{ $kasirName }}</span>
-                @if($cardName !== '' || $cardNumber !== '' || $bankName !== '')
-                    @if($cardName !== '')
-                    <span style="display: block; text-align: center; font-size: 7.5pt;">Nama Kartu: {{ $cardName }}</span>
-                    @endif
+                @if($cardNumber !== '' || $bankName !== '')
                     @if($cardNumber !== '')
                     <span style="display: block; text-align: center; font-size: 7.5pt;">No Kartu: {{ $cardNumber }}</span>
                     @endif

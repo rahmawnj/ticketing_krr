@@ -38,6 +38,8 @@ class MemberController extends Controller
     public function __construct()
     {
         $this->middleware('permission:member-access')->except(['findOne']);
+        $this->middleware('permission:member-edit')->only(['edit', 'update']);
+        $this->middleware('permission:member-delete')->only(['destroy']);
     }
 
     public function index()
@@ -60,9 +62,17 @@ class MemberController extends Controller
            if (!in_array($statusFilter, $allowedStatusFilters, true)) {
                $statusFilter = 'all';
            }
+            $today = Carbon::now('Asia/Jakarta')->startOfDay();
 
             // 2. Tentukan basis query
-            $data = Member::with('membership')->orderBy('nama', 'asc');
+            $data = Member::with('membership')
+                ->orderByRaw(
+                    "CASE WHEN is_active = 1 AND DATE(tgl_expired) >= ? THEN 0 ELSE 1 END ASC",
+                    [$today->toDateString()]
+                )
+                ->orderByRaw("CASE WHEN tgl_expired IS NULL THEN 1 ELSE 0 END ASC")
+                ->orderBy('tgl_expired', 'asc')
+                ->orderBy('nama', 'asc');
 
             // 3. Terapkan filter berdasarkan nilai $filter
             if ($filter === 'member') {
@@ -76,8 +86,6 @@ class MemberController extends Controller
             if ($membershipId > 0) {
                 $data->where('membership_id', $membershipId);
             }
-            $today = Carbon::now('Asia/Jakarta')->startOfDay();
-
             if ($statusFilter === 'active') {
                 $data
                     ->whereDate('tgl_expired', '>=', $today->toDateString())
@@ -101,8 +109,13 @@ class MemberController extends Controller
                         $buttons[] = '<a href="' . route('members.invoice', $row->id) . '" target="_blank" id="" class="btn btn-xs btn-outline-secondary btn-invoice"><i class="fas fa-print"></i></a>';
                     }
 
-                    $buttons[] = '<a href="' . route('members.edit', $row->id) . '" id="' . $row->id . '" class="btn btn-xs btn-outline-success"><i class="fas fa-edit"></i></a>';
-                    $buttons[] = '<button type="button" data-route="' . route('members.destroy', $row->id) . '" class="delete btn btn-outline-danger btn-delete btn-xs"><i class="fas fa-trash"></i></button>';
+                    if (auth()->user()->can('member-edit')) {
+                        $buttons[] = '<a href="' . route('members.edit', $row->id) . '" id="' . $row->id . '" class="btn btn-xs btn-outline-success"><i class="fas fa-edit"></i></a>';
+                    }
+
+                    if (auth()->user()->can('member-delete')) {
+                        $buttons[] = '<button type="button" data-route="' . route('members.destroy', $row->id) . '" class="delete btn btn-outline-danger btn-delete btn-xs"><i class="fas fa-trash"></i></button>';
+                    }
 
                     return '<div class="d-inline-flex flex-nowrap align-items-center gap-1 member-action-buttons">' . implode('', $buttons) . '</div>';
                 })
@@ -323,7 +336,6 @@ public function store(CreateMemberRequest $request)
             $isCardMethod = in_array($metode, ['debit', 'kredit'], true);
             if ($isCardMethod) {
                 $request->validate([
-                    'nama_kartu' => 'required|string|max:100',
                     'no_kartu' => 'required|string|max:100',
                     'bank' => 'required|string|max:100',
                 ]);
@@ -343,7 +355,7 @@ public function store(CreateMemberRequest $request)
                 'status' => 'open',
                 'is_active' => 1,
                 'metode' => $metode,
-                'nama_kartu' => $isCardMethod ? $request->nama_kartu : null,
+                'nama_kartu' => null,
                 'no_kartu' => $isCardMethod ? $request->no_kartu : null,
                 'bank' => $isCardMethod ? $request->bank : null,
                 'ticket_id'=> $membership->id,
@@ -523,7 +535,6 @@ public function update(UpdateMemberRequest $request, Member $member)
                     $isCardMethod = in_array($metode, ['debit', 'kredit'], true);
                     if ($isCardMethod) {
                         $request->validate([
-                            'nama_kartu' => 'required|string|max:100',
                             'no_kartu' => 'required|string|max:100',
                             'bank' => 'required|string|max:100',
                         ]);
@@ -543,7 +554,7 @@ public function update(UpdateMemberRequest $request, Member $member)
                         'status' => 'open',
                         'is_active' => 1,
                         'metode' => $metode,
-                        'nama_kartu' => $isCardMethod ? $request->nama_kartu : null,
+                        'nama_kartu' => null,
                         'no_kartu' => $isCardMethod ? $request->no_kartu : null,
                         'bank' => $isCardMethod ? $request->bank : null,
                         'ticket_id'=> $membership->id,
@@ -1343,7 +1354,6 @@ public function processBulkRenew(Request $request)
         $isCardMethod = in_array($metode, ['debit', 'kredit'], true);
         if ($isCardMethod) {
             $request->validate([
-                'nama_kartu' => 'required|string|max:100',
                 'no_kartu' => 'required|string|max:100',
                 'bank' => 'required|string|max:100',
             ]);
@@ -1363,7 +1373,7 @@ public function processBulkRenew(Request $request)
             'is_active' => 1,
             'tipe' => $tipeTransaksi,
             'metode' => $metode,
-            'nama_kartu' => $isCardMethod ? $request->nama_kartu : null,
+            'nama_kartu' => null,
             'no_kartu' => $isCardMethod ? $request->no_kartu : null,
             'bank' => $isCardMethod ? $request->bank : null,
             'ticket_id' => $member->membership_id,

@@ -92,7 +92,6 @@
     <input type="hidden" name="metode" id="renew-metode-input">
     <input type="hidden" name="admin_fee_master_id" id="renew-admin-fee-master-id-input">
     <input type="hidden" name="renewal_mode" id="renewal-mode-input">
-    <input type="hidden" name="nama_kartu" id="renew-nama-kartu-input">
     <input type="hidden" name="no_kartu" id="renew-no-kartu-input">
     <input type="hidden" name="bank" id="renew-bank-input">
 </form>
@@ -197,14 +196,6 @@
         metodeSelect.className = 'swal-content__input';
         paymentWrapper.appendChild(metodeSelect);
 
-        var namaKartuInput = document.createElement('input');
-        namaKartuInput.type = 'text';
-        namaKartuInput.id = 'renew-nama-kartu-swal';
-        namaKartuInput.className = 'swal-content__input renew-card-field';
-        namaKartuInput.placeholder = 'Nama Rekening / Pemilik Kartu';
-        namaKartuInput.style.display = 'none';
-        paymentWrapper.appendChild(namaKartuInput);
-
         var noKartuInput = document.createElement('input');
         noKartuInput.type = 'text';
         noKartuInput.id = 'renew-no-kartu-swal';
@@ -252,12 +243,10 @@
             var isCardMethod = metodeSelect.value === 'debit' || metodeSelect.value === 'kredit';
             var displayMode = isCardMethod ? 'block' : 'none';
 
-            namaKartuInput.style.display = displayMode;
             noKartuInput.style.display = displayMode;
             bankInput.style.display = displayMode;
 
             if (!isCardMethod) {
-                namaKartuInput.value = '';
                 noKartuInput.value = '';
                 bankInput.value = '';
             }
@@ -281,12 +270,11 @@
                 var selectedMetode = (metodeSelect.value || '').trim();
                 var selectedAdminFeeMasterId = (adminSelect.value || '').trim();
                 var isCardMethod = selectedMetode === 'debit' || selectedMetode === 'kredit';
-                var namaKartu = (namaKartuInput.value || '').trim();
                 var noKartu = (noKartuInput.value || '').trim();
                 var bank = (bankInput.value || '').trim();
 
-                if (isCardMethod && (!namaKartu || !noKartu || !bank)) {
-                    swal("Data pembayaran belum lengkap", "Untuk metode debit/kredit, isi nama rekening, nomor kartu/rekening, dan bank.", "warning");
+                if (isCardMethod && (!noKartu || !bank)) {
+                    swal("Data pembayaran belum lengkap", "Untuk metode debit/kredit, isi nomor kartu/rekening dan bank.", "warning");
                     return;
                 }
 
@@ -295,7 +283,6 @@
                 $('#renew-metode-input').val(selectedMetode);
                 $('#renew-admin-fee-master-id-input').val(selectedAdminFeeMasterId);
                 $('#renewal-mode-input').val(renewalMode);
-                $('#renew-nama-kartu-input').val(isCardMethod ? namaKartu : '');
                 $('#renew-no-kartu-input').val(isCardMethod ? noKartu : '');
                 $('#renew-bank-input').val(isCardMethod ? bank : '');
 

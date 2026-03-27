@@ -98,7 +98,6 @@
         $transactionDateTimeLabel = $transaction->created_at->format('d/m/Y H:i:s');
         $paymentLabel = \App\Support\PaymentMethod::displayLabelUpper($transaction->metode ?? null);
         $kasirName = $transaction->user->name ?? '-';
-        $cardName = trim((string) ($transaction->nama_kartu ?? ''));
         $cardNumber = trim((string) ($transaction->no_kartu ?? ''));
         $bankName = trim((string) ($transaction->bank ?? ''));
         $printTickets = $tickets;
@@ -156,14 +155,8 @@
                 <span>Pembayaran : </span>
                 <span>{{ $paymentLabel }}</span>
             </div>
-            @if($cardName !== '' || $cardNumber !== '' || $bankName !== '')
+            @if($cardNumber !== '' || $bankName !== '')
             <div style="font-size: 8.5pt; margin-left: 10px; margin-right: 10px;">
-                @if($cardName !== '')
-                <div style="display: flex; justify-content: space-between;">
-                    <span>Nama Kartu</span>
-                    <span>{{ $cardName }}</span>
-                </div>
-                @endif
                 @if($cardNumber !== '')
                 <div style="display: flex; justify-content: space-between;">
                     <span>No Kartu</span>
@@ -201,10 +194,7 @@
                 <span style="display: block; text-align: center; font-size: 8pt;">Tanggal: {{ $transactionDateLabel }}</span>
                 <span style="display: block; text-align: center; font-size: 8pt;">Pembayaran: {{ $paymentLabel }}</span>
                 <span style="display: block; text-align: center; font-size: 8pt;">Kasir: {{ $kasirName }}</span>
-                @if($cardName !== '' || $cardNumber !== '' || $bankName !== '')
-                    @if($cardName !== '')
-                    <span style="display: block; text-align: center; font-size: 7.5pt;">Nama Kartu: {{ $cardName }}</span>
-                    @endif
+                @if($cardNumber !== '' || $bankName !== '')
                     @if($cardNumber !== '')
                     <span style="display: block; text-align: center; font-size: 7.5pt;">No Kartu: {{ $cardNumber }}</span>
                     @endif
