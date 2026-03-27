@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 use Yajra\DataTables\DataTables;
 
 class RoleController extends Controller
@@ -55,6 +56,7 @@ class RoleController extends Controller
             ]);
 
             $role->syncPermissions($request->permission);
+            app(PermissionRegistrar::class)->forgetCachedPermissions();
 
             DB::commit();
 
@@ -89,6 +91,7 @@ class RoleController extends Controller
             ]);
 
             $role->syncPermissions($request->permission);
+            app(PermissionRegistrar::class)->forgetCachedPermissions();
 
             DB::commit();
 
@@ -105,6 +108,7 @@ class RoleController extends Controller
             DB::beginTransaction();
 
             $role->delete();
+            app(PermissionRegistrar::class)->forgetCachedPermissions();
 
             DB::commit();
 

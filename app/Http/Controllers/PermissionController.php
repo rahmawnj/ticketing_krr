@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\PermissionRegistrar;
 use Yajra\DataTables\Facades\DataTables;
 
 class PermissionController extends Controller
@@ -50,6 +51,7 @@ class PermissionController extends Controller
                 'name' => $request->name,
                 'guard_name' => 'web'
             ]);
+            app(PermissionRegistrar::class)->forgetCachedPermissions();
 
             DB::commit();
 
@@ -81,6 +83,7 @@ class PermissionController extends Controller
                 'name' => $request->name,
                 'guard_name' => 'web'
             ]);
+            app(PermissionRegistrar::class)->forgetCachedPermissions();
 
             DB::commit();
 
@@ -97,6 +100,7 @@ class PermissionController extends Controller
             DB::beginTransaction();
 
             $permission->delete();
+            app(PermissionRegistrar::class)->forgetCachedPermissions();
 
             DB::commit();
 
