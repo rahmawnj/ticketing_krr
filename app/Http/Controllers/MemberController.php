@@ -16,6 +16,7 @@ use App\Imports\MemberImport;
 use App\Models\DetailTransaction;
 use App\Models\HistoryMembership;
 use App\Models\WhatsappNotificationLog;
+use App\Support\MembershipPeriod;
 use App\Support\PaymentMethod;
 use App\Exports\MemberExport;
 use Illuminate\Support\Facades\DB;
@@ -224,9 +225,10 @@ public function store(CreateMemberRequest $request)
                  throw new \Exception("Jenis Member tidak valid.");
             }
 
+            $registerDate = Carbon::now('Asia/Jakarta')->startOfDay();
             $attr['tgl_lahir'] = $request->tanggal_lahir;
-            $attr['tgl_register'] = now('Asia/Jakarta')->format('Y-m-d');
-            $attr['tgl_expired'] = now('Asia/Jakarta')->addDay($membership->duration_days)->format('Y-m-d');
+            $attr['tgl_register'] = $registerDate->format('Y-m-d');
+            $attr['tgl_expired'] = MembershipPeriod::expiryFromStart($registerDate, (int) $membership->duration_days)->format('Y-m-d');
             $attr['qr_code'] = "MBR" . strtoupper(Str::random(13));
             $memberCodePrefix = strtoupper(preg_replace('/[^A-Z0-9]/', '', (string) ($membership->code ?? '')));
             if ($memberCodePrefix === '') {
@@ -498,9 +500,10 @@ public function update(UpdateMemberRequest $request, Member $member)
                          throw new \Exception("Jenis Member baru tidak valid.");
                     }
 
+                    $membershipStartDate = Carbon::now('Asia/Jakarta')->startOfDay();
                     $attr['tgl_lahir'] = $request->tanggal_lahir;
                     $attr['membership_id'] = $membership->id;
-                    $attr['tgl_expired'] = now('Asia/Jakarta')->addDay($membership->duration_days)->format('Y-m-d');
+                    $attr['tgl_expired'] = MembershipPeriod::expiryFromStart($membershipStartDate, (int) $membership->duration_days)->format('Y-m-d');
                     $attr['access_used'] = 0;
 
                     HistoryMembership::where('member_id', $member->id)
@@ -510,7 +513,7 @@ public function update(UpdateMemberRequest $request, Member $member)
                     HistoryMembership::create([
                         'member_id' => $member->id,
                         'membership_id' => $membership->id,
-                        'start_date' => now('Asia/Jakarta')->format('Y-m-d'),
+                        'start_date' => $membershipStartDate->format('Y-m-d'),
                         'end_date' => $attr['tgl_expired'],
                         'status' => 'active',
                     ]);
@@ -733,16 +736,24 @@ public function update(UpdateMemberRequest $request, Member $member)
                 return back()->with('error', 'Member belum berlangganan');
             }
 
+            $previousExpiredAt = Carbon::parse($member->tgl_expired)->startOfDay();
+            $anchorStartDate = Carbon::parse($member->tgl_register ?? $member->tgl_expired)->startOfDay();
+            $renewalPeriod = MembershipPeriod::standardRenewalPeriod(
+                $anchorStartDate,
+                $previousExpiredAt,
+                (int) $member->membership->duration_days
+            );
+
             $member->update([
-                'tgl_expired' => Carbon::now('Asia/Jakarta')->addDay($member->membership->duration_days)->format('Y-m-d'),
+                'tgl_expired' => $renewalPeriod['expired_at']->format('Y-m-d'),
                 'access_used' => 0
             ]);
 
             HistoryMembership::create([
                 'member_id' => $member->id,
                 'membership_id' => $member->membership_id,
-                'start_date' => Carbon::now('Asia/Jakarta')->format('Y-m-d'),
-                'end_date' => Carbon::now('Asia/Jakarta')->addDay($member->membership->duration_days)->format('Y-m-d'),
+                'start_date' => $renewalPeriod['start_date']->format('Y-m-d'),
+                'end_date' => $member->tgl_expired,
                 'status' => 'active',
             ]);
 
@@ -1292,13 +1303,21 @@ public function processBulkRenew(Request $request)
 
                 // Tambahkan ke total akumulasi transaksi
 
-                $startDate = Carbon::now('Asia/Jakarta');
-
-                $tgl_lama = Carbon::parse($member->tgl_expired);
-                // Tentukan tanggal mulai perpanjangan: Hari berikutnya dari tgl_expired lama JIKA tgl_expired > hari ini,
-                // jika tidak, mulai dari hari ini.
-                $tgl_baru_start = $tgl_lama->greaterThan($startDate) ? $tgl_lama->copy()->addDay() : $startDate->copy();
-                $tgl_expired_baru = $tgl_baru_start->copy()->addDays($duration)->format('Y-m-d');
+                $today = Carbon::now('Asia/Jakarta')->startOfDay();
+                $tgl_lama = Carbon::parse($member->tgl_expired)->startOfDay();
+                $anchorStartDate = Carbon::parse($member->tgl_register ?? $member->tgl_expired)->startOfDay();
+                $renewalPeriod = MembershipPeriod::standardRenewalPeriod(
+                    $anchorStartDate,
+                    $tgl_lama,
+                    (int) $duration
+                );
+                $tgl_baru_start = $isRenewalBaru
+                    ? $today->copy()
+                    : $renewalPeriod['start_date']->copy();
+                $tgl_expired_baru = ($isRenewalBaru
+                    ? MembershipPeriod::expiryFromStart($today, (int) $duration)
+                    : $renewalPeriod['expired_at']->copy())
+                    ->format('Y-m-d');
 
                 // Update member
                 $member->update(['tgl_expired' => $tgl_expired_baru, 'is_active' => true, 'access_used' => 0]); // Reset access

@@ -14,12 +14,18 @@
 /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
+
+-- Dumping database structure for db_membership
+CREATE DATABASE IF NOT EXISTS `db_membership` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
+USE `db_membership`;
+
 -- Dumping structure for table db_membership.detail_transactions
 CREATE TABLE IF NOT EXISTS `detail_transactions` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `transaction_id` bigint unsigned NOT NULL,
   `ticket_id` bigint unsigned NOT NULL,
   `qty` int NOT NULL,
+  `name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `total` int NOT NULL,
   `ppn` decimal(12,2) NOT NULL DEFAULT '0.00',
   `created_at` timestamp NULL DEFAULT NULL,
@@ -30,11 +36,19 @@ CREATE TABLE IF NOT EXISTS `detail_transactions` (
   `scanned_at` timestamp NULL DEFAULT NULL,
   `gate` int DEFAULT NULL,
   `is_print` int DEFAULT '0',
+  `jenis_ticket_id` int DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table db_membership.detail_transactions: ~9 rows (approximately)
-DELETE FROM `detail_transactions`;
+-- Dumping data for table db_membership.detail_transactions: ~0 rows (approximately)
+INSERT IGNORE INTO `detail_transactions` (`id`, `transaction_id`, `ticket_id`, `qty`, `name`, `total`, `ppn`, `created_at`, `updated_at`, `ticket_code`, `status`, `scanned`, `scanned_at`, `gate`, `is_print`, `jenis_ticket_id`) VALUES
+	(1, 8, 1, 1, NULL, 20000, 0.00, '2026-03-31 02:44:02', '2026-03-31 02:44:02', 'TKT20260331094402787', 'open', 0, NULL, NULL, 0, NULL),
+	(2, 8, 6, 1, NULL, 25000, 0.00, '2026-03-31 03:11:32', '2026-03-31 03:11:32', 'TKT20260331101132893', 'open', 0, NULL, NULL, 0, NULL),
+	(3, 8, 6, 1, NULL, 25000, 0.00, '2026-03-31 03:11:39', '2026-03-31 03:11:39', 'TKT20260331101139859', 'open', 0, NULL, NULL, 0, NULL),
+	(4, 8, 7, 1, NULL, 35000, 0.00, '2026-03-31 03:11:52', '2026-03-31 03:11:52', 'TKT20260331101152236', 'open', 0, NULL, NULL, 0, NULL),
+	(5, 8, 6, 1, NULL, 25000, 0.00, '2026-03-31 03:13:38', '2026-03-31 03:13:38', 'TKT20260331101338765', 'open', 0, NULL, NULL, 0, NULL),
+	(6, 8, 6, 1, NULL, 25000, 0.00, '2026-03-31 03:36:41', '2026-03-31 03:36:41', 'TKT20260331103641623', 'open', 0, NULL, NULL, 0, NULL),
+	(7, 8, 10, 1, NULL, 20000, 0.00, '2026-03-31 03:42:30', '2026-03-31 03:42:30', 'TKT20260331104230543', 'open', 0, NULL, NULL, 0, NULL);
 
 -- Dumping structure for table db_membership.failed_jobs
 CREATE TABLE IF NOT EXISTS `failed_jobs` (
@@ -50,7 +64,6 @@ CREATE TABLE IF NOT EXISTS `failed_jobs` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table db_membership.failed_jobs: ~0 rows (approximately)
-DELETE FROM `failed_jobs`;
 
 -- Dumping structure for table db_membership.gate_accesses
 CREATE TABLE IF NOT EXISTS `gate_accesses` (
@@ -65,9 +78,8 @@ CREATE TABLE IF NOT EXISTS `gate_accesses` (
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table db_membership.gate_accesses: ~1 rows (approximately)
-DELETE FROM `gate_accesses`;
-INSERT INTO `gate_accesses` (`id`, `gate_access_id`, `name`, `is_active`, `created_at`, `updated_at`) VALUES
-	(1, '1', 'Main GATE', 1, '2026-01-30 07:41:51', '2026-01-30 08:28:04');
+INSERT IGNORE INTO `gate_accesses` (`id`, `gate_access_id`, `name`, `is_active`, `created_at`, `updated_at`) VALUES
+	(1, '1', 'Gerbang Utama', 1, '2026-03-30 09:36:14', '2026-03-30 09:54:57');
 
 -- Dumping structure for table db_membership.gate_access_membership
 CREATE TABLE IF NOT EXISTS `gate_access_membership` (
@@ -79,12 +91,21 @@ CREATE TABLE IF NOT EXISTS `gate_access_membership` (
   CONSTRAINT `gate_access_membership_membership_id_foreign` FOREIGN KEY (`membership_id`) REFERENCES `memberships` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table db_membership.gate_access_membership: ~2 rows (approximately)
-DELETE FROM `gate_access_membership`;
-INSERT INTO `gate_access_membership` (`gate_access_id`, `membership_id`) VALUES
+-- Dumping data for table db_membership.gate_access_membership: ~1 rows (approximately)
+INSERT IGNORE INTO `gate_access_membership` (`gate_access_id`, `membership_id`) VALUES
 	(1, 1),
 	(1, 2),
-	(1, 3);
+	(1, 3),
+	(1, 4),
+	(1, 5),
+	(1, 6),
+	(1, 7),
+	(1, 8),
+	(1, 9),
+	(1, 10),
+	(1, 11),
+	(1, 12),
+	(1, 13);
 
 -- Dumping structure for table db_membership.histories
 CREATE TABLE IF NOT EXISTS `histories` (
@@ -96,18 +117,16 @@ CREATE TABLE IF NOT EXISTS `histories` (
   `waktu` timestamp NULL DEFAULT NULL,
   `user_id` int DEFAULT '0',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=51 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table db_membership.histories: ~8 rows (approximately)
-DELETE FROM `histories`;
-INSERT INTO `histories` (`id`, `member_id`, `gate`, `created_at`, `updated_at`, `waktu`, `user_id`) VALUES
-	(1, 1, 1, '2026-01-30 09:34:00', '2026-01-30 09:34:00', '2026-01-30 09:34:00', 0),
-	(2, 1, 1, '2026-01-30 09:34:22', '2026-01-30 09:34:22', '2026-01-30 09:34:22', 0),
-	(3, 1, 1, '2026-01-30 09:34:37', '2026-01-30 09:34:37', '2026-01-30 09:34:37', 0),
-	(4, 3, 1, '2026-01-30 09:35:22', '2026-01-30 09:35:22', '2026-01-30 09:35:22', 0),
-	(5, 3, 1, '2026-01-30 09:35:23', '2026-01-30 09:35:23', '2026-01-30 09:35:23', 0),
-	(6, 3, 1, '2026-01-30 09:35:24', '2026-01-30 09:35:24', '2026-01-30 09:35:24', 0),
-	(7, 1, 1, '2026-01-30 09:35:57', '2026-01-30 09:35:57', '2026-01-30 09:35:57', 0);
+-- Dumping data for table db_membership.histories: ~0 rows (approximately)
+INSERT IGNORE INTO `histories` (`id`, `member_id`, `gate`, `created_at`, `updated_at`, `waktu`, `user_id`) VALUES
+	(1, 2, 1, '2026-03-30 11:01:56', '2026-03-30 11:01:56', '2026-03-30 11:01:56', 0),
+	(2, 8, 1, '2026-03-30 11:56:14', '2026-03-30 11:56:14', '2026-03-30 11:56:14', 0),
+	(3, 8, 1, '2026-03-30 11:56:16', '2026-03-30 11:56:16', '2026-03-30 11:56:16', 0),
+	(4, 5, 1, '2026-03-30 11:57:11', '2026-03-30 11:57:11', '2026-03-30 11:57:11', 0),
+	(5, 5, 1, '2026-03-30 11:57:12', '2026-03-30 11:57:12', '2026-03-30 11:57:12', 0),
+	(6, 3, 1, '2026-03-30 11:58:35', '2026-03-30 11:58:35', '2026-03-30 11:58:35', 0);
 
 -- Dumping structure for table db_membership.history_memberships
 CREATE TABLE IF NOT EXISTS `history_memberships` (
@@ -124,41 +143,31 @@ CREATE TABLE IF NOT EXISTS `history_memberships` (
   KEY `history_memberships_member_id_foreign` (`member_id`),
   CONSTRAINT `history_memberships_member_id_foreign` FOREIGN KEY (`member_id`) REFERENCES `members` (`id`) ON DELETE CASCADE,
   CONSTRAINT `history_memberships_membership_id_foreign` FOREIGN KEY (`membership_id`) REFERENCES `memberships` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=72 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=22 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table db_membership.history_memberships: ~26 rows (approximately)
-DELETE FROM `history_memberships`;
-INSERT INTO `history_memberships` (`id`, `membership_id`, `member_id`, `start_date`, `end_date`, `status`, `created_at`, `updated_at`) VALUES
-	(1, 2, 1, '2026-01-30', '2026-04-30', 'active', '2026-01-30 08:48:59', '2026-01-30 08:48:59'),
-	(2, 2, 2, '2026-01-30', '2026-04-30', 'active', '2026-01-30 08:48:59', '2026-01-30 08:48:59'),
-	(3, 2, 3, '2026-01-30', '2026-04-30', 'active', '2026-01-30 08:48:59', '2026-01-30 08:48:59'),
-	(4, 2, 4, '2026-01-30', '2026-04-30', 'active', '2026-01-30 08:48:59', '2026-01-30 08:48:59'),
-	(19, 2, 1, '2026-02-12', '2026-05-13', 'active', '2026-02-10 03:36:17', '2026-02-10 03:36:17'),
-	(20, 2, 2, '2026-02-12', '2026-05-13', 'active', '2026-02-10 03:36:17', '2026-02-10 03:36:17'),
-	(21, 2, 3, '2026-02-12', '2026-05-13', 'active', '2026-02-10 03:36:17', '2026-02-10 03:36:17'),
-	(22, 2, 4, '2026-02-12', '2026-05-13', 'active', '2026-02-10 03:36:17', '2026-02-10 03:36:17'),
-	(39, 2, 1, '2026-02-19', '2026-05-20', 'active', '2026-02-19 07:52:17', '2026-02-19 07:52:17'),
-	(40, 2, 2, '2026-02-19', '2026-05-20', 'active', '2026-02-19 07:52:17', '2026-02-19 07:52:17'),
-	(41, 2, 3, '2026-02-19', '2026-05-20', 'active', '2026-02-19 07:52:17', '2026-02-19 07:52:17'),
-	(42, 2, 4, '2026-02-19', '2026-05-20', 'active', '2026-02-19 07:52:17', '2026-02-19 07:52:17'),
-	(54, 3, 19, '2026-02-24', '2026-03-01', 'active', '2026-02-24 05:45:14', '2026-02-24 05:45:14'),
-	(55, 3, 19, '2026-03-02', '2026-03-07', 'active', '2026-02-25 05:36:24', '2026-02-25 05:36:24'),
-	(56, 1, 20, '2026-02-25', '2026-03-27', 'active', '2026-02-25 05:41:35', '2026-02-25 05:41:35'),
-	(57, 2, 1, '2026-02-25', '2026-05-26', 'active', '2026-02-25 05:48:14', '2026-02-25 05:48:14'),
-	(58, 2, 2, '2026-02-25', '2026-05-26', 'active', '2026-02-25 05:48:14', '2026-02-25 05:48:14'),
-	(59, 2, 3, '2026-02-25', '2026-05-26', 'active', '2026-02-25 05:48:14', '2026-02-25 05:48:14'),
-	(60, 2, 4, '2026-02-25', '2026-05-26', 'active', '2026-02-25 05:48:14', '2026-02-25 05:48:14'),
-	(61, 1, 21, '2026-02-25', '2026-03-27', 'active', '2026-02-25 05:52:29', '2026-02-25 05:52:29'),
-	(62, 1, 22, '2026-02-25', '2026-03-27', 'active', '2026-02-25 05:53:00', '2026-02-25 05:53:00'),
-	(63, 3, 23, '2026-02-25', '2026-03-02', 'active', '2026-02-25 05:55:15', '2026-02-25 05:55:15'),
-	(64, 3, 23, '2026-03-03', '2026-03-08', 'active', '2026-02-25 05:55:51', '2026-02-25 05:55:51'),
-	(65, 3, 19, '2026-02-25', '2026-03-02', 'active', '2026-02-25 08:57:45', '2026-02-25 08:57:45'),
-	(66, 1, 20, '2026-02-25', '2026-03-27', 'active', '2026-02-25 09:02:55', '2026-02-25 09:02:55'),
-	(67, 3, 23, '2026-02-27', '2026-03-04', 'active', '2026-02-27 03:32:22', '2026-02-27 03:32:22'),
-	(68, 1, 21, '2026-02-27', '2026-03-29', 'active', '2026-02-27 03:33:59', '2026-02-27 03:33:59'),
-	(69, 1, 21, '2026-02-27', '2026-03-29', 'active', '2026-02-27 06:28:12', '2026-02-27 06:28:12'),
-	(70, 1, 21, '2026-02-27', '2026-03-29', 'active', '2026-02-27 06:28:38', '2026-02-27 06:28:38'),
-	(71, 1, 21, '2026-02-27', '2026-03-29', 'active', '2026-02-27 06:31:27', '2026-02-27 06:31:27');
+-- Dumping data for table db_membership.history_memberships: ~1 rows (approximately)
+INSERT IGNORE INTO `history_memberships` (`id`, `membership_id`, `member_id`, `start_date`, `end_date`, `status`, `created_at`, `updated_at`) VALUES
+	(1, 1, 1, '2026-03-30', '2026-04-29', 'active', '2026-03-30 09:54:19', '2026-03-30 09:54:19'),
+	(2, 1, 2, '2026-03-30', '2026-04-29', 'active', '2026-03-30 11:00:53', '2026-03-30 11:00:53'),
+	(3, 7, 3, '2026-03-30', '2026-04-29', 'active', '2026-03-30 11:05:10', '2026-03-30 11:05:10'),
+	(4, 7, 4, '2026-03-30', '2026-04-29', 'active', '2026-03-30 11:05:10', '2026-03-30 11:05:10'),
+	(5, 7, 5, '2026-03-30', '2026-04-29', 'active', '2026-03-30 11:05:10', '2026-03-30 11:05:10'),
+	(6, 7, 6, '2026-03-30', '2026-04-29', 'active', '2026-03-30 11:05:10', '2026-03-30 11:05:10'),
+	(7, 7, 7, '2026-03-30', '2026-04-29', 'active', '2026-03-30 11:05:10', '2026-03-30 11:05:10'),
+	(8, 7, 8, '2026-03-30', '2026-04-29', 'active', '2026-03-30 11:05:10', '2026-03-30 11:05:10'),
+	(9, 2, 9, '2026-03-30', '2026-04-29', 'active', '2026-03-30 11:06:29', '2026-03-30 11:06:29'),
+	(10, 2, 10, '2026-03-30', '2026-04-29', 'active', '2026-03-30 11:06:29', '2026-03-30 11:06:29'),
+	(11, 4, 11, '2026-03-30', '2026-04-29', 'active', '2026-03-30 11:08:07', '2026-03-30 11:08:07'),
+	(12, 4, 12, '2026-03-30', '2026-04-29', 'active', '2026-03-30 11:08:07', '2026-03-30 11:08:07'),
+	(13, 4, 13, '2026-03-30', '2026-04-29', 'active', '2026-03-30 11:08:07', '2026-03-30 11:08:07'),
+	(14, 4, 14, '2026-03-30', '2026-04-29', 'active', '2026-03-30 11:08:07', '2026-03-30 11:08:07'),
+	(15, 3, 15, '2026-03-30', '2026-04-29', 'active', '2026-03-30 11:09:06', '2026-03-30 11:09:06'),
+	(16, 3, 16, '2026-03-30', '2026-04-29', 'active', '2026-03-30 11:09:06', '2026-03-30 11:09:06'),
+	(17, 3, 17, '2026-03-30', '2026-04-29', 'active', '2026-03-30 11:09:06', '2026-03-30 11:09:06'),
+	(18, 2, 18, '2026-03-31', '2026-04-04', 'active', '2026-03-31 02:15:12', '2026-03-31 02:15:12'),
+	(19, 2, 19, '2026-03-31', '2026-04-04', 'active', '2026-03-31 02:15:13', '2026-03-31 02:15:13'),
+	(20, 2, 20, '2026-03-31', '2026-04-30', 'active', '2026-03-31 04:12:24', '2026-03-31 04:12:24'),
+	(21, 2, 21, '2026-03-31', '2026-04-30', 'active', '2026-03-31 04:12:24', '2026-03-31 04:12:24');
 
 -- Dumping structure for table db_membership.history_penyewaans
 CREATE TABLE IF NOT EXISTS `history_penyewaans` (
@@ -175,7 +184,6 @@ CREATE TABLE IF NOT EXISTS `history_penyewaans` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table db_membership.history_penyewaans: ~0 rows (approximately)
-DELETE FROM `history_penyewaans`;
 
 -- Dumping structure for table db_membership.jenis_tickets
 CREATE TABLE IF NOT EXISTS `jenis_tickets` (
@@ -187,10 +195,9 @@ CREATE TABLE IF NOT EXISTS `jenis_tickets` (
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table db_membership.jenis_tickets: ~2 rows (approximately)
-DELETE FROM `jenis_tickets`;
-INSERT INTO `jenis_tickets` (`id`, `nama_jenis`, `created_at`, `updated_at`) VALUES
-	(1, 'Reguler', '2026-01-30 07:32:23', '2026-01-30 07:32:23'),
-	(2, 'Terusan', '2026-01-30 07:32:23', '2026-01-30 07:32:23');
+INSERT IGNORE INTO `jenis_tickets` (`id`, `nama_jenis`, `created_at`, `updated_at`) VALUES
+	(1, 'Reguler', '2026-03-30 09:29:43', '2026-03-30 09:29:43'),
+	(2, 'Terusan', '2026-03-30 09:29:43', '2026-03-30 09:29:43');
 
 -- Dumping structure for table db_membership.limit_members
 CREATE TABLE IF NOT EXISTS `limit_members` (
@@ -202,19 +209,16 @@ CREATE TABLE IF NOT EXISTS `limit_members` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table db_membership.limit_members: ~0 rows (approximately)
-DELETE FROM `limit_members`;
 
 -- Dumping structure for table db_membership.members
 CREATE TABLE IF NOT EXISTS `members` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `parent_id` int DEFAULT '0',
   `membership_id` bigint DEFAULT '0',
-  `member_code` varchar(30) COLLATE utf8mb4_unicode_ci NOT NULL,
   `rfid` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `no_ktp` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `no_ktp` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `no_hp` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `nama` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `access_used` int NOT NULL DEFAULT '0',
   `alamat` text COLLATE utf8mb4_unicode_ci NOT NULL,
   `tgl_lahir` date NOT NULL,
   `tgl_register` date NOT NULL,
@@ -229,28 +233,37 @@ CREATE TABLE IF NOT EXISTS `members` (
   `limit` int NOT NULL DEFAULT '0',
   `jenis_member` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `members_member_code_unique` (`member_code`),
   UNIQUE KEY `members_rfid_unique` (`rfid`)
-) ENGINE=InnoDB AUTO_INCREMENT=24 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=22 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table db_membership.members: ~9 rows (approximately)
-DELETE FROM `members`;
-INSERT INTO `members` (`id`, `parent_id`, `membership_id`, `member_code`, `rfid`, `no_ktp`, `no_hp`, `nama`, `access_used`, `alamat`, `tgl_lahir`, `tgl_register`, `tgl_expired`, `saldo`, `is_active`, `jenis_kelamin`, `image_profile`, `qr_code`, `created_at`, `updated_at`, `limit`, `jenis_member`) VALUES
-	(1, 0, 2, 'MBR000001', NULL, '3277654567825678', '6289637761500', 'Budi', 0, 'Jl. Melati No. 123, Jakarta', '2026-01-30', '2026-01-30', '2026-02-26', 0, 1, 'L', NULL, 'MBRBVCAWZRZ7WXN2', '2026-01-30 08:48:59', '2026-02-25 05:48:14', 0, NULL),
-	(2, 1, 2, 'MBR000002', NULL, '3277654567825678', '6289637761500', 'Dina', 0, 'Jl. Melati No. 123, Jakarta', '2026-01-30', '2026-01-30', '2026-02-26', 0, 1, 'L', NULL, 'MBRVK4DFYKK4BCKU', '2026-01-30 08:48:59', '2026-02-25 05:48:14', 0, NULL),
-	(3, 1, 2, 'MBR000003', NULL, '3277654567825678', '6289637761500', 'Andi', 0, 'Jl. Melati No. 123, Jakarta', '2026-01-30', '2026-01-30', '2026-02-26', 0, 1, 'L', NULL, 'MBRPWQMAWVI7SSCF', '2026-01-30 08:48:59', '2026-02-25 05:48:14', 0, NULL),
-	(4, 1, 1, 'MBR000004', NULL, '3277654567825678', '6289637761500', 'Rara', 0, 'Jl. Melati No. 123, Jakarta', '2026-01-30', '2026-01-30', '2026-02-26', 0, 1, 'L', NULL, 'MBRJPG3DKVV3W5TO', '2026-01-30 08:48:59', '2026-02-25 05:48:14', 0, NULL),
-	(19, 0, 3, 'MSH00300001A', NULL, '7879', '08987654', 'Anggie', 0, 'Bandung', '2026-02-24', '2026-02-24', '2026-03-02', 0, 1, 'L', NULL, 'MBRTOBHEE4MS9MOJ', '2026-02-24 05:45:14', '2026-02-25 08:57:45', 0, NULL),
-	(20, 0, 1, 'MBR/0020', '22222222222', '575', '08954754776', 'Rahma', 0, 'Bandung', '2026-02-18', '2026-02-25', '2026-03-27', 0, 1, 'L', NULL, 'MBR/0020', '2026-02-25 05:41:35', '2026-02-25 09:02:55', 0, NULL),
-	(21, 0, 1, 'MBR/0021', NULL, NULL, '646564', 'Kino', 0, 'Cimahi', '2026-02-10', '2026-02-25', '2026-03-29', 0, 1, 'L', NULL, 'MBR/0021', '2026-02-25 05:52:29', '2026-02-27 06:31:27', 0, NULL),
-	(22, 0, 1, 'MBR/0022', NULL, '908980', '9059043859403', 'Jiju', 0, 'Cimahi', '2026-02-18', '2026-02-25', '2026-02-27', 0, 1, 'L', NULL, 'MBR/0022', '2026-02-25 05:53:00', '2026-02-25 05:53:00', 0, NULL),
-	(23, 0, 3, 'MV/0023', NULL, '8943', '8048204', 'DImaski', 0, 'Cimahi', '2026-02-18', '2026-02-25', '2026-03-04', 0, 1, 'L', NULL, 'MV/0023', '2026-02-25 05:55:15', '2026-02-27 03:32:22', 0, NULL);
+-- Dumping data for table db_membership.members: ~1 rows (approximately)
+INSERT IGNORE INTO `members` (`id`, `parent_id`, `membership_id`, `rfid`, `no_ktp`, `no_hp`, `nama`, `alamat`, `tgl_lahir`, `tgl_register`, `tgl_expired`, `saldo`, `is_active`, `jenis_kelamin`, `image_profile`, `qr_code`, `created_at`, `updated_at`, `limit`, `jenis_member`) VALUES
+	(1, 0, 1, NULL, '645', '75', 'rizal', 'h', '2026-03-30', '2026-03-30', '2026-04-29', 0, 1, 'L', NULL, 'MBRVYGVZ7VL27UHX', '2026-03-30 09:54:19', '2026-03-30 09:54:19', 0, NULL),
+	(2, 0, 1, NULL, '5588', '085819309386', 'ALI', 'DESA MEKAR JAYA', '1995-04-12', '2026-03-30', '2026-04-29', 0, 1, 'L', NULL, 'MBROT7ZTHI4ZAC4C', '2026-03-30 11:00:53', '2026-03-30 11:00:53', 0, NULL),
+	(3, 0, 7, NULL, '9977', '081292927343', 'ROBBY', 'SELAKOPI BOGOR', '1994-01-12', '2026-03-30', '2026-04-29', 0, 1, 'L', NULL, 'MBRNTLTXWMQUBQPT', '2026-03-30 11:05:10', '2026-03-30 11:05:10', 0, NULL),
+	(4, 3, 7, NULL, '9977', '081292927343', 'ALDONA', 'SELAKOPI BOGOR', '1994-01-12', '2026-03-30', '2026-04-29', 0, 1, 'L', NULL, 'MBR7FIT3KOHJDVBS', '2026-03-30 11:05:10', '2026-03-30 11:05:10', 0, NULL),
+	(5, 3, 7, NULL, '9977', '081292927343', 'LUTFI', 'SELAKOPI BOGOR', '1994-01-12', '2026-03-30', '2026-04-29', 0, 1, 'L', NULL, 'MBRRWLEVUBF25KMO', '2026-03-30 11:05:10', '2026-03-30 11:05:10', 0, NULL),
+	(6, 3, 7, NULL, '9977', '081292927343', 'SAMMY', 'SELAKOPI BOGOR', '1994-01-12', '2026-03-30', '2026-04-29', 0, 1, 'L', NULL, 'MBRV6AJ4FIKNOEBD', '2026-03-30 11:05:10', '2026-03-30 11:05:10', 0, NULL),
+	(7, 3, 7, NULL, '9977', '081292927343', 'RANDI', 'SELAKOPI BOGOR', '1994-01-12', '2026-03-30', '2026-04-29', 0, 1, 'L', NULL, 'MBROFJ84BS3OWJ9A', '2026-03-30 11:05:10', '2026-03-30 11:05:10', 0, NULL),
+	(8, 3, 7, NULL, '9977', '081292927343', 'ARIF', 'SELAKOPI BOGOR', '1994-01-12', '2026-03-30', '2026-04-29', 0, 1, 'L', NULL, 'MBRQAJ0HGMA7ESU3', '2026-03-30 11:05:10', '2026-03-30 11:05:10', 0, NULL),
+	(9, 0, 2, NULL, '8877', '085819868262', 'DIAN', 'SINDANG BARANG', '1997-03-04', '2026-03-30', '2026-04-29', 0, 1, 'P', NULL, 'MBRGG8BNZJGINPK3', '2026-03-30 11:06:29', '2026-03-30 11:06:29', 0, NULL),
+	(10, 9, 2, NULL, '8877', '085819868262', 'YOGO', 'SINDANG BARANG', '1997-03-04', '2026-03-30', '2026-04-29', 0, 1, 'P', NULL, 'MBRLML56XTPSLXL2', '2026-03-30 11:06:29', '2026-03-30 11:06:29', 0, NULL),
+	(11, 0, 4, NULL, '1144', '089679127878', 'DAVIEN', 'MEKAR JAYA KP SAWAH HILIR', '2002-10-12', '2026-03-30', '2026-04-29', 0, 1, 'L', NULL, 'MBRN25KYC1X41HZC', '2026-03-30 11:08:07', '2026-03-30 11:08:07', 0, NULL),
+	(12, 11, 4, NULL, '1144', '089679127878', 'GALANG', 'MEKAR JAYA KP SAWAH HILIR', '2002-10-12', '2026-03-30', '2026-04-29', 0, 1, 'L', NULL, 'MBRYNBIBYDSHQDLK', '2026-03-30 11:08:07', '2026-03-30 11:08:07', 0, NULL),
+	(13, 11, 4, NULL, '1144', '089679127878', 'YAFI', 'MEKAR JAYA KP SAWAH HILIR', '2002-10-12', '2026-03-30', '2026-04-29', 0, 1, 'L', NULL, 'MBR0BOBK1QNS7FVB', '2026-03-30 11:08:07', '2026-03-30 11:08:07', 0, NULL),
+	(14, 11, 4, NULL, '1144', '089679127878', 'ATALLA', 'MEKAR JAYA KP SAWAH HILIR', '2002-10-12', '2026-03-30', '2026-04-29', 0, 1, 'L', NULL, 'MBRNRN0FEGSGXTZS', '2026-03-30 11:08:07', '2026-03-30 11:08:07', 0, NULL),
+	(15, 0, 3, NULL, '8844', '087874591881', 'DIMAS', 'TANAH BARU', '1991-03-04', '2026-03-30', '2026-04-29', 0, 1, 'L', NULL, 'MBRLOFT0MDDKWECT', '2026-03-30 11:09:06', '2026-03-30 11:09:06', 0, NULL),
+	(16, 15, 3, NULL, '8844', '087874591881', 'ILHAM', 'TANAH BARU', '1991-03-04', '2026-03-30', '2026-04-29', 0, 1, 'L', NULL, 'MBRQAH1LKAMMH6OO', '2026-03-30 11:09:06', '2026-03-30 11:09:06', 0, NULL),
+	(17, 15, 3, NULL, '8844', '087874591881', 'ANIN', 'TANAH BARU', '1991-03-04', '2026-03-30', '2026-04-29', 0, 1, 'L', NULL, 'MBRWYF3WYLZHMGIA', '2026-03-30 11:09:06', '2026-03-30 11:09:06', 0, NULL),
+	(18, 0, 2, NULL, '22222', '082125196335', 'ANGGI', 'PERUM CIWARU INDAH BLOK C NO. 22', '1985-01-22', '2026-03-31', '2026-04-04', 0, 1, 'L', NULL, 'MBR6TOS9HVYM2XOX', '2026-03-31 02:15:12', '2026-03-31 02:15:12', 0, NULL),
+	(19, 18, 2, NULL, '22222', '082125196335', 'ANI', 'PERUM CIWARU INDAH BLOK C NO. 22', '1985-01-22', '2026-03-31', '2026-04-04', 0, 1, 'L', NULL, 'MBRA67KWQ8IDI28D', '2026-03-31 02:15:12', '2026-03-31 02:15:12', 0, NULL),
+	(20, 0, 2, NULL, '1111', '085814065158', 'KIKO', 'PABUARAN BNR', '2007-04-17', '2026-03-31', '2026-04-30', 0, 1, 'L', NULL, 'MBRK875H1DWVIZZ6', '2026-03-31 04:12:24', '2026-03-31 04:12:24', 0, NULL),
+	(21, 20, 2, NULL, '1111', '085814065158', 'ZAHRA', 'PABUARAN BNR', '2007-04-17', '2026-03-31', '2026-04-30', 0, 1, 'L', NULL, 'MBRARNLUATX4G8GS', '2026-03-31 04:12:24', '2026-03-31 04:12:24', 0, NULL);
 
 -- Dumping structure for table db_membership.memberships
 CREATE TABLE IF NOT EXISTS `memberships` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `code` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `duration_days` int NOT NULL,
   `price` double NOT NULL,
   `max_person` int NOT NULL DEFAULT '1',
@@ -259,16 +272,24 @@ CREATE TABLE IF NOT EXISTS `memberships` (
   `ppn` decimal(12,2) NOT NULL DEFAULT '0.00',
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
-  `max_access` int NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table db_membership.memberships: ~3 rows (approximately)
-DELETE FROM `memberships`;
-INSERT INTO `memberships` (`id`, `name`, `code`, `duration_days`, `price`, `max_person`, `is_active`, `use_ppn`, `ppn`, `created_at`, `updated_at`, `max_access`) VALUES
-	(1, 'Member Bulanan Reguler', 'MBR', 30, 150000, 1, 1, 0, 0.00, '2026-01-30 08:44:15', '2026-02-24 07:36:03', 10),
-	(2, 'Family Pass 3 Bulan', 'FP', 90, 500000, 4, 1, 1, 0.00, '2026-01-30 08:45:02', '2026-02-24 07:36:11', 5),
-	(3, 'Member VIP', 'MV', 5, 20000, 1, 1, 0, 0.00, '2026-02-12 02:11:15', '2026-02-24 07:35:55', 0);
+-- Dumping data for table db_membership.memberships: ~1 rows (approximately)
+INSERT IGNORE INTO `memberships` (`id`, `name`, `duration_days`, `price`, `max_person`, `is_active`, `use_ppn`, `ppn`, `created_at`, `updated_at`) VALUES
+	(1, 'Single Monthly', 30, 250000, 1, 1, 0, 0.00, '2026-03-30 09:53:52', '2026-03-30 09:53:52'),
+	(2, 'COUPLE MOUNTHLY', 30, 375000, 2, 1, 0, 0.00, '2026-03-30 10:55:31', '2026-03-31 04:11:30'),
+	(3, 'Couple+1 Mounthly', 30, 500000, 3, 1, 0, 0.00, '2026-03-30 10:55:57', '2026-03-30 10:55:57'),
+	(4, 'FAMILY MOUNTHLY', 30, 650000, 4, 1, 0, 0.00, '2026-03-30 10:56:25', '2026-03-30 10:56:25'),
+	(5, 'FAMILY+1 MONTHLY', 30, 775000, 5, 1, 0, 0.00, '2026-03-30 10:57:27', '2026-03-30 10:57:27'),
+	(6, 'FAMILY+2 MONTHLY', 30, 900000, 6, 1, 0, 0.00, '2026-03-30 10:57:55', '2026-03-30 10:57:55'),
+	(7, 'RENEWAL FAMILY+2 MONTHLY', 30, 700000, 6, 1, 0, 0.00, '2026-03-30 10:59:21', '2026-03-30 10:59:21'),
+	(8, 'SINGLE YEARLY', 360, 1192000, 1, 1, 0, 0.00, '2026-03-30 11:36:18', '2026-03-30 11:36:18'),
+	(9, 'COUPLE YEARLY', 360, 2192000, 2, 1, 0, 0.00, '2026-03-30 11:36:46', '2026-03-30 11:36:46'),
+	(10, 'COUPLE+1 YEARLY', 360, 2792000, 3, 1, 0, 0.00, '2026-03-30 11:37:21', '2026-03-30 11:37:21'),
+	(11, 'FAMILY YEARLY', 360, 2992000, 4, 1, 0, 0.00, '2026-03-30 11:37:46', '2026-03-30 11:37:46'),
+	(12, 'FAMILY+1 YEARLY', 360, 3592000, 5, 1, 0, 0.00, '2026-03-30 11:38:11', '2026-03-30 11:38:11'),
+	(13, 'FAMILY+2 YEARLY', 360, 4192000, 6, 1, 0, 0.00, '2026-03-30 11:38:33', '2026-03-30 11:38:33');
 
 -- Dumping structure for table db_membership.migrations
 CREATE TABLE IF NOT EXISTS `migrations` (
@@ -278,9 +299,8 @@ CREATE TABLE IF NOT EXISTS `migrations` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=43 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table db_membership.migrations: ~42 rows (approximately)
-DELETE FROM `migrations`;
-INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES
+-- Dumping data for table db_membership.migrations: ~0 rows (approximately)
+INSERT IGNORE INTO `migrations` (`id`, `migration`, `batch`) VALUES
 	(1, '2014_10_12_000000_create_users_table', 1),
 	(2, '2014_10_12_100000_create_password_resets_table', 1),
 	(3, '2019_08_19_000000_create_failed_jobs_table', 1),
@@ -335,7 +355,6 @@ CREATE TABLE IF NOT EXISTS `model_has_permissions` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table db_membership.model_has_permissions: ~0 rows (approximately)
-DELETE FROM `model_has_permissions`;
 
 -- Dumping structure for table db_membership.model_has_roles
 CREATE TABLE IF NOT EXISTS `model_has_roles` (
@@ -348,10 +367,8 @@ CREATE TABLE IF NOT EXISTS `model_has_roles` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table db_membership.model_has_roles: ~1 rows (approximately)
-DELETE FROM `model_has_roles`;
-INSERT INTO `model_has_roles` (`role_id`, `model_type`, `model_id`) VALUES
-	(1, 'App\\Models\\User', 1),
-	(2, 'App\\Models\\User', 2);
+INSERT IGNORE INTO `model_has_roles` (`role_id`, `model_type`, `model_id`) VALUES
+	(1, 'App\\Models\\User', 1);
 
 -- Dumping structure for table db_membership.password_resets
 CREATE TABLE IF NOT EXISTS `password_resets` (
@@ -362,7 +379,6 @@ CREATE TABLE IF NOT EXISTS `password_resets` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table db_membership.password_resets: ~0 rows (approximately)
-DELETE FROM `password_resets`;
 
 -- Dumping structure for table db_membership.penyewaans
 CREATE TABLE IF NOT EXISTS `penyewaans` (
@@ -370,11 +386,8 @@ CREATE TABLE IF NOT EXISTS `penyewaans` (
   `sewa_id` bigint unsigned NOT NULL,
   `user_id` bigint unsigned DEFAULT NULL,
   `qty` int NOT NULL DEFAULT '1',
-  `metode` enum('cash','debit','transfer','credit','qr','tap') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `metode` enum('Tap','Cash') COLLATE utf8mb4_unicode_ci NOT NULL,
   `jumlah` int NOT NULL,
-  `keterangan` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `start_time` time DEFAULT NULL,
-  `end_time` time DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
   `bayar` double NOT NULL,
@@ -386,8 +399,7 @@ CREATE TABLE IF NOT EXISTS `penyewaans` (
   CONSTRAINT `penyewaans_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table db_membership.penyewaans: ~11 rows (approximately)
-DELETE FROM `penyewaans`;
+-- Dumping data for table db_membership.penyewaans: ~0 rows (approximately)
 
 -- Dumping structure for table db_membership.permissions
 CREATE TABLE IF NOT EXISTS `permissions` (
@@ -401,23 +413,22 @@ CREATE TABLE IF NOT EXISTS `permissions` (
 ) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table db_membership.permissions: ~15 rows (approximately)
-DELETE FROM `permissions`;
-INSERT INTO `permissions` (`id`, `name`, `guard_name`, `created_at`, `updated_at`) VALUES
-	(1, 'master-access', 'web', '2026-01-30 07:32:23', '2026-01-30 07:32:23'),
-	(2, 'user-access', 'web', '2026-01-30 07:32:23', '2026-01-30 07:32:23'),
-	(3, 'ticket-access', 'web', '2026-01-30 07:32:23', '2026-01-30 07:32:23'),
-	(4, 'sewa-access', 'web', '2026-01-30 07:32:23', '2026-01-30 07:32:23'),
-	(5, 'member-access', 'web', '2026-01-30 07:32:23', '2026-01-30 07:32:23'),
-	(6, 'transaction-access', 'web', '2026-01-30 07:32:23', '2026-01-30 07:32:23'),
-	(7, 'penyewaan-access', 'web', '2026-01-30 07:32:23', '2026-01-30 07:32:23'),
-	(8, 'topup-access', 'web', '2026-01-30 07:32:23', '2026-01-30 07:32:23'),
-	(9, 'report-access', 'web', '2026-01-30 07:32:23', '2026-01-30 07:32:23'),
-	(10, 'report-transaction-access', 'web', '2026-01-30 07:32:23', '2026-01-30 07:32:23'),
-	(11, 'report-penyewaan-access', 'web', '2026-01-30 07:32:23', '2026-01-30 07:32:23'),
-	(12, 'transaction-delete', 'web', '2026-01-30 07:32:23', '2026-01-30 07:32:23'),
-	(13, 'penyewaan-delete', 'web', '2026-01-30 07:32:23', '2026-01-30 07:32:23'),
-	(14, 'topup-delete', 'web', '2026-01-30 07:32:23', '2026-01-30 07:32:23'),
-	(15, 'management-access', 'web', '2026-01-30 07:32:23', '2026-01-30 07:32:23');
+INSERT IGNORE INTO `permissions` (`id`, `name`, `guard_name`, `created_at`, `updated_at`) VALUES
+	(1, 'master-access', 'web', '2026-03-30 09:29:44', '2026-03-30 09:29:44'),
+	(2, 'user-access', 'web', '2026-03-30 09:29:45', '2026-03-30 09:29:45'),
+	(3, 'ticket-access', 'web', '2026-03-30 09:29:45', '2026-03-30 09:29:45'),
+	(4, 'sewa-access', 'web', '2026-03-30 09:29:45', '2026-03-30 09:29:45'),
+	(5, 'member-access', 'web', '2026-03-30 09:29:45', '2026-03-30 09:29:45'),
+	(6, 'transaction-access', 'web', '2026-03-30 09:29:45', '2026-03-30 09:29:45'),
+	(7, 'penyewaan-access', 'web', '2026-03-30 09:29:45', '2026-03-30 09:29:45'),
+	(8, 'topup-access', 'web', '2026-03-30 09:29:45', '2026-03-30 09:29:45'),
+	(9, 'report-access', 'web', '2026-03-30 09:29:45', '2026-03-30 09:29:45'),
+	(10, 'report-transaction-access', 'web', '2026-03-30 09:29:45', '2026-03-30 09:29:45'),
+	(11, 'report-penyewaan-access', 'web', '2026-03-30 09:29:45', '2026-03-30 09:29:45'),
+	(12, 'transaction-delete', 'web', '2026-03-30 09:29:45', '2026-03-30 09:29:45'),
+	(13, 'penyewaan-delete', 'web', '2026-03-30 09:29:46', '2026-03-30 09:29:46'),
+	(14, 'topup-delete', 'web', '2026-03-30 09:29:46', '2026-03-30 09:29:46'),
+	(15, 'management-access', 'web', '2026-03-30 09:29:46', '2026-03-30 09:29:46');
 
 -- Dumping structure for table db_membership.personal_access_tokens
 CREATE TABLE IF NOT EXISTS `personal_access_tokens` (
@@ -436,7 +447,6 @@ CREATE TABLE IF NOT EXISTS `personal_access_tokens` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table db_membership.personal_access_tokens: ~0 rows (approximately)
-DELETE FROM `personal_access_tokens`;
 
 -- Dumping structure for table db_membership.roles
 CREATE TABLE IF NOT EXISTS `roles` (
@@ -447,13 +457,11 @@ CREATE TABLE IF NOT EXISTS `roles` (
   `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `roles_name_guard_name_unique` (`name`,`guard_name`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table db_membership.roles: ~2 rows (approximately)
-DELETE FROM `roles`;
-INSERT INTO `roles` (`id`, `name`, `guard_name`, `created_at`, `updated_at`) VALUES
-	(1, 'Admin', 'web', '2026-01-30 07:32:23', '2026-01-30 07:32:23'),
-	(2, 'Kasir', 'web', '2026-01-30 08:29:18', '2026-01-30 08:29:18');
+-- Dumping data for table db_membership.roles: ~1 rows (approximately)
+INSERT IGNORE INTO `roles` (`id`, `name`, `guard_name`, `created_at`, `updated_at`) VALUES
+	(1, 'Admin', 'web', '2026-03-30 09:29:46', '2026-03-30 09:29:46');
 
 -- Dumping structure for table db_membership.role_has_permissions
 CREATE TABLE IF NOT EXISTS `role_has_permissions` (
@@ -465,9 +473,8 @@ CREATE TABLE IF NOT EXISTS `role_has_permissions` (
   CONSTRAINT `role_has_permissions_role_id_foreign` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table db_membership.role_has_permissions: ~19 rows (approximately)
-DELETE FROM `role_has_permissions`;
-INSERT INTO `role_has_permissions` (`permission_id`, `role_id`) VALUES
+-- Dumping data for table db_membership.role_has_permissions: ~15 rows (approximately)
+INSERT IGNORE INTO `role_has_permissions` (`permission_id`, `role_id`) VALUES
 	(1, 1),
 	(2, 1),
 	(3, 1),
@@ -482,78 +489,45 @@ INSERT INTO `role_has_permissions` (`permission_id`, `role_id`) VALUES
 	(12, 1),
 	(13, 1),
 	(14, 1),
-	(15, 1),
-	(3, 2),
-	(4, 2),
-	(5, 2),
-	(6, 2);
+	(15, 1);
 
 -- Dumping structure for table db_membership.settings
 CREATE TABLE IF NOT EXISTS `settings` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
-  `key` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `value` text COLLATE utf8mb4_unicode_ci,
+  `name` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `logo` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `ucapan` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `deskripsi` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `ppn` int DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `key` (`key`)
-) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  `use_logo` int NOT NULL DEFAULT '1',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table db_membership.settings: ~12 rows (approximately)
-DELETE FROM `settings`;
-INSERT INTO `settings` (`id`, `key`, `value`, `created_at`, `updated_at`) VALUES
-	(1, 'name', 'ANWA PURI RESIDENCE SPORT CLUB', '2026-02-24 04:50:44', '2026-02-24 07:08:31'),
-	(2, 'logo', 'logo/260224020831164.png', '2026-02-24 04:50:44', '2026-02-24 07:08:31'),
-	(3, 'ucapan', 'Terima Kasih', '2026-02-24 04:50:44', '2026-02-24 04:50:44'),
-	(4, 'deskripsi', 'IG WA', '2026-02-24 04:50:44', '2026-02-27 06:34:24'),
-	(5, 'ppn', '0', '2026-02-24 04:50:44', '2026-02-24 04:50:44'),
-	(8, 'print_mode', 'per_ticket', '2026-02-24 04:50:44', '2026-02-24 09:09:11'),
-	(9, 'dashboard_metric_mode', 'count', '2026-02-24 04:50:44', '2026-02-24 07:22:49'),
-	(10, 'whatsapp_enabled', '0', '2026-02-24 04:50:44', '2026-02-24 04:50:44'),
-	(11, 'use_logo', '1', '2026-02-24 04:50:44', '2026-02-24 07:08:31'),
-	(12, 'member_suspend_before_days', '7', '2026-02-24 04:53:19', '2026-02-24 04:53:19'),
-	(13, 'member_suspend_after_days', '30', '2026-02-24 04:53:19', '2026-02-24 04:53:19'),
-	(15, 'ticket_print_orientation', 'landscape', '2026-02-24 08:20:13', '2026-02-24 09:10:35'),
-	(16, 'member_reactivation_admin_fee', '2500', '2026-02-25 08:54:45', '2026-02-25 08:55:23');
-
--- Dumping structure for table db_membership.settings_legacy
-CREATE TABLE IF NOT EXISTS `settings_legacy` (
-  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
-  `key` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `value` text COLLATE utf8mb4_unicode_ci,
-  `created_at` timestamp NULL DEFAULT NULL,
-  `updated_at` timestamp NULL DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `key` (`key`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Dumping data for table db_membership.settings_legacy: ~0 rows (approximately)
-DELETE FROM `settings_legacy`;
+-- Dumping data for table db_membership.settings: ~0 rows (approximately)
+INSERT IGNORE INTO `settings` (`id`, `name`, `logo`, `ucapan`, `deskripsi`, `ppn`, `created_at`, `updated_at`, `use_logo`) VALUES
+	(1, 'My Member ID', NULL, 'Terima Kasih', 'Terima kasih', 0, '2026-03-31 02:47:34', '2026-03-31 02:47:58', 0);
 
 -- Dumping structure for table db_membership.sewa
 CREATE TABLE IF NOT EXISTS `sewa` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `harga` int NOT NULL,
-  `is_nominal_flexible` tinyint(1) NOT NULL DEFAULT '0',
   `device` int NOT NULL,
-  `use_time` tinyint(1) NOT NULL DEFAULT '1',
-  `print_qr` tinyint(1) NOT NULL DEFAULT '0',
   `use_ppn` tinyint(1) NOT NULL DEFAULT '0',
   `ppn` decimal(12,2) NOT NULL DEFAULT '0.00',
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table db_membership.sewa: ~5 rows (approximately)
-DELETE FROM `sewa`;
-INSERT INTO `sewa` (`id`, `name`, `harga`, `is_nominal_flexible`, `device`, `use_time`, `print_qr`, `use_ppn`, `ppn`, `created_at`, `updated_at`) VALUES
-	(1, 'Sewa Ban', 10000, 1, 1, 0, 0, 0, 0.00, '2026-01-30 07:32:23', '2026-02-27 05:56:03'),
-	(2, 'Sewa Baju Renang', 10000, 1, 2, 0, 0, 0, 0.00, '2026-01-30 07:32:23', '2026-02-27 05:56:09'),
-	(3, 'Sewa Pelampung', 10000, 0, 3, 0, 0, 0, 0.00, '2026-01-30 07:32:23', '2026-01-30 07:32:23'),
-	(4, 'Sewa Tikar', 10000, 0, 4, 1, 0, 0, 0.00, '2026-01-30 07:32:23', '2026-02-10 05:03:23'),
-	(5, 'Spicy Classic Fried Rice', 500000, 0, 3232, 0, 0, 0, 0.00, '2026-02-10 05:02:00', '2026-02-10 05:02:09');
+-- Dumping data for table db_membership.sewa: ~4 rows (approximately)
+INSERT IGNORE INTO `sewa` (`id`, `name`, `harga`, `device`, `use_ppn`, `ppn`, `created_at`, `updated_at`) VALUES
+	(1, 'Sewa Ban', 10000, 1, 0, 0.00, '2026-03-30 09:29:44', '2026-03-30 09:29:44'),
+	(2, 'Sewa Baju Renang', 10000, 2, 0, 0.00, '2026-03-30 09:29:44', '2026-03-30 09:29:44'),
+	(3, 'Sewa Pelampung', 10000, 3, 0, 0.00, '2026-03-30 09:29:44', '2026-03-30 09:29:44'),
+	(4, 'Sewa Tikar', 10000, 4, 0, 0.00, '2026-03-30 09:29:44', '2026-03-30 09:29:44');
 
 -- Dumping structure for table db_membership.terusans
 CREATE TABLE IF NOT EXISTS `terusans` (
@@ -567,7 +541,6 @@ CREATE TABLE IF NOT EXISTS `terusans` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table db_membership.terusans: ~0 rows (approximately)
-DELETE FROM `terusans`;
 
 -- Dumping structure for table db_membership.terusan_ticket
 CREATE TABLE IF NOT EXISTS `terusan_ticket` (
@@ -580,7 +553,6 @@ CREATE TABLE IF NOT EXISTS `terusan_ticket` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table db_membership.terusan_ticket: ~0 rows (approximately)
-DELETE FROM `terusan_ticket`;
 
 -- Dumping structure for table db_membership.tickets
 CREATE TABLE IF NOT EXISTS `tickets` (
@@ -590,22 +562,26 @@ CREATE TABLE IF NOT EXISTS `tickets` (
   `harga` int NOT NULL,
   `tripod` int NOT NULL,
   `use_ppn` tinyint(1) NOT NULL DEFAULT '0',
-  `ppn` decimal(12,2) NOT NULL DEFAULT '0.00',
+  `ppn` decimal(12,2) DEFAULT '0.00',
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `tickets_jenis_ticket_id_foreign` (`jenis_ticket_id`),
   CONSTRAINT `tickets_jenis_ticket_id_foreign` FOREIGN KEY (`jenis_ticket_id`) REFERENCES `jenis_tickets` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table db_membership.tickets: ~5 rows (approximately)
-DELETE FROM `tickets`;
-INSERT INTO `tickets` (`id`, `jenis_ticket_id`, `name`, `harga`, `tripod`, `use_ppn`, `ppn`, `created_at`, `updated_at`) VALUES
-	(1, 1, 'HTM Reguler Weekday', 20000, 1, 0, 0.00, '2026-01-30 07:32:23', '2026-01-30 07:46:46'),
-	(2, 1, 'HTM Reguler Weekend', 30000, 2, 0, 0.00, '2026-01-30 07:32:23', '2026-01-30 07:32:23'),
-	(3, 1, 'HTM Terusan Weekday', 40000, 3, 0, 0.00, '2026-01-30 07:32:23', '2026-01-30 07:32:23'),
-	(4, 1, 'HTM Terusan Weekend', 50000, 4, 0, 0.00, '2026-01-30 07:32:23', '2026-01-30 07:32:23'),
-	(5, 1, 'HTM Promo Pelajar', 15000, 1, 0, 0.00, '2026-01-30 08:34:18', '2026-01-30 08:34:31');
+-- Dumping data for table db_membership.tickets: ~4 rows (approximately)
+INSERT IGNORE INTO `tickets` (`id`, `jenis_ticket_id`, `name`, `harga`, `tripod`, `use_ppn`, `ppn`, `created_at`, `updated_at`) VALUES
+	(6, 1, 'Wp Weekday', 25000, 1, 0, 0.00, '2026-03-31 03:03:48', '2026-03-31 03:03:48'),
+	(7, 1, 'WP WEEKEND', 35000, 1, 0, 0.00, '2026-03-31 03:05:42', '2026-03-31 03:05:42'),
+	(8, 1, 'GYM WEEKDAY', 50000, 1, 0, 0.00, '2026-03-31 03:06:41', '2026-03-31 03:06:41'),
+	(9, 1, 'GYM WEEKEND', 50000, 1, 0, 0.00, '2026-03-31 03:07:04', '2026-03-31 03:07:04'),
+	(10, 1, 'ROMBONGAN SEKOLAH 25 ORANG', 20000, 1, 0, 0.00, '2026-03-31 03:08:12', '2026-03-31 03:08:12'),
+	(11, 1, 'ROMBONGAN SEKOLAH 26-50 ORANG', 17500, 1, 0, 0.00, '2026-03-31 03:08:47', '2026-03-31 03:08:47'),
+	(12, 1, 'ROMBONGAN SEKOLAH 51-75 ORANG', 15000, 1, 0, 0.00, '2026-03-31 03:09:38', '2026-03-31 03:09:38'),
+	(13, 1, 'ROMBONGAN SEKOLAH 76-100 ORANG', 12500, 1, 0, 0.00, '2026-03-31 03:10:06', '2026-03-31 03:10:06'),
+	(14, 1, 'ROMBONGAN SEKOLAH 100-UP', 10000, 1, 0, 0.00, '2026-03-31 03:10:37', '2026-03-31 03:10:37'),
+	(15, 1, 'SEWA KANTIN', 1750000, 1, 0, 0.00, '2026-03-31 03:11:05', '2026-03-31 03:11:05');
 
 -- Dumping structure for table db_membership.topups
 CREATE TABLE IF NOT EXISTS `topups` (
@@ -620,14 +596,11 @@ CREATE TABLE IF NOT EXISTS `topups` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table db_membership.topups: ~0 rows (approximately)
-DELETE FROM `topups`;
 
 -- Dumping structure for table db_membership.transactions
 CREATE TABLE IF NOT EXISTS `transactions` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `ticket_id` bigint unsigned DEFAULT '0',
-  `member_id` bigint unsigned DEFAULT NULL,
-  `member_info` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `user_id` bigint unsigned NOT NULL,
   `no_trx` int NOT NULL,
   `ticket_code` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -635,17 +608,13 @@ CREATE TABLE IF NOT EXISTS `transactions` (
   `tipe` enum('group','individual') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'group',
   `amount` int NOT NULL DEFAULT '0',
   `disc` int NOT NULL DEFAULT '0',
-  `metode` enum('cash','debit','kredit','qris','transfer') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `nama_kartu` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `no_kartu` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `bank` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `metode` enum('cash','debit','kredit','qris') COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `discount` int NOT NULL DEFAULT '0',
   `amount_scanned` int NOT NULL DEFAULT '0',
   `status` enum('open','closed') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'open',
   `gate` int DEFAULT NULL,
   `is_active` int NOT NULL DEFAULT '0',
   `ppn` decimal(12,2) NOT NULL DEFAULT '0.00',
-  `admin_fee` bigint unsigned NOT NULL DEFAULT '0',
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
   `is_print` int DEFAULT '0',
@@ -654,12 +623,19 @@ CREATE TABLE IF NOT EXISTS `transactions` (
   PRIMARY KEY (`id`),
   KEY `transactions_user_id_foreign` (`user_id`),
   CONSTRAINT `transactions_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table db_membership.transactions: ~59 rows (approximately)
-DELETE FROM `transactions`;
-INSERT INTO `transactions` (`id`, `ticket_id`, `member_id`, `member_info`, `user_id`, `no_trx`, `ticket_code`, `transaction_type`, `tipe`, `amount`, `disc`, `metode`, `nama_kartu`, `no_kartu`, `bank`, `discount`, `amount_scanned`, `status`, `gate`, `is_active`, `ppn`, `admin_fee`, `created_at`, `updated_at`, `is_print`, `bayar`, `kembali`) VALUES
-	(1, 1, 21, 'Kino - 646564', 1, 1, 'REG/001', 'registration', 'individual', 1, 0, 'debit', NULL, NULL, NULL, 0, 0, 'open', NULL, 1, 0.00, 2500, '2026-02-27 06:31:27', '2026-02-27 06:31:27', 0, 150000, 0);
+-- Dumping data for table db_membership.transactions: ~2 rows (approximately)
+INSERT IGNORE INTO `transactions` (`id`, `ticket_id`, `user_id`, `no_trx`, `ticket_code`, `transaction_type`, `tipe`, `amount`, `disc`, `metode`, `discount`, `amount_scanned`, `status`, `gate`, `is_active`, `ppn`, `created_at`, `updated_at`, `is_print`, `bayar`, `kembali`) VALUES
+	(1, 0, 1, 1, 'INV/30032026/3351', 'ticket', 'group', 0, 0, NULL, 0, 0, 'open', NULL, 0, 0.00, '2026-03-30 09:37:37', '2026-03-30 09:37:37', 0, 0, 0),
+	(2, 1, 1, 2, 'REG/300320262140', 'registration', 'individual', 1, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-03-30 09:54:19', '2026-03-30 09:54:19', 0, 250000, 0),
+	(3, 1, 1, 3, 'REG/300320268853', 'registration', 'individual', 1, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-03-30 11:00:53', '2026-03-30 11:00:53', 0, 250000, 0),
+	(4, 7, 1, 4, 'REG/300320265419', 'registration', 'group', 6, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-03-30 11:05:10', '2026-03-30 11:05:10', 0, 700000, 0),
+	(5, 2, 1, 5, 'REG/300320264301', 'registration', 'group', 2, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-03-30 11:06:29', '2026-03-30 11:06:29', 0, 375000, 0),
+	(6, 4, 1, 6, 'REG/300320264304', 'registration', 'group', 4, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-03-30 11:08:07', '2026-03-30 11:08:07', 0, 650000, 0),
+	(7, 3, 1, 7, 'REG/300320264962', 'registration', 'group', 3, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-03-30 11:09:06', '2026-03-30 11:09:06', 0, 500000, 0),
+	(8, 0, 1, 1, 'INV/31032026/6973', 'ticket', 'group', 0, 0, NULL, 0, 0, 'open', NULL, 0, 0.00, '2026-03-31 00:48:54', '2026-03-31 00:48:54', 0, 0, 0),
+	(10, 2, 1, 2, 'REG/310320263365', 'registration', 'group', 2, 0, 'cash', 0, 0, 'open', NULL, 1, 0.00, '2026-03-31 04:12:24', '2026-03-31 04:12:24', 0, 375000, 0);
 
 -- Dumping structure for table db_membership.users
 CREATE TABLE IF NOT EXISTS `users` (
@@ -675,38 +651,11 @@ CREATE TABLE IF NOT EXISTS `users` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `users_username_unique` (`username`),
   UNIQUE KEY `users_uid_unique` (`uid`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table db_membership.users: ~1 rows (approximately)
-DELETE FROM `users`;
-INSERT INTO `users` (`id`, `name`, `username`, `password`, `foto`, `created_at`, `updated_at`, `uid`, `is_active`) VALUES
-	(1, 'Super Admin', 'superadmin', '$2y$10$sswDhoSF0XL0ePqzbGcZJOHuLzwe5TezY5l9DYQvXPzdR2iB79EaK', NULL, '2026-01-30 07:32:23', '2026-01-30 08:26:42', NULL, 1),
-	(2, 'Dapur Nusantara', 'rahmawnj', '$2y$10$PiYxGR/REzX1dJHsG74QkOQTOiXQXAewCFhL9b/kMyNvlz81n4qhe', NULL, '2026-02-24 02:40:44', '2026-02-24 02:40:44', '08543212', 1);
-
--- Dumping structure for table db_membership.whatsapp_notification_logs
-CREATE TABLE IF NOT EXISTS `whatsapp_notification_logs` (
-  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
-  `type` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'renewal_reminder, invoice',
-  `member_id` bigint unsigned DEFAULT NULL,
-  `transaction_id` bigint unsigned DEFAULT NULL,
-  `recipient_phone` varchar(25) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `message` text COLLATE utf8mb4_unicode_ci NOT NULL,
-  `status` enum('pending','sent','failed') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'pending',
-  `retry_count` smallint unsigned NOT NULL DEFAULT '0',
-  `provider_response` text COLLATE utf8mb4_unicode_ci,
-  `sent_at` timestamp NULL DEFAULT NULL,
-  `created_at` timestamp NULL DEFAULT NULL,
-  `updated_at` timestamp NULL DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `idx_wa_logs_type_status` (`type`,`status`),
-  KEY `idx_wa_logs_member_id` (`member_id`),
-  KEY `idx_wa_logs_transaction_id` (`transaction_id`),
-  KEY `idx_wa_logs_recipient_phone` (`recipient_phone`),
-  KEY `idx_wa_logs_sent_at` (`sent_at`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Dumping data for table db_membership.whatsapp_notification_logs: ~5 rows (approximately)
-DELETE FROM `whatsapp_notification_logs`;
+INSERT IGNORE INTO `users` (`id`, `name`, `username`, `password`, `foto`, `created_at`, `updated_at`, `uid`, `is_active`) VALUES
+	(1, 'Developer', 'developer', '$2y$10$GkfxVaUdGIbBnZ29fWJojeZFyfohYRAjlltnfmU2HZ5HYAAKffvSG', NULL, '2026-03-30 09:29:47', '2026-03-30 09:29:47', NULL, 1);
 
 /*!40103 SET TIME_ZONE=IFNULL(@OLD_TIME_ZONE, 'system') */;
 /*!40101 SET SQL_MODE=IFNULL(@OLD_SQL_MODE, '') */;
