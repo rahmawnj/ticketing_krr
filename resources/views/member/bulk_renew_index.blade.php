@@ -145,6 +145,10 @@
         return day + '/' + month + '/' + year;
     }
 
+    function formatIsoDateText(value) {
+        return formatDisplayDate(parseIsoDate(value));
+    }
+
     function addDays(date, days) {
         var result = cloneDate(date);
         result.setDate(result.getDate() + days);
@@ -158,8 +162,8 @@
             return startDate;
         }
 
-        if (duration % 30 === 0) {
-            var monthsToAdd = duration / 30;
+        var monthsToAdd = resolveMonthCycleCount(duration);
+        if (monthsToAdd !== null) {
             var originalDay = startDate.getDate();
             var targetMonthDate = new Date(startDate.getFullYear(), startDate.getMonth() + monthsToAdd + 1, 0);
             var targetDay = Math.min(originalDay, targetMonthDate.getDate());
@@ -170,6 +174,21 @@
         return addDays(startDate, duration);
     }
 
+    function resolveMonthCycleCount(duration) {
+        if (duration <= 0) {
+            return null;
+        }
+
+        var monthlyDurations = [30, 31];
+        for (var i = 0; i < monthlyDurations.length; i++) {
+            if (duration % monthlyDurations[i] === 0) {
+                return duration / monthlyDurations[i];
+            }
+        }
+
+        return null;
+    }
+
     function expiryAfterCycles(anchorStartDate, duration, cycleNumber) {
         cycleNumber = Math.max(parseInt(cycleNumber, 10) || 1, 1);
 
@@ -177,7 +196,7 @@
             return cloneDate(anchorStartDate);
         }
 
-        if (duration % 30 === 0) {
+        if (resolveMonthCycleCount(duration) !== null) {
             return expiryFromStart(anchorStartDate, duration * cycleNumber);
         }
 
@@ -433,8 +452,8 @@
             $('#detail-nama').text(member.nama || '-');
             $('#detail-nohp').text(member.no_hp || '-');
             $('#detail-membership').text((member.membership && member.membership.name) ? member.membership.name : '-');
-            $('#detail-register').text(member.tgl_register || '-');
-            $('#detail-expired').text(member.tgl_expired || '-');
+            $('#detail-register').text(formatIsoDateText(member.tgl_register));
+            $('#detail-expired').text(formatIsoDateText(member.tgl_expired));
 
             var $subList = $('#detail-submembers');
             var $subWrap = $('#detail-submember-wrap');

@@ -978,6 +978,16 @@ public function getRenewableMembers(Request $request)
             });
         })
         ->addIndexColumn()
+        ->editColumn('tgl_register', function ($row) {
+            return filled($row->tgl_register)
+                ? Carbon::parse($row->tgl_register)->format('d/m/Y')
+                : '-';
+        })
+        ->editColumn('tgl_expired', function ($row) {
+            return filled($row->tgl_expired)
+                ? Carbon::parse($row->tgl_expired)->format('d/m/Y')
+                : '-';
+        })
         ->addColumn('package_price', function ($row) {
             if (!$row->membership) {
                 return 'N/A';

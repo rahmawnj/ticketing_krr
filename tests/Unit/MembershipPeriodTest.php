@@ -17,6 +17,15 @@ class MembershipPeriodTest extends TestCase
         $this->assertSame('2026-04-18', $expiredAt->format('Y-m-d'));
     }
 
+    public function test_31_day_monthly_membership_keeps_the_same_calendar_day_on_registration()
+    {
+        $startDate = Carbon::create(2026, 3, 13, 10, 0, 0, 'Asia/Jakarta');
+
+        $expiredAt = MembershipPeriod::expiryFromStart($startDate, 31);
+
+        $this->assertSame('2026-04-13', $expiredAt->format('Y-m-d'));
+    }
+
     public function test_yearly_membership_keeps_the_same_calendar_day()
     {
         $startDate = Carbon::create(2026, 3, 18, 10, 0, 0, 'Asia/Jakarta');
@@ -57,6 +66,17 @@ class MembershipPeriodTest extends TestCase
 
         $this->assertSame('2026-04-19', $renewalPeriod['start_date']->format('Y-m-d'));
         $this->assertSame('2026-05-18', $renewalPeriod['expired_at']->format('Y-m-d'));
+    }
+
+    public function test_31_day_standard_renewal_keeps_the_original_join_day()
+    {
+        $anchorStartDate = Carbon::create(2026, 3, 13, 10, 0, 0, 'Asia/Jakarta');
+        $currentExpiredAt = Carbon::create(2026, 4, 13, 0, 0, 0, 'Asia/Jakarta');
+
+        $renewalPeriod = MembershipPeriod::standardRenewalPeriod($anchorStartDate, $currentExpiredAt, 31);
+
+        $this->assertSame('2026-04-14', $renewalPeriod['start_date']->format('Y-m-d'));
+        $this->assertSame('2026-05-13', $renewalPeriod['expired_at']->format('Y-m-d'));
     }
 
     public function test_non_monthly_duration_still_uses_day_based_calculation()

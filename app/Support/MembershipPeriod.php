@@ -15,8 +15,9 @@ class MembershipPeriod
             return $startDate;
         }
 
-        if ($durationDays % 30 === 0) {
-            return $startDate->copy()->addMonthsNoOverflow((int) ($durationDays / 30));
+        $monthCycleCount = self::monthCycleCount($durationDays);
+        if ($monthCycleCount !== null) {
+            return $startDate->copy()->addMonthsNoOverflow($monthCycleCount);
         }
 
         return $startDate->copy()->addDays($durationDays);
@@ -67,10 +68,26 @@ class MembershipPeriod
             return $anchorStartDate;
         }
 
-        if ($durationDays % 30 === 0) {
-            return $anchorStartDate->copy()->addMonthsNoOverflow((int) (($durationDays / 30) * $cycleNumber));
+        $monthCycleCount = self::monthCycleCount($durationDays);
+        if ($monthCycleCount !== null) {
+            return $anchorStartDate->copy()->addMonthsNoOverflow($monthCycleCount * $cycleNumber);
         }
 
         return $anchorStartDate->copy()->addDays($durationDays * $cycleNumber);
+    }
+
+    private static function monthCycleCount(int $durationDays): ?int
+    {
+        if ($durationDays <= 0) {
+            return null;
+        }
+
+        foreach ([30, 31] as $monthlyDuration) {
+            if ($durationDays % $monthlyDuration === 0) {
+                return (int) ($durationDays / $monthlyDuration);
+            }
+        }
+
+        return null;
     }
 }

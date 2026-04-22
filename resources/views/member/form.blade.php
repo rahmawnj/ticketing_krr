@@ -348,9 +348,17 @@
     function calculateMembershipExpiryDate(duration) {
         var today = new Date();
         var baseDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        var monthlyDurations = [30, 31];
+        var monthsToAdd = null;
 
-        if (duration > 0 && duration % 30 === 0) {
-            var monthsToAdd = duration / 30;
+        for (var i = 0; i < monthlyDurations.length; i++) {
+            if (duration > 0 && duration % monthlyDurations[i] === 0) {
+                monthsToAdd = duration / monthlyDurations[i];
+                break;
+            }
+        }
+
+        if (monthsToAdd !== null) {
             var originalDay = baseDate.getDate();
             var targetMonthDate = new Date(baseDate.getFullYear(), baseDate.getMonth() + monthsToAdd + 1, 0);
             var targetDay = Math.min(originalDay, targetMonthDate.getDate());
