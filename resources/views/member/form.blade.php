@@ -345,6 +345,23 @@
         return parseMoneyNumber(selectedOption.attr('data-admin-fee'));
     }
 
+    function calculateMembershipExpiryDate(duration) {
+        var today = new Date();
+        var baseDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+        if (duration > 0 && duration % 30 === 0) {
+            var monthsToAdd = duration / 30;
+            var originalDay = baseDate.getDate();
+            var targetMonthDate = new Date(baseDate.getFullYear(), baseDate.getMonth() + monthsToAdd + 1, 0);
+            var targetDay = Math.min(originalDay, targetMonthDate.getDate());
+
+            return new Date(targetMonthDate.getFullYear(), targetMonthDate.getMonth(), targetDay);
+        }
+
+        baseDate.setDate(baseDate.getDate() + duration);
+        return baseDate;
+    }
+
     function calculateAndDisplayPrice() {
         var selectedOption = $('#membership').find('option:selected');
         var durationStr = selectedOption.data('duration');
@@ -372,12 +389,11 @@
 
             // --- Kalkulasi Tanggal Expired (hanya di create/saat ganti member) ---
             if ("{{ $method }}" === "POST") {
-                var today = new Date();
-                today.setDate(today.getDate() + duration);
+                var expiredDate = calculateMembershipExpiryDate(duration);
 
-                var year = today.getFullYear();
-                var month = (today.getMonth() + 1).toString().padStart(2, '0');
-                var day = today.getDate().toString().padStart(2, '0');
+                var year = expiredDate.getFullYear();
+                var month = (expiredDate.getMonth() + 1).toString().padStart(2, '0');
+                var day = expiredDate.getDate().toString().padStart(2, '0');
                 var formattedDate = year + '-' + month + '-' + day;
 
                 $('#tgl_expired').val(formattedDate);

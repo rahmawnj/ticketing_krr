@@ -48,6 +48,17 @@ class MembershipPeriodTest extends TestCase
         $this->assertSame('2026-06-18', $renewalPeriod['expired_at']->format('Y-m-d'));
     }
 
+    public function test_standard_renewal_keeps_the_original_join_day_for_regular_renewal()
+    {
+        $anchorStartDate = Carbon::create(2026, 3, 18, 10, 0, 0, 'Asia/Jakarta');
+        $currentExpiredAt = Carbon::create(2026, 4, 18, 0, 0, 0, 'Asia/Jakarta');
+
+        $renewalPeriod = MembershipPeriod::standardRenewalPeriod($anchorStartDate, $currentExpiredAt, 30);
+
+        $this->assertSame('2026-04-19', $renewalPeriod['start_date']->format('Y-m-d'));
+        $this->assertSame('2026-05-18', $renewalPeriod['expired_at']->format('Y-m-d'));
+    }
+
     public function test_non_monthly_duration_still_uses_day_based_calculation()
     {
         $startDate = Carbon::create(2026, 3, 18, 10, 0, 0, 'Asia/Jakarta');

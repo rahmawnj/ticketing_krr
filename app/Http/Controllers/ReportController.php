@@ -115,8 +115,8 @@ class ReportController extends Controller
         if ((!$from || !$to) && $request->filled('daterange')) {
             try {
                 $range = explode(' - ', (string) $request->daterange);
-                $from = $this->parseReportDateInput(trim($range[0]))?->format('Y-m-d');
-                $to = $this->parseReportDateInput(trim($range[1]))?->format('Y-m-d');
+                $from = Carbon::createFromFormat('m/d/Y', trim($range[0]))->format('Y-m-d');
+                $to = Carbon::createFromFormat('m/d/Y', trim($range[1]))->format('Y-m-d');
             } catch (\Throwable $e) {
                 $from = null;
                 $to = null;
@@ -142,19 +142,6 @@ class ReportController extends Controller
             'rows',
             'footer'
         ));
-    }
-
-    private function parseReportDateInput(string $value): ?Carbon
-    {
-        foreach (['d/m/Y', 'm/d/Y', 'Y-m-d'] as $format) {
-            try {
-                return Carbon::createFromFormat($format, $value);
-            } catch (\Throwable $e) {
-                continue;
-            }
-        }
-
-        return null;
     }
 
     public function exportRingkasanTransaksi(Request $request)

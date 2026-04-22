@@ -16,6 +16,8 @@ define('LARAVEL_START', microtime(true));
 |
 */
 
+
+
 if (file_exists($maintenance = __DIR__.'/../storage/framework/maintenance.php')) {
     require $maintenance;
 }
@@ -31,6 +33,8 @@ if (file_exists($maintenance = __DIR__.'/../storage/framework/maintenance.php'))
 |
 */
 
+
+
 require __DIR__.'/../vendor/autoload.php';
 
 /*
@@ -43,6 +47,7 @@ require __DIR__.'/../vendor/autoload.php';
 | to this client's browser, allowing them to enjoy our application.
 |
 */
+
 
 $app = require_once __DIR__.'/../bootstrap/app.php';
 

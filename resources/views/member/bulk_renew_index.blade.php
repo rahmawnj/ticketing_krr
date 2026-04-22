@@ -44,6 +44,7 @@
                     <th class="text-nowrap">Nama</th>
                     <th class="text-nowrap">No HP</th>
                     <th class="text-nowrap">Membership</th>
+                    <th class="text-nowrap">Tgl. Register</th>
                     <th class="text-nowrap">Harga Paket</th>
                     <th class="text-nowrap">Tgl. Expired Lama</th>
                     <th class="text-nowrap">Status</th>
@@ -72,6 +73,7 @@
                             <tr><th style="width: 180px;">Nama</th><td id="detail-nama">-</td></tr>
                             <tr><th>No HP</th><td id="detail-nohp">-</td></tr>
                             <tr><th>Membership</th><td id="detail-membership">-</td></tr>
+                            <tr><th>Tgl. Register</th><td id="detail-register">-</td></tr>
                             <tr><th>Tgl. Expired</th><td id="detail-expired">-</td></tr>
                         </table>
                         <div id="detail-submember-wrap" style="display: none;">
@@ -108,6 +110,113 @@
         return new Intl.NumberFormat('id-ID').format(Number(value || 0));
     }
 
+    function parseIsoDate(value) {
+        if (!value || typeof value !== 'string') {
+            return null;
+        }
+
+        var parts = value.split('-');
+        if (parts.length !== 3) {
+            return null;
+        }
+
+        var year = parseInt(parts[0], 10);
+        var month = parseInt(parts[1], 10);
+        var day = parseInt(parts[2], 10);
+        if (isNaN(year) || isNaN(month) || isNaN(day)) {
+            return null;
+        }
+
+        return new Date(year, month - 1, day);
+    }
+
+    function cloneDate(date) {
+        return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    }
+
+    function formatDisplayDate(date) {
+        if (!(date instanceof Date) || isNaN(date.getTime())) {
+            return '-';
+        }
+
+        var day = String(date.getDate()).padStart(2, '0');
+        var month = String(date.getMonth() + 1).padStart(2, '0');
+        var year = date.getFullYear();
+        return day + '/' + month + '/' + year;
+    }
+
+    function addDays(date, days) {
+        var result = cloneDate(date);
+        result.setDate(result.getDate() + days);
+        return result;
+    }
+
+    function expiryFromStart(date, duration) {
+        var startDate = cloneDate(date);
+
+        if (duration <= 0) {
+            return startDate;
+        }
+
+        if (duration % 30 === 0) {
+            var monthsToAdd = duration / 30;
+            var originalDay = startDate.getDate();
+            var targetMonthDate = new Date(startDate.getFullYear(), startDate.getMonth() + monthsToAdd + 1, 0);
+            var targetDay = Math.min(originalDay, targetMonthDate.getDate());
+
+            return new Date(targetMonthDate.getFullYear(), targetMonthDate.getMonth(), targetDay);
+        }
+
+        return addDays(startDate, duration);
+    }
+
+    function expiryAfterCycles(anchorStartDate, duration, cycleNumber) {
+        cycleNumber = Math.max(parseInt(cycleNumber, 10) || 1, 1);
+
+        if (duration <= 0) {
+            return cloneDate(anchorStartDate);
+        }
+
+        if (duration % 30 === 0) {
+            return expiryFromStart(anchorStartDate, duration * cycleNumber);
+        }
+
+        return addDays(anchorStartDate, duration * cycleNumber);
+    }
+
+    function buildEstimatedRenewalPeriod(registerDateText, expiredDateText, duration, renewalMode) {
+        var today = new Date();
+        var todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        var parsedRegisterDate = parseIsoDate(registerDateText);
+        var parsedExpiredDate = parseIsoDate(expiredDateText);
+
+        if (renewalMode === 'renewal_baru') {
+            return {
+                startDate: todayDate,
+                expiredAt: expiryFromStart(todayDate, duration)
+            };
+        }
+
+        var anchorStartDate = parsedRegisterDate || todayDate;
+        var referenceExpiredAt = parsedExpiredDate || anchorStartDate;
+        var cycleNumber = 1;
+        var nextExpiredAt = expiryAfterCycles(anchorStartDate, duration, cycleNumber);
+
+        while (nextExpiredAt.getTime() <= referenceExpiredAt.getTime()) {
+            cycleNumber += 1;
+            nextExpiredAt = expiryAfterCycles(anchorStartDate, duration, cycleNumber);
+        }
+
+        var previousExpiredAt = cycleNumber > 1
+            ? expiryAfterCycles(anchorStartDate, duration, cycleNumber - 1)
+            : anchorStartDate;
+
+        return {
+            startDate: addDays(previousExpiredAt, 1),
+            expiredAt: nextExpiredAt
+        };
+    }
+
     var table = $('#datatable-renew').DataTable({
         processing: true,
         serverSide: true,
@@ -122,6 +231,7 @@
             { data: 'nama', name: 'nama' },
             { data: 'no_hp', name: 'no_hp' },
             { data: 'membership.name', name: 'membership.name' },
+            { data: 'tgl_register', name: 'tgl_register' },
             { data: 'package_price', name: 'package_price' },
             { data: 'tgl_expired', name: 'tgl_expired' },
             { data: 'renewal_status', name: 'renewal_status', orderable: false, searchable: false },
@@ -137,6 +247,9 @@
         var memberName = $(this).data('name');
         var memberBasePriceRaw = parseInt($(this).attr('data-price-base-raw') || '0', 10) || 0;
         var memberPpnPriceRaw = parseInt($(this).attr('data-price-ppn-raw') || '0', 10) || 0;
+        var memberRegisterDate = $(this).attr('data-register-date') || '';
+        var memberExpiredDate = $(this).attr('data-expired-date') || '';
+        var memberDurationDays = parseInt($(this).attr('data-duration-days') || '0', 10) || 0;
         var renewalMode = $(this).data('renewal-mode') || 'renewal';
         var isRenewalBaru = renewalMode === 'renewal_baru';
         var confirmTitle = isRenewalBaru ? "Konfirmasi Perpanjangan Baru" : "Konfirmasi Perpanjangan";
@@ -232,11 +345,19 @@
         function renderRenewSummary() {
             var adminFee = getSelectedAdminFee();
             var total = memberBasePriceRaw + memberPpnPriceRaw + adminFee;
+            var estimatedPeriod = buildEstimatedRenewalPeriod(
+                memberRegisterDate,
+                memberExpiredDate,
+                memberDurationDays,
+                renewalMode
+            );
             summaryBox.innerHTML = ''
                 + 'Harga Dasar: <strong>Rp ' + formatRupiahNumber(memberBasePriceRaw) + '</strong><br>'
                 + 'PBJT: <strong>Rp ' + formatRupiahNumber(memberPpnPriceRaw) + '</strong><br>'
                 + 'Biaya Admin: <strong>Rp ' + formatRupiahNumber(adminFee) + '</strong><br>'
-                + 'Total: <strong>Rp ' + formatRupiahNumber(total) + '</strong>';
+                + 'Total: <strong>Rp ' + formatRupiahNumber(total) + '</strong><br>'
+                + 'Periode Aktif Baru: <strong>' + formatDisplayDate(estimatedPeriod.startDate) + '</strong><br>'
+                + 'Aktif Sampai: <strong>' + formatDisplayDate(estimatedPeriod.expiredAt) + '</strong>';
         }
 
         function toggleRenewCardFields() {
@@ -312,6 +433,7 @@
             $('#detail-nama').text(member.nama || '-');
             $('#detail-nohp').text(member.no_hp || '-');
             $('#detail-membership').text((member.membership && member.membership.name) ? member.membership.name : '-');
+            $('#detail-register').text(member.tgl_register || '-');
             $('#detail-expired').text(member.tgl_expired || '-');
 
             var $subList = $('#detail-submembers');

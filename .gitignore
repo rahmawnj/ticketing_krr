@@ -14,3 +14,8 @@ yarn-error.log
 /.idea
 /.vscode
 Caddyfile
+
+error_log
+public/error_log
+config/error_log
+bootstrap/error_log

@@ -225,10 +225,11 @@ public function store(CreateMemberRequest $request)
                  throw new \Exception("Jenis Member tidak valid.");
             }
 
-            $registerDate = Carbon::now('Asia/Jakarta')->startOfDay();
+            $registrationPeriod = $this->buildRegistrationPeriod((int) $membership->duration_days);
+
             $attr['tgl_lahir'] = $request->tanggal_lahir;
-            $attr['tgl_register'] = $registerDate->format('Y-m-d');
-            $attr['tgl_expired'] = MembershipPeriod::expiryFromStart($registerDate, (int) $membership->duration_days)->format('Y-m-d');
+            $attr['tgl_register'] = $registrationPeriod['start_date']->format('Y-m-d');
+            $attr['tgl_expired'] = $registrationPeriod['expired_at']->format('Y-m-d');
             $attr['qr_code'] = "MBR" . strtoupper(Str::random(13));
             $memberCodePrefix = strtoupper(preg_replace('/[^A-Z0-9]/', '', (string) ($membership->code ?? '')));
             if ($memberCodePrefix === '') {
@@ -500,10 +501,12 @@ public function update(UpdateMemberRequest $request, Member $member)
                          throw new \Exception("Jenis Member baru tidak valid.");
                     }
 
-                    $membershipStartDate = Carbon::now('Asia/Jakarta')->startOfDay();
+                    $registrationPeriod = $this->buildRegistrationPeriod((int) $membership->duration_days);
+
                     $attr['tgl_lahir'] = $request->tanggal_lahir;
                     $attr['membership_id'] = $membership->id;
-                    $attr['tgl_expired'] = MembershipPeriod::expiryFromStart($membershipStartDate, (int) $membership->duration_days)->format('Y-m-d');
+                    $attr['tgl_register'] = $registrationPeriod['start_date']->format('Y-m-d');
+                    $attr['tgl_expired'] = $registrationPeriod['expired_at']->format('Y-m-d');
                     $attr['access_used'] = 0;
 
                     HistoryMembership::where('member_id', $member->id)
@@ -513,7 +516,7 @@ public function update(UpdateMemberRequest $request, Member $member)
                     HistoryMembership::create([
                         'member_id' => $member->id,
                         'membership_id' => $membership->id,
-                        'start_date' => $membershipStartDate->format('Y-m-d'),
+                        'start_date' => $registrationPeriod['start_date']->format('Y-m-d'),
                         'end_date' => $attr['tgl_expired'],
                         'status' => 'active',
                     ]);
@@ -605,16 +608,23 @@ public function update(UpdateMemberRequest $request, Member $member)
                 $member->refresh();
                 $parentExpiredDate = $member->tgl_expired;
                 $parentMembershipId = $member->membership_id;
+                $parentRegisterDate = $member->tgl_register;
 
                 // Guard + autosync: child selalu ikut parent untuk membership & expired date.
                 if ($member->childs) {
                     foreach ($member->childs as $child) {
-                        $child->update([
+                        $childUpdate = [
                             'is_active' => $is_active,
                             'membership_id' => $parentMembershipId,
                             'tgl_expired' => $parentExpiredDate,
                             'access_used' => $is_membership_changed ? 0 : $child->access_used,
-                        ]);
+                        ];
+
+                        if ($is_membership_changed) {
+                            $childUpdate['tgl_register'] = $parentRegisterDate;
+                        }
+
+                        $child->update($childUpdate);
 
                         if ($is_membership_changed) {
                             // Nonaktifkan riwayat membership lama child
@@ -626,7 +636,7 @@ public function update(UpdateMemberRequest $request, Member $member)
                             HistoryMembership::create([
                                 'member_id' => $child->id,
                                 'membership_id' => $parentMembershipId,
-                                'start_date' => now('Asia/Jakarta')->format('Y-m-d'),
+                                'start_date' => $registrationPeriod['start_date']->format('Y-m-d'),
                                 'end_date' => $parentExpiredDate,
                                 'status' => 'active',
                             ]);
@@ -640,6 +650,9 @@ public function update(UpdateMemberRequest $request, Member $member)
                     $syncAttr = [];
                     if ((string) $member->tgl_expired !== (string) $parent->tgl_expired) {
                         $syncAttr['tgl_expired'] = $parent->tgl_expired;
+                    }
+                    if ((string) $member->tgl_register !== (string) $parent->tgl_register) {
+                        $syncAttr['tgl_register'] = $parent->tgl_register;
                     }
                     if ((int) $member->membership_id !== (int) $parent->membership_id) {
                         $syncAttr['membership_id'] = $parent->membership_id;
@@ -736,24 +749,19 @@ public function update(UpdateMemberRequest $request, Member $member)
                 return back()->with('error', 'Member belum berlangganan');
             }
 
-            $previousExpiredAt = Carbon::parse($member->tgl_expired)->startOfDay();
-            $anchorStartDate = Carbon::parse($member->tgl_register ?? $member->tgl_expired)->startOfDay();
-            $renewalPeriod = MembershipPeriod::standardRenewalPeriod(
-                $anchorStartDate,
-                $previousExpiredAt,
-                (int) $member->membership->duration_days
-            );
+            $registrationPeriod = $this->buildRegistrationPeriod((int) $member->membership->duration_days);
 
             $member->update([
-                'tgl_expired' => $renewalPeriod['expired_at']->format('Y-m-d'),
+                'tgl_register' => $registrationPeriod['start_date']->format('Y-m-d'),
+                'tgl_expired' => $registrationPeriod['expired_at']->format('Y-m-d'),
                 'access_used' => 0
             ]);
 
             HistoryMembership::create([
                 'member_id' => $member->id,
                 'membership_id' => $member->membership_id,
-                'start_date' => $renewalPeriod['start_date']->format('Y-m-d'),
-                'end_date' => $member->tgl_expired,
+                'start_date' => $registrationPeriod['start_date']->format('Y-m-d'),
+                'end_date' => $registrationPeriod['expired_at']->format('Y-m-d'),
                 'status' => 'active',
             ]);
 
@@ -1031,13 +1039,16 @@ public function getRenewableMembers(Request $request)
                         data-route="' . $detailRoute . '">
                         <i class="fa fa-eye"></i> Detail
                     </button>
-                    <button type="button"
-                        class="btn btn-sm ' . $buttonClass . ' btn-renew-single"
-                        data-id="' . $row->id . '"
-                        data-name="' . $row->nama . '"
-                        data-price-base="' . $formattedBasePrice . '"
-                        data-price-ppn="' . $formattedPpnPrice . '"
-                        data-price-admin="' . $formattedAdminFee . '"
+	                    <button type="button"
+	                        class="btn btn-sm ' . $buttonClass . ' btn-renew-single"
+	                        data-id="' . $row->id . '"
+	                        data-name="' . $row->nama . '"
+	                        data-register-date="' . e((string) $row->tgl_register) . '"
+	                        data-expired-date="' . e((string) $row->tgl_expired) . '"
+	                        data-duration-days="' . (int) ($row->membership->duration_days ?? 0) . '"
+	                        data-price-base="' . $formattedBasePrice . '"
+	                        data-price-ppn="' . $formattedPpnPrice . '"
+	                        data-price-admin="' . $formattedAdminFee . '"
                         data-price-base-raw="' . (int) round($basePrice) . '"
                         data-price-ppn-raw="' . (int) round($ppnPrice) . '"
                         data-price-admin-raw="' . (int) round($adminFee) . '"
@@ -1303,24 +1314,19 @@ public function processBulkRenew(Request $request)
 
                 // Tambahkan ke total akumulasi transaksi
 
-                $today = Carbon::now('Asia/Jakarta')->startOfDay();
-                $tgl_lama = Carbon::parse($member->tgl_expired)->startOfDay();
-                $anchorStartDate = Carbon::parse($member->tgl_register ?? $member->tgl_expired)->startOfDay();
-                $renewalPeriod = MembershipPeriod::standardRenewalPeriod(
-                    $anchorStartDate,
-                    $tgl_lama,
-                    (int) $duration
-                );
-                $tgl_baru_start = $isRenewalBaru
-                    ? $today->copy()
-                    : $renewalPeriod['start_date']->copy();
-                $tgl_expired_baru = ($isRenewalBaru
-                    ? MembershipPeriod::expiryFromStart($today, (int) $duration)
-                    : $renewalPeriod['expired_at']->copy())
-                    ->format('Y-m-d');
+                $membershipPeriod = $isRenewalBaru
+                    ? $this->buildRegistrationPeriod((int) $duration)
+                    : $this->buildStandardRenewalPeriod($member, (int) $duration);
+
+                $tgl_baru_start = $membershipPeriod['start_date'];
+                $tgl_expired_baru = $membershipPeriod['expired_at']->format('Y-m-d');
 
                 // Update member
-                $member->update(['tgl_expired' => $tgl_expired_baru, 'is_active' => true, 'access_used' => 0]); // Reset access
+                $memberUpdate = ['tgl_expired' => $tgl_expired_baru, 'is_active' => true, 'access_used' => 0];
+                if ($isRenewalBaru) {
+                    $memberUpdate['tgl_register'] = $tgl_baru_start->format('Y-m-d');
+                }
+                $member->update($memberUpdate); // Reset access
 
                 // Catat History untuk Parent
                 HistoryMembership::create([
@@ -1337,8 +1343,11 @@ public function processBulkRenew(Request $request)
 
                 $childMembers = Member::where('parent_id', $member->id)->get();
                 foreach ($childMembers as $child) {
-                    $child->update(['tgl_expired' => $tgl_expired_baru, 'is_active' => true, 'access_used' => 0]);
-                    $child->update(['access_used' => 0]);
+                    $childUpdate = ['tgl_expired' => $tgl_expired_baru, 'is_active' => true, 'access_used' => 0];
+                    if ($isRenewalBaru) {
+                        $childUpdate['tgl_register'] = $tgl_baru_start->format('Y-m-d');
+                    }
+                    $child->update($childUpdate);
 
                     HistoryMembership::create([
                         'member_id' => $child->id,
@@ -1465,6 +1474,29 @@ public function processBulkRenew(Request $request)
             'admin_fee_master_id' => (int) $adminFeeMaster->id,
             'admin_type' => (string) ($adminFeeMaster->admin_type ?? ''),
         ];
+    }
+
+    private function buildRegistrationPeriod(int $durationDays): array
+    {
+        $startDate = Carbon::now('Asia/Jakarta')->startOfDay();
+
+        return [
+            'start_date' => $startDate,
+            'expired_at' => MembershipPeriod::expiryFromStart($startDate, $durationDays),
+        ];
+    }
+
+    private function buildStandardRenewalPeriod(Member $member, int $durationDays): array
+    {
+        $anchorStartDate = filled($member->tgl_register)
+            ? Carbon::parse($member->tgl_register)->startOfDay()
+            : Carbon::now('Asia/Jakarta')->startOfDay();
+
+        $referenceExpiredAt = filled($member->tgl_expired)
+            ? Carbon::parse($member->tgl_expired)->startOfDay()
+            : $anchorStartDate->copy();
+
+        return MembershipPeriod::standardRenewalPeriod($anchorStartDate, $referenceExpiredAt, $durationDays);
     }
 
     private function enqueueWhatsappNotificationFromTransaction(Transaction $transaction, Member $member): void

@@ -21,7 +21,7 @@
             <div class="col-md-4">
                 <label for="daterange">Tanggal</label>
                 <input type="text" name="daterange" id="daterange" class="form-control"
-                    value="{{ request('daterange') ?: \Carbon\Carbon::parse($from)->format('d/m/Y') . ' - ' . \Carbon\Carbon::parse($to)->format('d/m/Y') }}">
+                    value="{{ request('daterange') ?: \Carbon\Carbon::parse($from)->format('m/d/Y') . ' - ' . \Carbon\Carbon::parse($to)->format('m/d/Y') }}">
                 <input type="hidden" name="from" id="from" value="{{ $from }}">
                 <input type="hidden" name="to" id="to" value="{{ $to }}">
             </div>
@@ -99,8 +99,8 @@
         if (!value.includes(' - ')) return;
 
         const parts = value.split(' - ');
-        const start = moment(parts[0], 'DD/MM/YYYY', true);
-        const end = moment(parts[1], 'DD/MM/YYYY', true);
+        const start = moment(parts[0], 'MM/DD/YYYY', true);
+        const end = moment(parts[1], 'MM/DD/YYYY', true);
         if (!start.isValid() || !end.isValid()) return;
 
         $("#from").val(start.format('YYYY-MM-DD'));
@@ -117,7 +117,7 @@
             startDate: start,
             endDate: end,
             locale: {
-                format: "DD/MM/YYYY",
+                format: "MM/DD/YYYY",
                 separator: " - "
             }
         });
