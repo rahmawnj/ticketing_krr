@@ -141,6 +141,12 @@ Route::middleware('auth')->group(function () {
     Route::get('report/transactions', [ReportController::class, 'transaction'])->name('reports.transactions');
     Route::get('report/ringkasan-transaksi', [ReportController::class, 'ringkasanTransaksi'])->name('reports.ringkasan-transaksi');
     Route::get('report/ringkasan-transaksi/export', [ReportController::class, 'exportRingkasanTransaksi'])->name('reports.ringkasan-transaksi.export');
+    Route::get('report/detail/{scope}', [ReportController::class, 'detailSummary'])
+        ->where('scope', 'member|ticket|other')
+        ->name('reports.detail');
+    Route::get('report/detail/{scope}/export', [ReportController::class, 'exportDetailSummary'])
+        ->where('scope', 'member|ticket|other')
+        ->name('reports.detail.export');
     Route::get('report/transactions-list', [ReportController::class, 'transactionList'])->name('reports.transaction-list');
     Route::get('/report/transactions/export', [ReportController::class, 'export_transaction'])->name('report.transaction.export');
     Route::get('/report/transactions/export-txt', [ReportController::class, 'export_transaction_txt'])->name('report.transaction.export.txt');

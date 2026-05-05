@@ -247,6 +247,27 @@
                             </div>
                             @endcan
                             @can('report-transaction-access')
+                            <div class="menu-item {{ request()->routeIs('reports.detail*') && request()->route('scope') === 'member' ? 'active' : '' }}">
+                                <a href="{{ route('reports.detail', ['scope' => 'member']) }}" class="menu-link">
+                                    <div class="menu-text">Report Detail Member</div>
+                                </a>
+                            </div>
+                            @endcan
+                            @can('report-transaction-access')
+                            <div class="menu-item {{ request()->routeIs('reports.detail*') && request()->route('scope') === 'ticket' ? 'active' : '' }}">
+                                <a href="{{ route('reports.detail', ['scope' => 'ticket']) }}" class="menu-link">
+                                    <div class="menu-text">Report Detail Ticket</div>
+                                </a>
+                            </div>
+                            @endcan
+                            @can('report-transaction-access')
+                            <div class="menu-item {{ request()->routeIs('reports.detail*') && request()->route('scope') === 'other' ? 'active' : '' }}">
+                                <a href="{{ route('reports.detail', ['scope' => 'other']) }}" class="menu-link">
+                                    <div class="menu-text">Report Detail Lain-lain</div>
+                                </a>
+                            </div>
+                            @endcan
+                            @can('report-transaction-access')
                             <div class="menu-item">
                                 <a href="{{ route('rekap.transactions') }}" class="menu-link">
                                     <div class="menu-text">Rekap Transaction</div>
@@ -363,6 +384,5 @@
 </body>
 
 </html>
-
 
 

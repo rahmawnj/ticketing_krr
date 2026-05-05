@@ -12,6 +12,7 @@ use App\Models\Membership;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
 use App\Exports\PenyewaanExport;
+use App\Exports\DetailCategoryReportExport;
 use App\Models\DetailTransaction;
 use App\Exports\TransactionExport;
 use App\Http\Controllers\Controller;
@@ -155,6 +156,436 @@ class ReportController extends Controller
         return Excel::download(
             new RingkasanTransaksiExport($from, $to, $rows, $footer),
             'Report_Ringkasan_Transaksi.xlsx'
+        );
+    }
+
+    private function resolveReportDateRange(Request $request): array
+    {
+        $now = Carbon::now('Asia/Jakarta');
+        $from = $request->input('from');
+        $to = $request->input('to');
+
+        if ((!$from || !$to) && $request->filled('daterange')) {
+            try {
+                $range = explode(' - ', (string) $request->input('daterange'));
+                $from = Carbon::createFromFormat('m/d/Y', trim($range[0]))->format('Y-m-d');
+                $to = Carbon::createFromFormat('m/d/Y', trim($range[1]))->format('Y-m-d');
+            } catch (\Throwable $e) {
+                $from = null;
+                $to = null;
+            }
+        }
+
+        return [
+            (string) ($from ?: $now->format('Y-m-d')),
+            (string) ($to ?: $now->format('Y-m-d')),
+        ];
+    }
+
+    private function resolveReportHeading(): string
+    {
+        $setting = Setting::asObject();
+
+        return strtoupper(trim((string) ($setting->name ?? config('app.name', 'TICKETING'))));
+    }
+
+    private function detailReportScopes(): array
+    {
+        return [
+            'member' => [
+                'key' => 'member',
+                'title' => 'Report Detail Member',
+                'breadcrumb' => 'Report Detail Member',
+                'group_label' => 'Member',
+                'export_file' => 'Report_Detail_Member.xlsx',
+            ],
+            'ticket' => [
+                'key' => 'ticket',
+                'title' => 'Report Detail Ticket',
+                'breadcrumb' => 'Report Detail Ticket',
+                'group_label' => 'Ticket',
+                'export_file' => 'Report_Detail_Ticket.xlsx',
+            ],
+            'other' => [
+                'key' => 'other',
+                'title' => 'Report Detail Lain-lain',
+                'breadcrumb' => 'Report Detail Lain-lain',
+                'group_label' => 'Lain-lain',
+                'export_file' => 'Report_Detail_Lain-lain.xlsx',
+            ],
+        ];
+    }
+
+    private function resolveDetailReportScope(string $scope): array
+    {
+        $scopes = $this->detailReportScopes();
+        abort_unless(isset($scopes[$scope]), 404);
+
+        return $scopes[$scope];
+    }
+
+    private function registerDetailReportColumn(
+        array &$columns,
+        array &$rowsByDate,
+        array &$footer,
+        string $key,
+        string $label
+    ): void {
+        if ($key === '' || isset($columns[$key])) {
+            return;
+        }
+
+        $columns[$key] = [
+            'key' => $key,
+            'label' => $label,
+        ];
+        $footer['items'][$key] = 0.0;
+
+        foreach ($rowsByDate as &$row) {
+            $row['items'][$key] = 0.0;
+        }
+        unset($row);
+    }
+
+    private function ensureDetailReportRow(array &$rowsByDate, string $dateKey, array $columns): void
+    {
+        if (isset($rowsByDate[$dateKey])) {
+            return;
+        }
+
+        $rowsByDate[$dateKey] = [
+            'tanggal' => Carbon::parse($dateKey)->format('d/m/Y'),
+            'items' => array_fill_keys(array_keys($columns), 0.0),
+            'total' => 0.0,
+            'dpp' => 0.0,
+            'ppn' => 0.0,
+            'admin_fee' => 0.0,
+        ];
+    }
+
+    private function addDetailReportValue(
+        array &$rowsByDate,
+        array &$footer,
+        string $dateKey,
+        string $columnKey,
+        float $itemTotal,
+        float $dpp,
+        float $ppn,
+        float $adminFee,
+        array $columns
+    ): void {
+        $this->ensureDetailReportRow($rowsByDate, $dateKey, $columns);
+
+        if (!array_key_exists($columnKey, $rowsByDate[$dateKey]['items'])) {
+            $rowsByDate[$dateKey]['items'][$columnKey] = 0.0;
+        }
+        if (!array_key_exists($columnKey, $footer['items'])) {
+            $footer['items'][$columnKey] = 0.0;
+        }
+
+        $rowsByDate[$dateKey]['items'][$columnKey] += $itemTotal;
+        $rowsByDate[$dateKey]['total'] += $itemTotal;
+        $rowsByDate[$dateKey]['dpp'] += $dpp;
+        $rowsByDate[$dateKey]['ppn'] += $ppn;
+        $rowsByDate[$dateKey]['admin_fee'] += $adminFee;
+
+        $footer['items'][$columnKey] += $itemTotal;
+        $footer['total'] += $itemTotal;
+        $footer['dpp'] += $dpp;
+        $footer['ppn'] += $ppn;
+        $footer['admin_fee'] += $adminFee;
+    }
+
+    private function buildDetailReportData(string $scope, string $from, string $to, string $kasir = 'all'): array
+    {
+        $start = Carbon::parse($from, 'Asia/Jakarta')->startOfDay();
+        $end = Carbon::parse($to, 'Asia/Jakarta')->endOfDay();
+
+        $columns = [];
+        $rowsByDate = [];
+        $footer = [
+            'items' => [],
+            'total' => 0.0,
+            'dpp' => 0.0,
+            'ppn' => 0.0,
+            'admin_fee' => 0.0,
+        ];
+
+        if ($scope === 'member') {
+            $query = Transaction::query()
+                ->where('is_active', 1)
+                ->whereIn('transaction_type', ['registration', 'renewal'])
+                ->whereBetween('created_at', [$start->format('Y-m-d H:i:s'), $end->format('Y-m-d H:i:s')]);
+
+            if ($kasir !== 'all' && $kasir !== '') {
+                $query->where('user_id', $kasir);
+            }
+
+            $transactions = $query->orderBy('created_at')->orderBy('id')->get();
+            $membershipIds = $transactions->pluck('ticket_id')->filter()->map(fn ($id) => (int) $id)->unique()->values();
+
+            $memberships = Membership::query()
+                ->when($membershipIds->isNotEmpty(), function ($membershipQuery) use ($membershipIds) {
+                    $membershipQuery->where(function ($query) use ($membershipIds) {
+                        $query->where('is_active', 1)
+                            ->orWhereIn('id', $membershipIds);
+                    });
+                }, function ($membershipQuery) {
+                    $membershipQuery->where('is_active', 1);
+                })
+                ->orderBy('name')
+                ->get(['id', 'name']);
+
+            foreach ($memberships as $membership) {
+                $this->registerDetailReportColumn(
+                    $columns,
+                    $rowsByDate,
+                    $footer,
+                    (string) $membership->id,
+                    (string) $membership->name
+                );
+            }
+
+            foreach ($transactions as $transaction) {
+                $columnKey = (string) ((int) ($transaction->ticket_id ?? 0));
+                $columnLabel = $columnKey !== '0' ? ('Membership #' . $columnKey) : 'Membership';
+
+                $this->registerDetailReportColumn($columns, $rowsByDate, $footer, $columnKey, $columnLabel);
+
+                $dateKey = Carbon::parse($transaction->created_at)->timezone('Asia/Jakarta')->format('Y-m-d');
+                $dpp = max(0.0, ((float) ($transaction->bayar ?? 0)) - ((float) ($transaction->kembali ?? 0)));
+                $ppn = (float) ($transaction->ppn ?? 0);
+                $adminFee = $this->resolveAdminFee($transaction);
+                $itemTotal = $dpp + $ppn + $adminFee;
+
+                $this->addDetailReportValue(
+                    $rowsByDate,
+                    $footer,
+                    $dateKey,
+                    $columnKey,
+                    $itemTotal,
+                    $dpp,
+                    $ppn,
+                    $adminFee,
+                    $columns
+                );
+            }
+        } elseif ($scope === 'ticket') {
+            $query = Transaction::query()
+                ->with(['detail.ticket:id,name'])
+                ->where('is_active', 1)
+                ->where('transaction_type', 'ticket')
+                ->whereBetween('created_at', [$start->format('Y-m-d H:i:s'), $end->format('Y-m-d H:i:s')]);
+
+            if ($kasir !== 'all' && $kasir !== '') {
+                $query->where('user_id', $kasir);
+            }
+
+            $transactions = $query->orderBy('created_at')->orderBy('id')->get();
+            $ticketIds = $transactions
+                ->flatMap(fn ($transaction) => $transaction->detail->pluck('ticket_id'))
+                ->filter()
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->values();
+
+            $tickets = $ticketIds->isNotEmpty()
+                ? Ticket::query()->whereIn('id', $ticketIds)->orderBy('name')->get(['id', 'name'])
+                : Ticket::query()->orderBy('name')->get(['id', 'name']);
+
+            foreach ($tickets as $ticket) {
+                $this->registerDetailReportColumn(
+                    $columns,
+                    $rowsByDate,
+                    $footer,
+                    (string) $ticket->id,
+                    (string) $ticket->name
+                );
+            }
+
+            foreach ($transactions as $transaction) {
+                $dateKey = Carbon::parse($transaction->created_at)->timezone('Asia/Jakarta')->format('Y-m-d');
+
+                foreach ($transaction->detail as $detail) {
+                    $columnKey = (string) ((int) ($detail->ticket_id ?? 0));
+                    $columnLabel = $columnKey !== '0' ? ('Ticket #' . $columnKey) : 'Ticket';
+
+                    $this->registerDetailReportColumn($columns, $rowsByDate, $footer, $columnKey, $columnLabel);
+
+                    $dpp = (float) ($detail->total ?? 0);
+                    $ppn = (float) ($detail->ppn ?? 0);
+                    $itemTotal = $dpp + $ppn;
+
+                    $this->addDetailReportValue(
+                        $rowsByDate,
+                        $footer,
+                        $dateKey,
+                        $columnKey,
+                        $itemTotal,
+                        $dpp,
+                        $ppn,
+                        0.0,
+                        $columns
+                    );
+                }
+            }
+        } else {
+            $query = Transaction::query()
+                ->where('is_active', 1)
+                ->whereNotIn('transaction_type', ['ticket', 'registration', 'renewal'])
+                ->whereBetween('created_at', [$start->format('Y-m-d H:i:s'), $end->format('Y-m-d H:i:s')]);
+
+            if ($kasir !== 'all' && $kasir !== '') {
+                $query->where('user_id', $kasir);
+            }
+
+            $transactions = $query->orderBy('created_at')->orderBy('id')->get();
+            $penyewaanIds = $transactions
+                ->where('transaction_type', 'rental')
+                ->pluck('ticket_id')
+                ->filter()
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->values();
+
+            $penyewaanMap = Penyewaan::query()
+                ->with('sewa:id,name')
+                ->when($penyewaanIds->isNotEmpty(), function ($penyewaanQuery) use ($penyewaanIds) {
+                    $penyewaanQuery->whereIn('id', $penyewaanIds);
+                }, function ($penyewaanQuery) {
+                    $penyewaanQuery->whereRaw('1 = 0');
+                })
+                ->get()
+                ->keyBy('id');
+
+            $sewaIds = $penyewaanMap->pluck('sewa_id')->filter()->map(fn ($id) => (int) $id)->unique()->values();
+            $sewaItems = $sewaIds->isNotEmpty()
+                ? Sewa::query()->whereIn('id', $sewaIds)->orderBy('name')->get(['id', 'name'])
+                : Sewa::query()->orderBy('name')->get(['id', 'name']);
+
+            foreach ($sewaItems as $sewaItem) {
+                $this->registerDetailReportColumn(
+                    $columns,
+                    $rowsByDate,
+                    $footer,
+                    'rental:' . $sewaItem->id,
+                    (string) $sewaItem->name
+                );
+            }
+
+            $otherTypes = $transactions
+                ->where('transaction_type', '!=', 'rental')
+                ->pluck('transaction_type')
+                ->filter()
+                ->unique()
+                ->sort()
+                ->values();
+
+            foreach ($otherTypes as $transactionType) {
+                $this->registerDetailReportColumn(
+                    $columns,
+                    $rowsByDate,
+                    $footer,
+                    'type:' . $transactionType,
+                    ucwords(str_replace('_', ' ', (string) $transactionType))
+                );
+            }
+
+            foreach ($transactions as $transaction) {
+                if (($transaction->transaction_type ?? '') === 'rental') {
+                    $penyewaan = $penyewaanMap->get((int) ($transaction->ticket_id ?? 0));
+                    $sewaId = (int) ($penyewaan->sewa_id ?? 0);
+                    $columnKey = $sewaId > 0
+                        ? 'rental:' . $sewaId
+                        : 'type:rental';
+                    $columnLabel = $sewaId > 0
+                        ? (string) ($penyewaan?->sewa?->name ?? ('Penyewaan #' . $sewaId))
+                        : 'Rental';
+                } else {
+                    $columnKey = 'type:' . (string) ($transaction->transaction_type ?? 'lain_lain');
+                    $columnLabel = ucwords(str_replace('_', ' ', (string) ($transaction->transaction_type ?? 'lain_lain')));
+                }
+
+                $this->registerDetailReportColumn($columns, $rowsByDate, $footer, $columnKey, $columnLabel);
+
+                $dateKey = Carbon::parse($transaction->created_at)->timezone('Asia/Jakarta')->format('Y-m-d');
+                $dpp = max(0.0, ((float) ($transaction->bayar ?? 0)) - ((float) ($transaction->kembali ?? 0)));
+                $ppn = (float) ($transaction->ppn ?? 0);
+                $adminFee = $this->resolveAdminFee($transaction);
+                $itemTotal = $dpp + $ppn + $adminFee;
+
+                $this->addDetailReportValue(
+                    $rowsByDate,
+                    $footer,
+                    $dateKey,
+                    $columnKey,
+                    $itemTotal,
+                    $dpp,
+                    $ppn,
+                    $adminFee,
+                    $columns
+                );
+            }
+        }
+
+        ksort($rowsByDate);
+
+        return [
+            'columns' => array_values($columns),
+            'rows' => array_values($rowsByDate),
+            'footer' => $footer,
+            'showAdminFee' => (float) $footer['admin_fee'] > 0,
+        ];
+    }
+
+    public function detailSummary(Request $request, string $scope)
+    {
+        $scopeMeta = $this->resolveDetailReportScope($scope);
+        [$from, $to] = $this->resolveReportDateRange($request);
+        $kasir = (string) $request->input('kasir', 'all');
+        $reportData = $this->buildDetailReportData($scope, $from, $to, $kasir);
+        $dateLabel = Carbon::parse($from)->format('d/m/Y') . ' s.d ' . Carbon::parse($to)->format('d/m/Y');
+        $title = $scopeMeta['title'] . ' ' . $dateLabel;
+        $breadcrumbs = ['Master', $scopeMeta['breadcrumb']];
+        $users = User::query()->orderBy('name')->get();
+        $reportHeading = $this->resolveReportHeading();
+
+        return view('report.detail-summary', [
+            'title' => $title,
+            'breadcrumbs' => $breadcrumbs,
+            'from' => $from,
+            'to' => $to,
+            'kasir' => $kasir,
+            'users' => $users,
+            'scopeMeta' => $scopeMeta,
+            'reportHeading' => $reportHeading,
+            'columns' => $reportData['columns'],
+            'rows' => $reportData['rows'],
+            'footer' => $reportData['footer'],
+            'showAdminFee' => $reportData['showAdminFee'],
+        ]);
+    }
+
+    public function exportDetailSummary(Request $request, string $scope)
+    {
+        $scopeMeta = $this->resolveDetailReportScope($scope);
+        [$from, $to] = $this->resolveReportDateRange($request);
+        $kasir = (string) $request->input('kasir', 'all');
+        $reportData = $this->buildDetailReportData($scope, $from, $to, $kasir);
+        $reportHeading = $this->resolveReportHeading();
+
+        return Excel::download(
+            new DetailCategoryReportExport(
+                $from,
+                $to,
+                $reportData['columns'],
+                $reportData['rows'],
+                $reportData['footer'],
+                $reportData['showAdminFee'],
+                $scopeMeta,
+                $reportHeading
+            ),
+            $scopeMeta['export_file']
         );
     }
 
