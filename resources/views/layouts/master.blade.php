@@ -277,7 +277,7 @@
                             @can('report-transaction-access')
                             <div class="menu-item">
                                 <a href="{{ route('reports.penyewaan') }}" class="menu-link">
-                                    <div class="menu-text">Report Transaksi Lainnya</div>
+                                    <div class="menu-text">Report Transaksi Lain Lain</div>
                                 </a>
                             </div>
                             @endcan
@@ -286,7 +286,7 @@
                             @can('report-transaction-access')
                             <div class="menu-item">
                                 <a href="{{ route('rekap.penyewaan') }}" class="menu-link">
-                                    <div class="menu-text">Rekap Transaksi Lainnya</div>
+                                    <div class="menu-text">Rekap Transaksi Lain Lain</div>
                                 </a>
                             </div>
                             @endcan
@@ -384,5 +384,4 @@
 </body>
 
 </html>
-
 

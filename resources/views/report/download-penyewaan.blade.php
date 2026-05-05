@@ -18,7 +18,7 @@
 <table class="table table-bordered table-hover" border="1" cellpadding="8" cellspacing="0">
     <thead>
         <tr>
-            <th colspan="5">Report Transaksi Lainnya <br> Tanggal {{ Carbon\Carbon::parse($from)->format('d/m/Y') }} - {{ request('to') ? Carbon\Carbon::parse($to)->subDay(1)->format('d/m/Y') : Carbon\Carbon::parse($to)->format('d/m/Y') }}</th>
+            <th colspan="5">Report Transaksi Lain Lain <br> Tanggal {{ Carbon\Carbon::parse($from)->format('d/m/Y') }} - {{ request('to') ? Carbon\Carbon::parse($to)->subDay(1)->format('d/m/Y') : Carbon\Carbon::parse($to)->format('d/m/Y') }}</th>
         </tr>
         <tr>
             <th>Jenis Lainnya</th>

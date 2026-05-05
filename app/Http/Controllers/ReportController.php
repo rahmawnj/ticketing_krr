@@ -849,8 +849,8 @@ class ReportController extends Controller
         [$groupedRows, $grandQty, $grandPpn, $grandTotal] = $this->buildTransaksiLainnyaGroupedRows($from, $to, $kasir);
         $date = Carbon::parse($from)->format('d/m/Y') . ' s.d ' . Carbon::parse($to)->format('d/m/Y');
 
-        $title = 'Report Transaksi Lainnya ' . $date;
-        $breadcrumbs = ['Master', 'Report Transaksi Lainnya'];
+        $title = 'Report Transaksi Lain Lain ' . $date;
+        $breadcrumbs = ['Master', 'Report Transaksi Lain Lain'];
         $users = User::get();
 
         return view('report.penyewaan', compact(
@@ -918,7 +918,7 @@ class ReportController extends Controller
 
         return Excel::download(
             new ReportPenyewaanExport($groupedRows->all(), $grandQty, $grandPpn, $grandTotal),
-            "Laporan Transaksi Lainnya.xlsx"
+            "Laporan Transaksi Lain Lain.xlsx"
         );
     }
 
@@ -1141,8 +1141,8 @@ public function printTransaction(Request $request)
         $from = $request->from ? Carbon::parse($request->from)->format('Y-m-d') : Carbon::now()->format('Y-m-d');
         $to = $request->to ? Carbon::parse($request->to)->addDay(1)->format('Y-m-d') : Carbon::now()->format('Y-m-d');
 
-        $title = 'Rekap Transaksi Lainnya ' . $date;
-        $breadcrumbs = ['Master', 'Rekap Transaksi Lainnya'];
+        $title = 'Rekap Transaksi Lain Lain ' . $date;
+        $breadcrumbs = ['Master', 'Rekap Transaksi Lain Lain'];
         $sewa = Sewa::get();
         $users = User::get();
 
@@ -1154,7 +1154,7 @@ public function printTransaction(Request $request)
         $from = Carbon::parse(request('from'))->format('Y-m-d');
         $to = Carbon::parse(request('to'))->addDay(1)->format('Y-m-d');
 
-        return Excel::download(new PenyewaanExport($from, $to, $request->kasir), 'Rekap Transaksi Lainnya.xlsx');
+        return Excel::download(new PenyewaanExport($from, $to, $request->kasir), 'Rekap Transaksi Lain Lain.xlsx');
     }
 
     public function printPenyewaan(Request $request)
