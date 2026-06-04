@@ -37,15 +37,15 @@
         <tr>
             <td style="border: 1px solid #000;">{{ $row['tanggal'] }}</td>
             @forelse($columns as $column)
-                <td style="border: 1px solid #000;">{{ number_format($row['items'][$column['key']] ?? 0, 0, ',', '.') }}</td>
+                <td style="border: 1px solid #000;">{{ (int) round((float) ($row['items'][$column['key']] ?? 0)) }}</td>
             @empty
                 <td style="border: 1px solid #000;">-</td>
             @endforelse
-            <td style="border: 1px solid #000;">{{ number_format($row['total'], 0, ',', '.') }}</td>
-            <td style="border: 1px solid #000;">{{ number_format($row['dpp'], 0, ',', '.') }}</td>
-            <td style="border: 1px solid #000;">{{ number_format($row['ppn'], 0, ',', '.') }}</td>
+            <td style="border: 1px solid #000;">{{ (int) round((float) $row['total']) }}</td>
+            <td style="border: 1px solid #000;">{{ (int) round((float) $row['dpp']) }}</td>
+            <td style="border: 1px solid #000;">{{ (int) round((float) $row['ppn']) }}</td>
             @if($showAdminFee)
-                <td style="border: 1px solid #000;">{{ number_format($row['admin_fee'], 0, ',', '.') }}</td>
+                <td style="border: 1px solid #000;">{{ (int) round((float) $row['admin_fee']) }}</td>
             @endif
         </tr>
     @empty
@@ -57,15 +57,15 @@
     <tr style="font-weight: bold; background: #f2f2f2;">
         <td style="border: 1px solid #000;">TOTAL</td>
         @forelse($columns as $column)
-            <td style="border: 1px solid #000;">{{ number_format($footer['items'][$column['key']] ?? 0, 0, ',', '.') }}</td>
+            <td style="border: 1px solid #000;">{{ (int) round((float) ($footer['items'][$column['key']] ?? 0)) }}</td>
         @empty
             <td style="border: 1px solid #000;">-</td>
         @endforelse
-        <td style="border: 1px solid #000;">{{ number_format($footer['total'], 0, ',', '.') }}</td>
-        <td style="border: 1px solid #000;">{{ number_format($footer['dpp'], 0, ',', '.') }}</td>
-        <td style="border: 1px solid #000;">{{ number_format($footer['ppn'], 0, ',', '.') }}</td>
+        <td style="border: 1px solid #000;">{{ (int) round((float) $footer['total']) }}</td>
+        <td style="border: 1px solid #000;">{{ (int) round((float) $footer['dpp']) }}</td>
+        <td style="border: 1px solid #000;">{{ (int) round((float) $footer['ppn']) }}</td>
         @if($showAdminFee)
-            <td style="border: 1px solid #000;">{{ number_format($footer['admin_fee'], 0, ',', '.') }}</td>
+            <td style="border: 1px solid #000;">{{ (int) round((float) $footer['admin_fee']) }}</td>
         @endif
     </tr>
 </table>

@@ -23,13 +23,13 @@
     @forelse($rows as $row)
     <tr>
         <td style="border: 1px solid #000;">{{ $row['tanggal'] }}</td>
-        <td style="border: 1px solid #000;">{{ number_format($row['member'], 0, ',', '.') }}</td>
-        <td style="border: 1px solid #000;">{{ number_format($row['ticket'], 0, ',', '.') }}</td>
-        <td style="border: 1px solid #000;">{{ number_format($row['lain_lain'], 0, ',', '.') }}</td>
-        <td style="border: 1px solid #000;">{{ number_format($row['total'], 0, ',', '.') }}</td>
-        <td style="border: 1px solid #000;">{{ number_format($row['dpp'], 0, ',', '.') }}</td>
-        <td style="border: 1px solid #000;">{{ number_format($row['ppn'], 0, ',', '.') }}</td>
-        <td style="border: 1px solid #000;">{{ number_format($row['admin_fee'] ?? 0, 0, ',', '.') }}</td>
+        <td style="border: 1px solid #000;">{{ (int) round((float) $row['member']) }}</td>
+        <td style="border: 1px solid #000;">{{ (int) round((float) $row['ticket']) }}</td>
+        <td style="border: 1px solid #000;">{{ (int) round((float) $row['lain_lain']) }}</td>
+        <td style="border: 1px solid #000;">{{ (int) round((float) $row['total']) }}</td>
+        <td style="border: 1px solid #000;">{{ (int) round((float) $row['dpp']) }}</td>
+        <td style="border: 1px solid #000;">{{ (int) round((float) $row['ppn']) }}</td>
+        <td style="border: 1px solid #000;">{{ (int) round((float) ($row['admin_fee'] ?? 0)) }}</td>
     </tr>
     @empty
     <tr>
@@ -39,12 +39,12 @@
 
     <tr style="font-weight: bold; background: #f2f2f2;">
         <td style="border: 1px solid #000;">TOTAL</td>
-        <td style="border: 1px solid #000;">{{ number_format($footer['member'], 0, ',', '.') }}</td>
-        <td style="border: 1px solid #000;">{{ number_format($footer['ticket'], 0, ',', '.') }}</td>
-        <td style="border: 1px solid #000;">{{ number_format($footer['lain_lain'], 0, ',', '.') }}</td>
-        <td style="border: 1px solid #000;">{{ number_format($footer['total'], 0, ',', '.') }}</td>
-        <td style="border: 1px solid #000;">{{ number_format($footer['dpp'], 0, ',', '.') }}</td>
-        <td style="border: 1px solid #000;">{{ number_format($footer['ppn'], 0, ',', '.') }}</td>
-        <td style="border: 1px solid #000;">{{ number_format($footer['admin_fee'] ?? 0, 0, ',', '.') }}</td>
+        <td style="border: 1px solid #000;">{{ (int) round((float) $footer['member']) }}</td>
+        <td style="border: 1px solid #000;">{{ (int) round((float) $footer['ticket']) }}</td>
+        <td style="border: 1px solid #000;">{{ (int) round((float) $footer['lain_lain']) }}</td>
+        <td style="border: 1px solid #000;">{{ (int) round((float) $footer['total']) }}</td>
+        <td style="border: 1px solid #000;">{{ (int) round((float) $footer['dpp']) }}</td>
+        <td style="border: 1px solid #000;">{{ (int) round((float) $footer['ppn']) }}</td>
+        <td style="border: 1px solid #000;">{{ (int) round((float) ($footer['admin_fee'] ?? 0)) }}</td>
     </tr>
 </table>
