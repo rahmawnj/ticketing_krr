@@ -22,8 +22,8 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 Route::get('/transactions/no-trx', [ApiController::class, 'getNoTrx']);
 Route::get('ticket/check', [ApiController::class, 'check']);
-Route::get('ticket/{ticket}/individu-check', [ApiController::class, 'checkIndividualTicket']);
-Route::get('ticket/{ticket}/group-check', [ApiController::class, 'checkGroupTicket']);
+Route::get('ticket/{ticket}/individu-check', [ApiController::class, 'checkIndividualTicket'])->where('ticket', '.*');
+Route::get('ticket/{ticket}/group-check', [ApiController::class, 'checkGroupTicket'])->where('ticket', '.*');
 Route::get('ticket/code', [ApiController::class, 'getCode']);
 Route::get('ticket/{id}/printQR', [ApiController::class, 'printQR']);
 Route::get('ticket/group', [ApiController::class, 'detailGroup']);
