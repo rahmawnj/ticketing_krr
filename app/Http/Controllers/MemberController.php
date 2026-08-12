@@ -424,9 +424,10 @@ public function store(CreateMemberRequest $request)
                     'nama' => $family->nama ?? '-',
                     'rfid' => $family->rfid ?? '-',
                     'no_hp' => $family->no_hp ?? '-',
-                    'tgl_expired' => $family->tgl_expired ?? '-',
-                    'relation' => $relation,
-                    'is_current' => $isCurrentMember,
+                   'tgl_lahir' => $family->tgl_lahir ?? null,
+                   'tgl_expired' => $family->tgl_expired ?? '-',
+                   'relation' => $relation,
+                   'is_current' => $isCurrentMember,
                 ];
             })
             ->values();
@@ -490,9 +491,9 @@ public function update(UpdateMemberRequest $request, Member $member)
             $invoiceUrl = null;
 
             if ($member->parent_id == 0) {
-                $newMembershipId = $request->membership;
+                $newMembershipId = $request->membership ?? $member->membership_id;
 
-                if ($member->membership_id != $newMembershipId) {
+                if ((int) $member->membership_id !== (int) $newMembershipId) {
 
                     $is_membership_changed = true;
                     $membership = Membership::find($newMembershipId);
@@ -603,6 +604,88 @@ public function update(UpdateMemberRequest $request, Member $member)
             }
 
             $member->update($attr);
+
+            if ((int) $member->parent_id === 0 && ($request->has('rfid_group') || $request->has('name_group') || $request->has('tanggal_lahir_group'))) {
+                $existingChildren = $member->childs()->orderBy('id')->get();
+                $groupCount = max(
+                    count((array) $request->input('rfid_group', [])),
+                    count((array) $request->input('name_group', [])),
+                    count((array) $request->input('tanggal_lahir_group', []))
+                );
+
+                for ($i = 0; $i < $groupCount; $i++) {
+                    $rfid = $request->input("rfid_group.$i");
+                    $name = $request->input("name_group.$i");
+                    $tanggalLahir = $request->input("tanggal_lahir_group.$i");
+                    $image = $request->file("image_group.$i");
+
+                    if (!filled($rfid) && !filled($name) && !filled($tanggalLahir) && !$image) {
+                        continue;
+                    }
+
+                    if ($i < $existingChildren->count()) {
+                        $child = $existingChildren[$i];
+                        $childData = [
+                            'rfid' => $rfid ?? $child->rfid,
+                            'nama' => $name ?? $child->nama,
+                            'tgl_lahir' => $tanggalLahir ?? $child->tgl_lahir,
+                        ];
+
+                        if ($image) {
+                            if ($child->image_profile) {
+                                \Illuminate\Support\Facades\Storage::delete($child->image_profile);
+                            }
+
+                            $childData['image_profile'] = $image->storeAs(
+                                'members',
+                                ($rfid ?? $child->rfid ?? Str::random(10)) . now('Asia/Jakarta')->format('YmdHis') . '.' . $image->extension()
+                            );
+                        }
+
+                        $child->update($childData);
+                        continue;
+                    }
+
+                    $childData = [
+                        'rfid' => $rfid,
+                        'nama' => $name,
+                        'alamat' => $member->alamat,
+                        'no_ktp' => $member->no_ktp,
+                        'no_hp' => $member->no_hp,
+                        'tgl_lahir' => $tanggalLahir ?: $member->tgl_lahir,
+                        'jenis_kelamin' => $member->jenis_kelamin,
+                        'membership_id' => $member->membership_id,
+                        'tgl_register' => $member->tgl_register,
+                        'tgl_expired' => $member->tgl_expired,
+                        'qr_code' => 'MBR' . strtoupper(Str::random(13)),
+                        'member_code' => strtoupper(preg_replace('/[^A-Z0-9]/', '', (string) ($member->membership?->code ?? ''))) . '/TEMP-' . strtoupper(Str::random(8)),
+                        'is_active' => $is_active,
+                        'parent_id' => $member->id,
+                        'access_used' => 0,
+                    ];
+
+                    if ($image) {
+                        $childData['image_profile'] = $image->storeAs(
+                            'members',
+                            ($rfid ?? Str::random(10)) . now('Asia/Jakarta')->format('YmdHis') . '.' . $image->extension()
+                        );
+                    }
+
+                    $child = Member::create($childData);
+                    $child->update([
+                        'member_code' => sprintf('%s/%04d', strtoupper(preg_replace('/[^A-Z0-9]/', '', (string) ($member->membership?->code ?? ''))) ?: 'MSH', (int) $child->id),
+                        'qr_code' => sprintf('%s/%04d', strtoupper(preg_replace('/[^A-Z0-9]/', '', (string) ($member->membership?->code ?? ''))) ?: 'MSH', (int) $child->id),
+                    ]);
+
+                    HistoryMembership::create([
+                        'member_id' => $child->id,
+                        'membership_id' => $member->membership_id,
+                        'start_date' => $member->tgl_register,
+                        'end_date' => $member->tgl_expired,
+                        'status' => 'active',
+                    ]);
+                }
+            }
 
             if ((int) $member->parent_id === 0) {
                 $member->refresh();

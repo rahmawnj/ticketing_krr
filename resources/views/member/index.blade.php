@@ -249,6 +249,35 @@
         ]
     });
 
+    function calculateAgeBreakdown(dateString) {
+        if (!dateString) {
+            return '-';
+        }
+
+        var birth = new Date(dateString + 'T00:00:00');
+        if (isNaN(birth.getTime())) {
+            return '-';
+        }
+
+        var today = new Date();
+        var years = today.getFullYear() - birth.getFullYear();
+        var months = today.getMonth() - birth.getMonth();
+        var days = today.getDate() - birth.getDate();
+
+        if (days < 0) {
+            months -= 1;
+            var previousMonth = new Date(today.getFullYear(), today.getMonth(), 0);
+            days += previousMonth.getDate();
+        }
+
+        if (months < 0) {
+            years -= 1;
+            months += 12;
+        }
+
+        return years + ' tahun ' + months + ' bulan ' + days + ' hari';
+    }
+
     function updateExportUrl() {
         var params = $.param({
             filter: currentFilter,
@@ -418,6 +447,7 @@
                 $("#info-id").text(textOrDash(member.no_ktp))
                 $("#info-phone").text(textOrDash(member.no_hp))
                 $("#info-birth").text(textOrDash(member.tgl_lahir))
+                $("#info-age").text('Umur: ' + calculateAgeBreakdown(member.tgl_lahir))
                 $("#info-gender").text(textOrDash(member.jenis_kelamin))
                 $("#info-address").text(textOrDash(member.alamat))
                 $("#info-member-code").text(textOrDash(member.member_code))
@@ -448,17 +478,21 @@
                 $("#family-member-count").text(`Total anggota: ${familyMembers.length}`);
                 let familyRows = '';
                 if (familyMembers.length === 0) {
-                    familyRows = '<tr><td colspan="5" class="text-center text-muted">Belum ada data anggota grup</td></tr>';
+                    familyRows = '<tr><td colspan="7" class="text-center text-muted">Belum ada data anggota grup</td></tr>';
                 } else {
                     familyMembers.forEach(function(item) {
                         const relationBadge = item.is_current
                             ? `<span class="badge bg-primary">${textOrDash(item.relation)}</span>`
                             : `<span class="badge bg-secondary">${textOrDash(item.relation)}</span>`;
+                        const ageText = calculateAgeBreakdown(item.tgl_lahir);
+                        const birthText = item.tgl_lahir ? item.tgl_lahir : '-';
                         familyRows += `<tr>
                             <td class="text-nowrap">${textOrDash(item.nama)}</td>
                             <td class="text-nowrap">${relationBadge}</td>
                             <td class="text-nowrap">${textOrDash(item.rfid)}</td>
                             <td class="text-nowrap">${textOrDash(item.no_hp)}</td>
+                            <td class="text-nowrap">${ageText}</td>
+                            <td class="text-nowrap">${birthText}</td>
                             <td class="text-nowrap">${textOrDash(item.tgl_expired)}</td>
                         </tr>`;
                     });

@@ -58,6 +58,7 @@
                              <div class="col-md-4">
                                  <span class="d-block">Tanggal Lahir</span>
                                  <b class="fs-14px" id="info-birth"></b>
+                                 <small class="d-block text-muted mt-1" id="info-age">-</small>
                              </div>
 
                              <div class="col-md-4">
@@ -96,6 +97,8 @@
                                          <th class="text-nowrap">Relasi</th>
                                          <th class="text-nowrap">RFID</th>
                                          <th class="text-nowrap">No. HP</th>
+                                         <th class="text-nowrap">Umur</th>
+                                         <th class="text-nowrap">Tgl Lahir</th>
                                          <th class="text-nowrap">Expired</th>
                                      </tr>
                                  </thead>

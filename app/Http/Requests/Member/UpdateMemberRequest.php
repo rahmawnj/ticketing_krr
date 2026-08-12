@@ -53,12 +53,14 @@ class UpdateMemberRequest extends FormRequest
                     Rule::unique('members')->ignore($memberId),
                 ],
 
-                'rfid_group'    => 'nullable|array',
-                'name_group'    => 'nullable|array',
-                'image_group'   => 'nullable|array',
+                'rfid_group'          => 'nullable|array',
+                'name_group'          => 'nullable|array',
+                'tanggal_lahir_group' => 'nullable|array',
+                'image_group'         => 'nullable|array',
 
-                'name_group.*'  => 'nullable|string',
-                'image_group.*' => 'nullable|mimes:png,jpg,jpeg',
+                'name_group.*'          => 'nullable|string',
+                'tanggal_lahir_group.*' => 'nullable|date',
+                'image_group.*'         => 'nullable|mimes:png,jpg,jpeg',
 
                 'rfid_group.*' => [
                     'nullable',

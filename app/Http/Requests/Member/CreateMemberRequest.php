@@ -36,11 +36,15 @@ class CreateMemberRequest extends FormRequest
 
             'rfid_group' => 'nullable|array',
             'name_group' => 'nullable|array',
+            'no_hp_group' => 'nullable|array',
+            'tanggal_lahir_group' => 'nullable|array',
             'image_group' => 'nullable|array',
 
             'rfid_group.*' => 'nullable|string|unique:members,rfid',
-            'name_group.*' => 'required_with:rfid_group.*,image_group.*|nullable|string|max:255',
-            'image_group.*' => 'required_with:rfid_group.*,name_group.*|nullable|mimes:png,jpg,jpeg',
+            'name_group.*' => 'required_with:rfid_group.*,no_hp_group.*,tanggal_lahir_group.*,image_group.*|nullable|string|max:255',
+            'no_hp_group.*' => 'nullable|numeric',
+            'tanggal_lahir_group.*' => 'nullable|date',
+            'image_group.*' => 'required_with:rfid_group.*,name_group.*,no_hp_group.*,tanggal_lahir_group.*|nullable|mimes:png,jpg,jpeg',
         ];
     }
 }

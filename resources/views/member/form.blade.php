@@ -53,6 +53,10 @@
                         @endforeach
                     </select>
 
+                    @if($member->id != 0 && $member->membership_id != 0)
+                        <input type="hidden" name="membership" value="{{ old('membership', $member->membership_id) }}">
+                    @endif
+
                     @error('membership')
                     <small class="text-danger">{{ $message }}</small>
                     @enderror
@@ -272,6 +276,20 @@
 </div>
 @endsection
 
+@php
+    $existingGroupMembers = [];
+    if ($member->parent_id == 0) {
+        $existingGroupMembers = $member->childs()->orderBy('id')->get()->map(function ($child) {
+            return [
+                'id' => (int) $child->id,
+                'rfid' => (string) ($child->rfid ?? ''),
+                'nama' => (string) ($child->nama ?? ''),
+                'tanggal_lahir' => $child->tgl_lahir ? \Carbon\Carbon::parse($child->tgl_lahir)->format('Y-m-d') : '',
+            ];
+        })->toArray();
+    }
+@endphp
+
 @push('script')
 <script src="{{ asset('/') }}plugins/datatables.net/js/jquery.dataTables.min.js"></script>
 <script src="{{ asset('/') }}plugins/datatables.net-bs4/js/dataTables.bootstrap4.min.js"></script>
@@ -281,6 +299,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
 <script>
+    var EXISTING_GROUP_MEMBERS = @json($existingGroupMembers ?? []);
     function parseMoneyNumber(value) {
         var raw = (value ?? '').toString().trim();
         if (raw === '') {
@@ -408,23 +427,35 @@
             }
 
 
-            // --- Loop untuk Anggota Grup (hanya di create/saat ganti member) ---
-            if ("{{ $method }}" === "POST") {
+            // --- Loop untuk Anggota Grup (create + edit) ---
+            if ("{{ $method }}" === "POST" || "{{ $method }}" === "PUT") {
                 $('.form-group.title-group').remove();
                 $(".form-group.member-group").remove();
 
-                for (var i = 1; i < max_person; i++) {
+                var groupMembers = Array.isArray(EXISTING_GROUP_MEMBERS) ? EXISTING_GROUP_MEMBERS : [];
+                var totalRows = Math.max(groupMembers.length, Math.max((max_person || 1) - 1, 0));
+
+                for (var i = 0; i < totalRows; i++) {
+                    var memberRow = groupMembers[i] || {};
+                    var rfidValue = String(memberRow.rfid || '').replace(/"/g, '&quot;');
+                    var namaValue = String(memberRow.nama || '').replace(/"/g, '&quot;');
+                    var tanggalValue = String(memberRow.tanggal_lahir || '');
+
                     var rfidGroupField = `
                     <div class="form-group member-group row mb-3">
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label for="rfid_${i}" class="form-label">RFID Anggota</label>
-                            <input type="text" name="rfid_group[]" id="rfid_${i}" class="form-control" placeholder="0192029300">
+                            <input type="text" name="rfid_group[]" id="rfid_${i}" class="form-control" placeholder="0192029300" value="${rfidValue}">
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label for="nama_${i}" class="form-label">Nama Anggota</label>
-                            <input type="text" name="name_group[]" id="nama_${i}" class="form-control" placeholder="John Doe">
+                            <input type="text" name="name_group[]" id="nama_${i}" class="form-control" placeholder="John Doe" value="${namaValue}">
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
+                            <label for="tanggal_lahir_${i}" class="form-label">Tanggal Lahir Anggota</label>
+                            <input type="date" name="tanggal_lahir_group[]" id="tanggal_lahir_${i}" class="form-control" value="${tanggalValue}">
+                        </div>
+                        <div class="col-md-3">
                             <label for="image_profile_${i}" class="form-label">Foto Anggota</label>
                             <input type="file" name="image_group[]" id="image_profile_${i}" class="form-control" accept="image/*">
                         </div>
@@ -437,7 +468,7 @@
                     </div>
                     `;
 
-                    if (i === 1) {
+                    if (i === 0) {
                         $(title).insertBefore($("#submit-btn"));
                     }
                     $(rfidGroupField).insertBefore($("#submit-btn"));

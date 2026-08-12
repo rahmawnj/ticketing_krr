@@ -44,6 +44,8 @@
                     <th class="text-nowrap">Nama</th>
                     <th class="text-nowrap">No HP</th>
                     <th class="text-nowrap">Membership</th>
+                    <th class="text-nowrap">Tgl. Lahir</th>
+                    <th class="text-nowrap">Umur</th>
                     <th class="text-nowrap">Tgl. Register</th>
                     <th class="text-nowrap">Harga Paket</th>
                     <th class="text-nowrap">Tgl. Expired Lama</th>
@@ -73,12 +75,25 @@
                             <tr><th style="width: 180px;">Nama</th><td id="detail-nama">-</td></tr>
                             <tr><th>No HP</th><td id="detail-nohp">-</td></tr>
                             <tr><th>Membership</th><td id="detail-membership">-</td></tr>
+                            <tr><th>Tgl. Lahir</th><td id="detail-tgl-lahir">-</td></tr>
+                            <tr><th>Umur</th><td id="detail-umur">-</td></tr>
                             <tr><th>Tgl. Register</th><td id="detail-register">-</td></tr>
                             <tr><th>Tgl. Expired</th><td id="detail-expired">-</td></tr>
                         </table>
                         <div id="detail-submember-wrap" style="display: none;">
                             <h6 class="mb-2">Sub Member</h6>
-                            <ul id="detail-submembers" class="mb-0 ps-3"></ul>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th class="text-nowrap">Nama</th>
+                                            <th class="text-nowrap">Tgl Lahir</th>
+                                            <th class="text-nowrap">Umur</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="detail-submembers"></tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -147,6 +162,35 @@
 
     function formatIsoDateText(value) {
         return formatDisplayDate(parseIsoDate(value));
+    }
+
+    function calculateAgeBreakdown(dateString) {
+        if (!dateString) {
+            return '-';
+        }
+
+        var birth = new Date(dateString + 'T00:00:00');
+        if (isNaN(birth.getTime())) {
+            return '-';
+        }
+
+        var today = new Date();
+        var years = today.getFullYear() - birth.getFullYear();
+        var months = today.getMonth() - birth.getMonth();
+        var days = today.getDate() - birth.getDate();
+
+        if (days < 0) {
+            months -= 1;
+            var previousMonth = new Date(today.getFullYear(), today.getMonth(), 0);
+            days += previousMonth.getDate();
+        }
+
+        if (months < 0) {
+            years -= 1;
+            months += 12;
+        }
+
+        return years + ' tahun ' + months + ' bulan ' + days + ' hari';
     }
 
     function addDays(date, days) {
@@ -250,6 +294,8 @@
             { data: 'nama', name: 'nama' },
             { data: 'no_hp', name: 'no_hp' },
             { data: 'membership.name', name: 'membership.name' },
+            { data: 'tgl_lahir', name: 'tgl_lahir', render: function (data) { return formatIsoDateText(data); }, orderable: false, searchable: false },
+            { data: 'tgl_lahir', name: 'tgl_lahir_age', render: function (data) { return calculateAgeBreakdown(data); }, orderable: false, searchable: false },
             { data: 'tgl_register', name: 'tgl_register' },
             { data: 'package_price', name: 'package_price' },
             { data: 'tgl_expired', name: 'tgl_expired' },
@@ -452,6 +498,8 @@
             $('#detail-nama').text(member.nama || '-');
             $('#detail-nohp').text(member.no_hp || '-');
             $('#detail-membership').text((member.membership && member.membership.name) ? member.membership.name : '-');
+            $('#detail-tgl-lahir').text(formatIsoDateText(member.tgl_lahir));
+            $('#detail-umur').text(calculateAgeBreakdown(member.tgl_lahir));
             $('#detail-register').text(formatIsoDateText(member.tgl_register));
             $('#detail-expired').text(formatIsoDateText(member.tgl_expired));
 
@@ -463,7 +511,9 @@
             } else {
                 $subWrap.show();
                 subMembers.forEach(function(item) {
-                    $subList.append('<li>' + (item.nama || '-') + '</li>');
+                    var ageText = calculateAgeBreakdown(item.tgl_lahir);
+                    var birthText = formatIsoDateText(item.tgl_lahir);
+                    $subList.append('<tr><td>' + (item.nama || '-') + '</td><td>' + birthText + '</td><td>' + ageText + '</td></tr>');
                 });
             }
 
