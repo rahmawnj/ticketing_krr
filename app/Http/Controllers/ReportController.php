@@ -408,7 +408,9 @@ class ReportController extends Controller
 
                 foreach ($transaction->detail as $detail) {
                     $columnKey = (string) ((int) ($detail->ticket_id ?? 0));
-                    $columnLabel = $columnKey !== '0' ? ('Ticket #' . $columnKey) : 'Ticket';
+                    $columnLabel = $columnKey !== '0'
+                        ? ($detail->ticket ? $detail->ticket->name : 'Ticket #' . $columnKey . ' (sudah dihapus)')
+                        : 'Ticket';
 
                     $this->registerDetailReportColumn($columns, $rowsByDate, $footer, $columnKey, $columnLabel);
 
@@ -1104,6 +1106,32 @@ class ReportController extends Controller
         $breadcrumbs = ['Master', 'Rekap Transaction'];
         $tickets = Ticket::get();
         $users = User::get();
+
+        $ticketTransactions = Transaction::query()
+            ->where('is_active', 1)
+            ->where('transaction_type', 'ticket')
+            ->whereBetween('created_at', [$from, $to]);
+        if ($request->kasir && $request->kasir !== 'all') {
+            $ticketTransactions->where('user_id', $request->kasir);
+        }
+
+        $ticketIds = DetailTransaction::query()
+            ->whereIn('transaction_id', $ticketTransactions->pluck('id'))
+            ->distinct()
+            ->pluck('ticket_id')
+            ->map(fn ($id) => (int) $id)
+            ->filter();
+        $existingTicketIds = $tickets->pluck('id')->map(fn ($id) => (int) $id);
+
+        foreach ($ticketIds->diff($existingTicketIds) as $ticketId) {
+            $tickets->push(new Ticket([
+                'id' => $ticketId,
+                'name' => 'Ticket #' . $ticketId . ' (sudah dihapus)',
+                'harga' => 0,
+                'ppn' => 0,
+                'use_ppn' => 0,
+            ]));
+        }
 
         $memberships = Membership::where('is_active', 1)->get();
         $sewa = Sewa::get();
